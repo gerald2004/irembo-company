@@ -1,0 +1,244 @@
+/* eslint-disable react/prop-types */
+import { useState, useMemo } from "react";
+import {
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ChevronDown } from "lucide-react";
+
+const Datatable = ({
+  columns,
+  data,
+  fetchData,
+  isLoading,
+  isRefetching,
+  isError,
+  buttonTitle,
+  buttonMethod,
+  colSpan,
+}) => {
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 7 });
+
+  const table = useReactTable({
+    data,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    state: {
+      globalFilter,
+      pagination,
+    },
+    onPaginationChange: setPagination,
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: (row, columnId, filterValue) => {
+      return String(row.getValue(columnId))
+        .toLowerCase()
+        .includes(filterValue.toLowerCase());
+    },
+  });
+
+  // ✅ Calculate Total Debit & Credit
+  const { totalDebit, totalCredit } = useMemo(() => {
+    if (!data || data.length === 0) return { totalDebit: 0, totalCredit: 0 };
+
+    return data.reduce(
+      (totals, row) => {
+        const amount = parseFloat(row.amount) || 0;
+        if (row.debit_credit === "Debit") {
+          totals.totalDebit += amount;
+        } else if (row.debit_credit === "Credit") {
+          totals.totalCredit += amount;
+        }
+        return totals;
+      },
+      { totalDebit: 0, totalCredit: 0 }
+    );
+  }, [data]);
+
+  const handlePageSizeChange = (size) => {
+    setPagination((prev) => ({
+      ...prev,
+      pageSize: size,
+      pageIndex: 0,
+    }));
+  };
+
+  return (
+    <div className="w-full">
+      {/* ✅ Search, Add Button, Refresh */}
+      <div className="flex items-center py-4 space-x-4">
+        <Input
+          placeholder="Search..."
+          value={globalFilter}
+          onChange={(e) => setGlobalFilter(e.target.value)}
+        />
+        {buttonTitle && (
+          <Button variant="outline" size="sm" onClick={buttonMethod}>
+            {buttonTitle}
+          </Button>
+        )}
+        <Button variant="outline" size="sm" onClick={fetchData}>
+          {isRefetching ? "Refreshing" : "Refresh"}
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="ml-auto">
+              Columns <ChevronDown />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            {table
+              .getAllColumns()
+              .filter((column) => column.getCanHide())
+              .map((column) => (
+                <DropdownMenuCheckboxItem
+                  key={column.id}
+                  className="capitalize"
+                  checked={column.getIsVisible()}
+                  onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                >
+                  {column.columnDef.header}
+                </DropdownMenuCheckboxItem>
+              ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* ✅ Table Component */}
+      <div className="rounded-md border overflow-x-auto">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id}>
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext()
+                    )}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {isLoading || isRefetching ? (
+              Array(pagination.pageSize)
+                .fill()
+                .map((_, i) => (
+                  <TableRow key={`skeleton-${i}`}>
+                    {columns.map((_, colIdx) => (
+                      <TableCell key={`skeleton-cell-${colIdx}`}>
+                        <Skeleton className="h-5 w-full" />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+            ) : isError ? (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="text-center">
+                  Error Loading Data
+                </TableCell>
+              </TableRow>
+            ) : data?.length ? (
+              <>
+                {table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+
+                {/* ✅ Summary Row (Only if data has debits/credits) */}
+                {data.some((row) => row.debit_credit) && (
+                  <TableRow className="font-semibold">
+                    <TableCell colSpan={columns.length - colSpan}></TableCell>
+                    <TableCell>{totalDebit.toLocaleString()}</TableCell>
+                    <TableCell>{totalCredit.toLocaleString()}</TableCell>
+                  </TableRow>
+                )}
+              </>
+            ) : (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="text-center">
+                  No results.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* ✅ Pagination Controls */}
+      <div className="flex justify-between items-center py-4">
+        <div className="text-sm">
+          Page {pagination.pageIndex + 1} of {table.getPageCount()}
+        </div>
+        <div className="flex space-x-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+          >
+            Previous
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
+            Next
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" >Rows per page</Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {[5, 10, 20, 50, 100, 500].map((size) => (
+                <DropdownMenuItem
+                  key={size}
+                  onClick={() => handlePageSizeChange(size)}
+                >
+                  {size}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Datatable;

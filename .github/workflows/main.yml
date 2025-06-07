@@ -1,0 +1,35 @@
+name: Deployment Alert
+
+on:
+  push:
+    branches:
+      - main  # Trigger on push to main branch
+  workflow_run:
+    workflows: ["Workflow Test"]  # Replace with the name of the workflow you want to trigger this on.
+    types:
+      - completed
+
+jobs:
+  send_alert:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if Deployment was Successful
+        id: deployment_check
+        run: |
+          # Check the deployment status from the event payload
+          if [ "${{ github.event.client_payload.deployment_status }}" == "success" ]; then
+            echo "Deployment succeeded!"
+            echo "status=success" >> $GITHUB_ENV  # Set output using environment file
+          else
+            echo "Deployment failed!"
+            echo "status=failure" >> $GITHUB_ENV  # Set output using environment file
+          fi
+
+      - name: Log Deployment Status
+        run: |
+          # Check if the deployment was successful
+          if [ "${{ env.status }}" == "success" ]; then
+            echo "The deployment to Vercel was successful."
+          else
+            echo "The deployment to Vercel failed. Please check the logs for more information."
+          fi  # Close the `if` statement properly
