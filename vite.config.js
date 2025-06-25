@@ -13,8 +13,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "logo.png", "logo.png"],
       manifest: {
-        name: "iRembo Finance Management System",
-        short_name: "iRembo Finance",
+        name: "Furaha Banking Management Information System",
+        short_name: "Furaha Banking",
         theme_color: "#000",
         icons: [
           {
