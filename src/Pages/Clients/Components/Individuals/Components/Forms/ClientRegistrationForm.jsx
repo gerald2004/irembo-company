@@ -659,7 +659,7 @@ const ClientRegistrationForm = () => {
                   <Controller
                     name="client_date_of_join"
                     control={control}
-                    rules={{ required: "Date of birth is required" }}
+                    rules={{ required: "Date of joining is required" }}
                     render={({ field }) => {
                       const parsedDate = field.value
                         ? new Date(field.value)

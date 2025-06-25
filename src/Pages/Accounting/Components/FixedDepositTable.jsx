@@ -38,6 +38,8 @@ import AlertModal from "@/components/AlertModal";
 import { Badge } from "@/components/ui/badge";
 import { formatDateTimestamp } from "@/lib/utils";
 import { useDebounce } from "@/lib/utils";
+import fileDownload from "js-file-download";
+import { toast } from "@/hooks/use-toast";
 export function FixedDepositTable() {
   const navigate = useNavigate();
   const [sorting, setSorting] = useState([]);
@@ -125,12 +127,11 @@ export function FixedDepositTable() {
     },
     {
       id: "fixed_deposit_transaction_return_amount",
-      header: "Return Amount",
+      header: "Return Interest",
       cell: ({ row }) => (
         <p className="capitalize hover:uppercase">
           {parseFloat(
-            row.original.fixed_deposit_transaction_amount +
-              row.original.fixed_deposit_transaction_amount
+            row.original.fixed_deposit_transaction_return_amount
           ).toLocaleString()}
         </p>
       ),
@@ -185,7 +186,7 @@ export function FixedDepositTable() {
     {
       id: "actions",
       header: "Actions",
-      cell: () => (
+      cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -196,7 +197,11 @@ export function FixedDepositTable() {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Download Certificate</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onDownload(row.original)}>
+              {isDownloading
+                ? "Downloading Please Wait"
+                : "Download Certificate"}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -297,6 +302,56 @@ export function FixedDepositTable() {
       pageSize: size,
       pageIndex: 0,
     }));
+  };
+  const [isDownloading, setIsDownloading] = useState(false);
+  const onDownload = async (data) => {
+    const controller = new AbortController();
+    const dataDownload = {
+      transaction: {
+        code: data?.fixed_deposit_transaction_code,
+        start: data?.fixed_deposit_transaction_start_date,
+        account_name: data?.account_name,
+        account_number: data?.account_number,
+        amount: data?.fixed_deposit_transaction_amount,
+        interest: data?.fixed_deposit_setting?.fixed_deposit_setting_interest,
+        end: data?.fixed_deposit_transaction_end_date,
+        amount_to_receive:
+          parseFloat(data?.fixed_deposit_transaction_amount) +
+          parseFloat(data?.fixed_deposit_transaction_return_amount),
+      },
+    };    
+    try {
+      setIsDownloading(true);
+      let response;
+
+      response = await axiosPrivate.post(
+        `/export/certificate/fixed-deposit/pdf`, // <-- Your endpoint
+        { data: dataDownload },
+        {
+          responseType: "blob",
+          signal: controller.signal,
+        }
+      );
+
+      const downloadTitle = `Fixed-Deposit-Certificate.pdf`;
+
+      fileDownload(response.data, downloadTitle);
+
+      toast({
+        title: `Download successful`,
+        variant: "success",
+        description: `Your file has been downloaded.`,
+      });
+      setIsDownloading(false);
+    } catch (error) {
+      console.log(error);
+      toast({
+        title: "Uh oh! Something went wrong.",
+        variant: "destructive",
+        description: "Failed to download file.",
+      });
+      setIsDownloading(false);
+    }
   };
 
   return (

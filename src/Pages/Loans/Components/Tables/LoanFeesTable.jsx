@@ -6,7 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { useState } from "react";
 import LoanFeesDialog from "../Forms/LoanFeesDialog";
-import { formatDateTimestamp } from "@/lib/utils";
+import { formatDateTimestamp, hasPermission } from "@/lib/utils";
+import useAuth from "@/MiddleWares/Hooks/useAuth";
 export function LoanFeesTable() {
   const navigate = useNavigate();
   const axiosPrivate = useAxiosPrivate();
@@ -45,7 +46,7 @@ export function LoanFeesTable() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
-
+  const {auth: {roles}} = useAuth();
   const columns = [
     {
       id: "select",
@@ -147,15 +148,16 @@ export function LoanFeesTable() {
         isLoading={isLoading}
         isRefetching={isRefetching}
         isError={isError}
-        buttonTitle={"+ Loans Fees"}
-        buttonMethod={handleOpenModal}
+        buttonTitle={hasPermission(roles, 100095) ? "+ Loans Fees" : ""}
+        buttonMethod={hasPermission(roles, 100095) ? handleOpenModal : ""}
       />
-
-      <LoanFeesDialog
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        refetch={refetch}
-      />
+      {hasPermission(roles, 100095) && isModalOpen && (
+        <LoanFeesDialog
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          refetch={refetch}
+        />
+      )}
     </>
   );
 }

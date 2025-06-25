@@ -18,8 +18,9 @@ import {
 import { Switch } from "@/components/ui/switch";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { useParams } from "react-router-dom";
-import { formatDateTimestamp } from "@/lib/utils";
+import { formatDateTimestamp, hasPermission } from "@/lib/utils";
 import EditLoanUser from "./Forms/EditLoanUser";
+import useAuth from "@/MiddleWares/Hooks/useAuth";
 const LoanSummary = ({ data, refetch, totals }) => {
   const [showDialog, setShowDialog] = useState(false);
   const axiosPrivate = useAxiosPrivate();
@@ -70,7 +71,7 @@ const LoanSummary = ({ data, refetch, totals }) => {
   };
 
   const togglePaymentStatus = async (currentStatus) => {
-          const controller = new AbortController();
+    const controller = new AbortController();
 
     try {
       await axiosPrivate.put(
@@ -87,39 +88,44 @@ const LoanSummary = ({ data, refetch, totals }) => {
       console.error("Error updating account status", error);
     }
   };
-
+  const {
+    auth: { roles },
+  } = useAuth();
   return (
     <>
       <div className="flex flex-wrap items-center gap-4 border p-6 rounded-lg shadow-sm">
-        {data?.loan_application_status === "pending" && (
-          <Button size="sm" onClick={() => handleOpenDialog("process")}>
-            Process Loan
-          </Button>
-        )}
-        {data?.loan_application_status === "processed" && (
-          <Button size="sm" onClick={() => handleOpenDialog("approve")}>
-            Approve Loan
-          </Button>
-        )}
-        {data?.loan_application_status === "approved" && (
-          <>
-            <Button
-              size="sm"
-              onClick={() => handleOpenLoanDisburseModal("disburse")}
-            >
-              Disburse Loan
+        {data?.loan_application_status === "pending" &&
+          hasPermission(roles, 100069) && (
+            <Button size="sm" onClick={() => handleOpenDialog("process")}>
+              Process Loan
             </Button>
-            {openLoanDisburseModal && (
-              <LoanDisbursementDialog
-                isOpen={openLoanDisburseModal}
-                onClose={handleCloseLoanDisburseModal}
-                defaultValues={data}
-                refetch={refetch}
-                action={action}
-              />
-            )}
-          </>
-        )}
+          )}
+        {data?.loan_application_status === "processed" &&
+          hasPermission(roles, 100070) && (
+            <Button size="sm" onClick={() => handleOpenDialog("approve")}>
+              Approve Loan
+            </Button>
+          )}
+        {data?.loan_application_status === "approved" &&
+          hasPermission(roles, 100072) && (
+            <>
+              <Button
+                size="sm"
+                onClick={() => handleOpenLoanDisburseModal("disburse")}
+              >
+                Disburse Loan
+              </Button>
+              {openLoanDisburseModal && (
+                <LoanDisbursementDialog
+                  isOpen={openLoanDisburseModal}
+                  onClose={handleCloseLoanDisburseModal}
+                  defaultValues={data}
+                  refetch={refetch}
+                  action={action}
+                />
+              )}
+            </>
+          )}
 
         {data?.loan_application_status === "rejected" && (
           <span className="text-sm">
@@ -130,52 +136,60 @@ const LoanSummary = ({ data, refetch, totals }) => {
 
         {(data?.loan_application_status === "pending" ||
           data?.loan_application_status === "approved" ||
-          data?.loan_application_status === "processed") && (
-          <Button
-            size="sm"
-            onClick={() => handleOpenDialog("reject")}
-            variant="destructive"
-          >
-            Reject Loan
-          </Button>
-        )}
+          data?.loan_application_status === "processed") &&
+          hasPermission(roles, 100071) && (
+            <Button
+              size="sm"
+              onClick={() => handleOpenDialog("reject")}
+              variant="destructive"
+            >
+              Reject Loan
+            </Button>
+          )}
 
         {(data?.loan_application_status === "pending" ||
           data?.loan_application_status === "approved" ||
-          data?.loan_application_status === "processed") && (
-          <>
-            <Button size="sm" onClick={handleOpenLoanUpdateModal}>
-              Update Loan Information
-            </Button>
-            {openLoanUpdateModal && (
-              <UpdateLoanApplicationDialog
-                isOpen={openLoanUpdateModal}
-                onClose={handleCloseLoanUpdateModal}
-                defaultValues={data}
-                refetch={refetch}
-              />
-            )}
-          </>
-        )}
+          data?.loan_application_status === "processed") &&
+          hasPermission(roles, 100167) && (
+            <>
+              <Button size="sm" onClick={handleOpenLoanUpdateModal}>
+                Update Loan Information
+              </Button>
+              {openLoanUpdateModal && (
+                <UpdateLoanApplicationDialog
+                  isOpen={openLoanUpdateModal}
+                  onClose={handleCloseLoanUpdateModal}
+                  defaultValues={data}
+                  refetch={refetch}
+                />
+              )}
+            </>
+          )}
         {data?.loan_application_status === "disbursed" && (
           <>
-            <Button size="sm" onClick={() => handleOpenDialog("payoff")}>
-              Pay Off Loan
-            </Button>
-            <Button onClick={() => handleOpenDialog("writeoff")} size="sm">
-              Write Off Loan
-            </Button>
-            <div>
-              <Switch
-                checked={data?.loan_application_auto_payment_status === "yes"}
-                onCheckedChange={() =>
-                  togglePaymentStatus(
-                    data?.loan_application_auto_payment_status
-                  )
-                }
-              ></Switch>{" "}
-              <span className="text-sm mb-5">Auto Repayments</span>
-            </div>
+            {hasPermission(roles, 100073) && (
+              <Button size="sm" onClick={() => handleOpenDialog("payoff")}>
+                Pay Off Loan
+              </Button>
+            )}
+            {hasPermission(roles, 100074) && (
+              <Button onClick={() => handleOpenDialog("writeoff")} size="sm">
+                Write Off Loan
+              </Button>
+            )}
+            {hasPermission(roles, 100075) && (
+              <div>
+                <Switch
+                  checked={data?.loan_application_auto_payment_status === "yes"}
+                  onCheckedChange={() =>
+                    togglePaymentStatus(
+                      data?.loan_application_auto_payment_status
+                    )
+                  }
+                ></Switch>{" "}
+                <span className="text-sm mb-5">Auto Repayments</span>
+              </div>
+            )}
           </>
         )}
       </div>
@@ -204,7 +218,9 @@ const LoanSummary = ({ data, refetch, totals }) => {
           <span className="w-2/3">
             {data?.loan_product?.loan_products_interest_rate}% (
             <span className="capitalize">
-              {data?.loan_product?.loan_product_type === "reducing_balance" ? "Reducing Balance" : "Fixed Interest"}
+              {data?.loan_product?.loan_product_type === "reducing_balance"
+                ? "Reducing Balance"
+                : "Fixed Interest"}
             </span>
             )
           </span>
@@ -236,11 +252,13 @@ const LoanSummary = ({ data, refetch, totals }) => {
         </div>
         <div className="flex gap-x-4 items-center">
           <Label className="w-1/3 font-semibold">Loan Manager</Label>
-          <span
-            className="w-2/3 capitalize"
-            onClick={handleOpenLoanUpdateMemberModal}
-          >
-            <Button size="sm" variant="outline" >
+          <span className="w-2/3 capitalize">
+            <Button
+              onClick={handleOpenLoanUpdateMemberModal}
+              disabled={!hasPermission(roles, 100076)}
+              size="sm"
+              variant="outline"
+            >
               {`${data?.user?.user_firstname} ${data?.user?.user_lastname}`}
             </Button>
           </span>
@@ -441,14 +459,15 @@ const LoanSummary = ({ data, refetch, totals }) => {
           </div>
         </>
       )}
-      {showDialog && (
-        <LoanAction
-          isOpen={showDialog}
-          onClose={handleCloseDialog}
-          actionType={action}
-          refetch={refetch}
-        />
-      )}
+      {showDialog &&
+        hasPermission(roles,[100069, 100070, 100072, 100071, 100073, 100074]) && (
+          <LoanAction
+            isOpen={showDialog}
+            onClose={handleCloseDialog}
+            actionType={action}
+            refetch={refetch}
+          />
+        )}
       {openLoanUpdateUserModal && (
         <EditLoanUser
           isOpen={openLoanUpdateUserModal}

@@ -36,9 +36,10 @@ import { ChevronDown } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import AlertModal from "@/components/AlertModal";
 import { Badge } from "@/components/ui/badge";
-import { formatDateTimestamp } from "@/lib/utils";
+import { formatDateTimestamp, hasPermission } from "@/lib/utils";
 import JournalEntryDialog from "./Forms/JournalEntryDialog";
 import { useDebounce } from "@/lib/utils";
+import useAuth from "@/MiddleWares/Hooks/useAuth";
 export function JournalEntriesTable() {
   const navigate = useNavigate();
   const [sorting, setSorting] = useState([]);
@@ -47,7 +48,9 @@ export function JournalEntriesTable() {
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 7 });
   const axiosPrivate = useAxiosPrivate();
   const [showDialog, setShowDialog] = useState(false);
-
+  const {
+    auth: { roles },
+  } = useAuth();
   const {
     data = [],
     isLoading,
@@ -109,7 +112,10 @@ export function JournalEntriesTable() {
       header: "Transaction Code",
       cell: ({ row }) => (
         <Link
-          to={`/journal-entries/${row.original.journal_entry_id}`}
+          to={hasPermission(
+            roles,
+            100169
+          ) ? `/journal-entries/${row.original.journal_entry_id}` : ""}
           className="capitalize hover:uppercase"
         >
           {row.original.transaction_code}
@@ -162,7 +168,9 @@ export function JournalEntriesTable() {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Reverse</DropdownMenuItem>
+            {hasPermission(roles, 100172) && (
+              <DropdownMenuItem>Reverse</DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -279,10 +287,11 @@ export function JournalEntriesTable() {
           onChange={(event) => setGlobalFilter(event.target.value)}
           className="max-w-sm"
         />
-
-        <Button variant="outline" size="sm" onClick={handleOpenModal}>
-          + New Entry
-        </Button>
+        {hasPermission(roles, 100108) && (
+          <Button variant="outline" size="sm" onClick={handleOpenModal}>
+            + New Entry
+          </Button>
+        )}
         <Button
           variant="outline"
           size="sm"
@@ -460,11 +469,13 @@ export function JournalEntriesTable() {
           // modalSize="325px"
         />
       )}
-      <JournalEntryDialog
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        refetch={refetch}
-      />
+      {hasPermission(roles, 100108) && isModalOpen && (
+        <JournalEntryDialog
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          refetch={refetch}
+        />
+      )}
     </div>
   );
 }

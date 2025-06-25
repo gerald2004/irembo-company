@@ -98,7 +98,7 @@ export function SharesTable() {
     },
     {
       accessorKey: "shares_transaction_count",
-      header: "Count",
+      header: "Number of Shares",
       cell: ({ row }) => (
         <p className="capitalize text-xs">
           {row.original.shares_transaction_count}

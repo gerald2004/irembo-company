@@ -18,7 +18,8 @@ import { useState } from "react";
 import EditLoanColletralDialog from "../Forms/EditLoanColletralDialog";
 import AlertModal from "@/components/AlertModal";
 import { toast } from "@/hooks/use-toast";
-import { formatDateTimestamp } from "@/lib/utils";
+import { formatDateTimestamp, hasPermission } from "@/lib/utils";
+import useAuth from "@/MiddleWares/Hooks/useAuth";
 export function LoanColletralTable() {
   const navigate = useNavigate();
   const axiosPrivate = useAxiosPrivate();
@@ -33,7 +34,7 @@ export function LoanColletralTable() {
   } = useQuery({
     queryKey: ["loan-colletral-data", params.loanid],
     queryFn: async () => {
-            const controller = new AbortController();
+      const controller = new AbortController();
 
       const fetchURL = `/loans/colletral/${params.loanid}/applications`;
       try {
@@ -77,7 +78,7 @@ export function LoanColletralTable() {
   };
 
   const handleDelete = async () => {
-          const controller = new AbortController();
+    const controller = new AbortController();
 
     try {
       const response = await axiosPrivate.delete(
@@ -96,6 +97,9 @@ export function LoanColletralTable() {
       });
     }
   };
+  const {
+    auth: { roles },
+  } = useAuth();
   const columns = [
     {
       id: "select",
@@ -180,7 +184,8 @@ export function LoanColletralTable() {
       cell: ({ row }) => {
         return (
           <p className="text-xs capitalize">
-            {formatDateTimestamp(row.original.loan_colletral_timestamp) || "N/A"}
+            {formatDateTimestamp(row.original.loan_colletral_timestamp) ||
+              "N/A"}
           </p>
         );
       },
@@ -198,16 +203,22 @@ export function LoanColletralTable() {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => handleOpenModalEdit(row.original)}>
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() =>
-                handleOpenDeleteDialog(row.original.loan_colletral_id)
-              }
-            >
-              Delete
-            </DropdownMenuItem>
+            {hasPermission(roles, 100087) && (
+              <DropdownMenuItem
+                onClick={() => handleOpenModalEdit(row.original)}
+              >
+                Edit
+              </DropdownMenuItem>
+            )}
+            {hasPermission(roles, 100088) && (
+              <DropdownMenuItem
+                onClick={() =>
+                  handleOpenDeleteDialog(row.original.loan_colletral_id)
+                }
+              >
+                Delete
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -222,29 +233,34 @@ export function LoanColletralTable() {
         isLoading={isLoading}
         isRefetching={isRefetching}
         isError={isError}
-        buttonTitle={"+ Colletral Sercuity"}
-        buttonMethod={handleOpenModal}
+        buttonTitle={hasPermission(roles, 100086) ? "+ Colletral Sercuity" : ""}
+        buttonMethod={hasPermission(roles, 100086) ? handleOpenModal : ""}
       />
-
-      <LoanColletralDialog
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        refetch={refetch}
-      />
-      <EditLoanColletralDialog
-        isOpen={isModalOpenEdit}
-        onClose={handleCloseModalEdit}
-        refetch={refetch}
-        defaultValues={defaultValues}
-      />
-      <AlertModal
-        showDialog={showDialog}
-        setShowDialog={handleCloseDeleteDialog}
-        title="Are you absolutely sure?"
-        message="Are you sure you want to delete this colletral sercuity?"
-        method={handleDelete}
-        buttonName="Delete"
-      />
+      {hasPermission(roles, 100086) && isModalOpen && (
+        <LoanColletralDialog
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          refetch={refetch}
+        />
+      )}
+      {hasPermission(roles, 100087) && isModalOpenEdit && (
+        <EditLoanColletralDialog
+          isOpen={isModalOpenEdit}
+          onClose={handleCloseModalEdit}
+          refetch={refetch}
+          defaultValues={defaultValues}
+        />
+      )}
+      {hasPermission(roles, 100088) && showDialog && (
+        <AlertModal
+          showDialog={showDialog}
+          setShowDialog={handleCloseDeleteDialog}
+          title="Are you absolutely sure?"
+          message="Are you sure you want to delete this colletral sercuity?"
+          method={hasPermission(roles, 100088) ? handleDelete : ""}
+          buttonName="Delete"
+        />
+      )}
     </>
   );
 }

@@ -30,9 +30,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getInitials } from "@/lib/general-functions";
+import useAuth from "@/MiddleWares/Hooks/useAuth";
+import { hasPermission } from "@/lib/utils";
 const StaffDetails = () => {
   const axiosPrivate = useAxiosPrivate();
   const params = useParams();
+  const {
+    auth: { roles },
+  } = useAuth();
   const {
     data: userData,
     isLoading,
@@ -42,7 +47,7 @@ const StaffDetails = () => {
   } = useQuery({
     queryKey: ["staff", params.id],
     queryFn: async () => {
-            const controller = new AbortController();
+      const controller = new AbortController();
 
       const response = await axiosPrivate.get(
         `/business/employees/${params.id}`,
@@ -56,7 +61,7 @@ const StaffDetails = () => {
   const [isDisabled, setIsDisabled] = useState(false);
 
   const resetUserPassword = async () => {
-          const controller = new AbortController();
+    const controller = new AbortController();
 
     try {
       setIsLoadingReset(true);
@@ -87,7 +92,7 @@ const StaffDetails = () => {
     }
   };
   const resetUserPincode = async () => {
-          const controller = new AbortController();
+    const controller = new AbortController();
 
     try {
       setIsLoadingReset(true);
@@ -115,7 +120,7 @@ const StaffDetails = () => {
   };
 
   const unlockUser = async () => {
-          const controller = new AbortController();
+    const controller = new AbortController();
 
     try {
       setIsLoadingReset(true);
@@ -146,7 +151,7 @@ const StaffDetails = () => {
     }
   };
   const updatePrivileges = async (newPrivilege) => {
-          const controller = new AbortController();
+    const controller = new AbortController();
 
     try {
       setIsLoadingReset(true); // Show loading state
@@ -179,12 +184,12 @@ const StaffDetails = () => {
   };
 
   const updateDashboard = async (newDashboard) => {
-          const controller = new AbortController();
+    const controller = new AbortController();
 
     try {
       setIsLoadingReset(true); // Show loading state
       console.log(newDashboard);
-      
+
       await axiosPrivate.patch(
         `/business/employees/${params.id}`,
         {
@@ -345,55 +350,57 @@ const StaffDetails = () => {
                   </Card>
                 </div>
                 <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Card className="shadow-lg rounded-xl">
-                    <CardHeader className="p-4">
-                      <CardTitle className="text-xl font-semibold">
-                        Staff Data Privileges & Dashboards
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Select
-                          value={userData.user_data_privileges}
-                          onValueChange={updatePrivileges} // ✅ Call API directly on change
-                          disabled={isLoadingReset} // ✅ Prevent multiple requests
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select Privileges" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="personal">Personal</SelectItem>
-                            <SelectItem value="branch">Branch</SelectItem>
-                            <SelectItem value="sacco">
-                              Whole Business
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Select
-                          value={userData.user_default_dashboard}
-                          onValueChange={updateDashboard} // ✅ Call API directly on change
-                          disabled={isLoadingReset} // ✅ Prevent multiple requests
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select Default Dashboard" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="overview">Overview</SelectItem>
-                            <SelectItem value="accounting">
-                              Accounting
-                            </SelectItem>
-                            <SelectItem value="members">Members</SelectItem>
-                            <SelectItem value="loans">Loans</SelectItem>
-                            <SelectItem value="notifications">
-                              Notifications
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  {hasPermission(roles, 100118) && (
+                    <Card className="shadow-lg rounded-xl">
+                      <CardHeader className="p-4">
+                        <CardTitle className="text-xl font-semibold">
+                          Staff Data Privileges & Dashboards
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Select
+                            value={userData.user_data_privileges}
+                            onValueChange={updatePrivileges} // ✅ Call API directly on change
+                            disabled={isLoadingReset} // ✅ Prevent multiple requests
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select Privileges" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="personal">Personal</SelectItem>
+                              <SelectItem value="branch">Branch</SelectItem>
+                              <SelectItem value="sacco">
+                                Whole Business
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Select
+                            value={userData.user_default_dashboard}
+                            onValueChange={updateDashboard} // ✅ Call API directly on change
+                            disabled={isLoadingReset} // ✅ Prevent multiple requests
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select Default Dashboard" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="overview">Overview</SelectItem>
+                              <SelectItem value="accounting">
+                                Accounting
+                              </SelectItem>
+                              <SelectItem value="members">Members</SelectItem>
+                              <SelectItem value="loans">Loans</SelectItem>
+                              <SelectItem value="notifications">
+                                Notifications
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
                   <Card className="shadow-lg rounded-xl">
                     <CardHeader className="p-4">
                       <CardTitle className="text-xl font-semibold">
@@ -401,31 +408,37 @@ const StaffDetails = () => {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="p-4 space-x-4">
-                      <Button
-                        size="sm"
-                        onClick={unlockUser}
-                        disabled={
-                          userData.user_login_attempts < 3 ||
-                          isDisabled ||
-                          isLoadingReset
-                        }
-                      >
-                        {isLoadingReset ? "Resetting..." : "Unlock User"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={resetUserPassword}
-                        disabled={isDisabled || isLoadingReset}
-                      >
-                        {isLoadingReset ? "Resetting..." : "Reset Password"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={resetUserPincode}
-                        disabled={isDisabled || isLoadingReset}
-                      >
-                        {isLoadingReset ? "Resetting..." : "Reset Pincode"}
-                      </Button>
+                      {hasPermission(roles, 100117) && (
+                        <Button
+                          size="sm"
+                          onClick={unlockUser}
+                          disabled={
+                            userData.user_login_attempts < 3 ||
+                            isDisabled ||
+                            isLoadingReset
+                          }
+                        >
+                          {isLoadingReset ? "Resetting..." : "Unlock User"}
+                        </Button>
+                      )}
+                      {hasPermission(roles, 100115) && (
+                        <Button
+                          size="sm"
+                          onClick={resetUserPassword}
+                          disabled={isDisabled || isLoadingReset}
+                        >
+                          {isLoadingReset ? "Resetting..." : "Reset Password"}
+                        </Button>
+                      )}
+                      {hasPermission(roles, 100116) && (
+                        <Button
+                          size="sm"
+                          onClick={resetUserPincode}
+                          disabled={isDisabled || isLoadingReset}
+                        >
+                          {isLoadingReset ? "Resetting..." : "Reset Pincode"}
+                        </Button>
+                      )}
                     </CardContent>
                   </Card>
                 </div>

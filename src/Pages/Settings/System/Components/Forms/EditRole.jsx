@@ -73,7 +73,7 @@ export default function EditRole() {
       {permissionsData.map((group) => (
         <div key={group.id} className="border p-4 rounded">
           <h3 className="font-semibold mb-2">{group.name}</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-6 gap-2">
             {group.permissions.map((perm) => (
               <label key={perm.id} className="flex items-center gap-2 text-xs">
                 <Checkbox

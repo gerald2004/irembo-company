@@ -69,7 +69,7 @@ export function AddRoleForm() {
             permissionData?.map((group) => (
               <div key={group.id} className="border rounded-md p-4">
                 <h4 className="text-lg font-semibold mb-2">{group.name}</h4>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-6 gap-2">
                   {group.permissions.map((perm) => (
                     <FormField
                       key={perm.id}

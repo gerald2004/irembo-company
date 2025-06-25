@@ -18,12 +18,15 @@ import AlertModal from "@/components/AlertModal";
 import { toast } from "@/hooks/use-toast";
 import LoanGaurantorDialog from "../Forms/LoanGaurantorDialog";
 import EditLoanGaurantorDialog from "../Forms/EditLoanGaurantorDialog";
-import { formatDateTimestamp } from "@/lib/utils";
+import { formatDateTimestamp, hasPermission } from "@/lib/utils";
+import useAuth from "@/MiddleWares/Hooks/useAuth";
 export function LoanGuarantorsTable() {
   const navigate = useNavigate();
   const axiosPrivate = useAxiosPrivate();
   const params = useParams();
-
+  const {
+    auth: { roles },
+  } = useAuth();
   const {
     data = [],
     refetch,
@@ -76,7 +79,7 @@ export function LoanGuarantorsTable() {
   };
 
   const handleDelete = async () => {
-          const controller = new AbortController();
+    const controller = new AbortController();
 
     try {
       const response = await axiosPrivate.delete(
@@ -189,7 +192,8 @@ export function LoanGuarantorsTable() {
       cell: ({ row }) => {
         return (
           <p className="text-xs capitalize">
-            {formatDateTimestamp(row.original.loan_guarantor_timestamp) || "N/A"}
+            {formatDateTimestamp(row.original.loan_guarantor_timestamp) ||
+              "N/A"}
           </p>
         );
       },
@@ -207,16 +211,22 @@ export function LoanGuarantorsTable() {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => handleOpenModalEdit(row.original)}>
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() =>
-                handleOpenDeleteDialog(row.original.loan_guarantor_id)
-              }
-            >
-              Delete
-            </DropdownMenuItem>
+            {hasPermission(roles, 100093) && (
+              <DropdownMenuItem
+                onClick={() => handleOpenModalEdit(row.original)}
+              >
+                Edit
+              </DropdownMenuItem>
+            )}
+            {hasPermission(roles, 100094) && (
+              <DropdownMenuItem
+                onClick={() =>
+                  handleOpenDeleteDialog(row.original.loan_guarantor_id)
+                }
+              >
+                Delete
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -231,29 +241,34 @@ export function LoanGuarantorsTable() {
         isLoading={isLoading}
         isRefetching={isRefetching}
         isError={isError}
-        buttonTitle={"+ Add Guarantor"}
-        buttonMethod={handleOpenModal}
+        buttonTitle={hasPermission(roles, 100092) ? "+ Add Guarantor" : ""}
+        buttonMethod={hasPermission(roles, 100092) ? handleOpenModal : ""}
       />
-
-      <LoanGaurantorDialog
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        refetch={refetch}
-      />
-      <EditLoanGaurantorDialog
-        isOpen={isModalOpenEdit}
-        onClose={handleCloseModalEdit}
-        refetch={refetch}
-        defaultValues={defaultValues}
-      />
-      <AlertModal
-        showDialog={showDialog}
-        setShowDialog={handleCloseDeleteDialog}
-        title="Are you absolutely sure?"
-        message="Are you sure you want to delete this guarantor?"
-        method={handleDelete}
-        buttonName="Delete"
-      />
+      {hasPermission(roles, 100092) && isModalOpen && (
+        <LoanGaurantorDialog
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          refetch={refetch}
+        />
+      )}
+      {hasPermission(roles, 100093) && isModalOpenEdit && (
+        <EditLoanGaurantorDialog
+          isOpen={isModalOpenEdit}
+          onClose={handleCloseModalEdit}
+          refetch={refetch}
+          defaultValues={defaultValues}
+        />
+      )}
+      {hasPermission(roles, 100094) && showDialog && (
+        <AlertModal
+          showDialog={showDialog}
+          setShowDialog={handleCloseDeleteDialog}
+          title="Are you absolutely sure?"
+          message="Are you sure you want to delete this guarantor?"
+          method={handleDelete}
+          buttonName="Delete"
+        />
+      )}
     </>
   );
 }

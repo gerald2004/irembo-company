@@ -38,6 +38,8 @@ import AlertModal from "@/components/AlertModal";
 import { Badge } from "@/components/ui/badge";
 import { formatDateTimestamp } from "@/lib/utils";
 import { useDebounce } from "@/lib/utils";
+import InvoicePOS from "@/Pages/Components/InvoicePOS";
+import useAuth from "@/MiddleWares/Hooks/useAuth";
 export function WithdrawsTable() {
   const navigate = useNavigate();
   const [sorting, setSorting] = useState([]);
@@ -84,7 +86,42 @@ export function WithdrawsTable() {
     },
     keepPreviousData: true,
   });
+const {
+    auth: { user },
+  } = useAuth();
+  const [openReceipt, setOpenReceipt] = useState(false);
+  const [receiptData, setReceiptData] = useState(false);
 
+  const onOpenReceipt = async (data) => {
+    const loadedData = {
+      sacco: {
+        name: user?.sacco_name,
+        address: user?.sacco_address,
+        email: user?.sacco_email,
+        contact: user?.sacco_contact,
+        branch: user?.branch_name,
+      },
+      client: {
+        accountNumber: data?.account_number,
+        accountName: data?.account_name,
+      },
+      transaction: {
+        amount: data?.withdraw_amount,
+        timestamp: data?.withdraw_transaction_timestamp,
+        notes: data?.withdraw_transaction_notes,
+        notary: data?.withdraw_transaction_notary,
+        transactionId: data?.withdraw_transaction_code,
+        user: data?.user,
+      },
+      title: "Withdraw Receipt",
+    };
+    setReceiptData(loadedData);
+    setOpenReceipt(true);
+  };
+  const onCloseReceipt = async () => {
+    setReceiptData([]);
+    setOpenReceipt(false);
+  };
   const columns = [
     {
       id: "select",
@@ -180,7 +217,7 @@ export function WithdrawsTable() {
     {
       id: "actions",
       header: "Actions",
-      cell: () => (
+      cell: ({row}) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -191,7 +228,9 @@ export function WithdrawsTable() {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Receipt</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onOpenReceipt(row.original)}>
+              Receipt
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -481,6 +520,13 @@ export function WithdrawsTable() {
           // modalSize="325px"
         />
       )}
+       {openReceipt && (
+              <InvoicePOS
+                data={receiptData}
+                onClose={onCloseReceipt}
+                isOpen={openReceipt}
+              />
+            )}
     </div>
   );
 }

@@ -3,30 +3,20 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
 
 import "jspdf-autotable";
 
 import Datatable from "@/Pages/Components/Datatable";
-import AlertModal from "@/components/AlertModal";
 import AddIncomeDialog from "../Forms/AddIncomeDialog";
-import { formatDateTimestamp } from "@/lib/utils";
+import { formatDateTimestamp, hasPermission } from "@/lib/utils";
+import useAuth from "@/MiddleWares/Hooks/useAuth";
 export function IncomesTable() {
   const navigate = useNavigate();
   const axiosPrivate = useAxiosPrivate();
   const params = useParams();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const [showDialog, setShowDialog] = useState(false);
 
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
@@ -55,13 +45,9 @@ export function IncomesTable() {
     },
     keepPreviousData: true,
   });
-  const handleOpenDeleteDialog = () => {
-    setShowDialog(true);
-  };
-
-  const handleCloseDeleteDialog = () => {
-    setShowDialog(false);
-  };
+  const {
+    auth: { roles },
+  } = useAuth();
 
   const columns = [
     {
@@ -123,28 +109,6 @@ export function IncomesTable() {
         <p className="capitalize">{row.original.income_notes}</p>
       ),
     },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              ...
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => handleOpenDeleteDialog(row.original.id)}
-            >
-              Reverse
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
-    },
   ];
 
   const {
@@ -172,28 +136,22 @@ export function IncomesTable() {
         fetchData={refetch}
         isLoading={isLoading}
         isRefetching={isRefetching}
-        buttonTitle={"+ Incomes"}
-        buttonMethod={handleOpenModal}
+        buttonTitle={hasPermission(roles, 100104) ? "+ Incomes" : ""}
+        buttonMethod={hasPermission(roles, 100104) ? handleOpenModal : ""}
         isError={isError}
       />
-      <AddIncomeDialog
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        refetch={refetch}
-        accountsData={accountsData}
-        isLoadingAccounts={isLoadingAccounts}
-        isErrorAccounts={isErrorAccounts}
-        refetchAccounts={refetchAccounts}
-        isRefetchingAccounts={isRefetchingAccounts}
-      />
-      <AlertModal
-        showDialog={showDialog}
-        setShowDialog={handleCloseDeleteDialog}
-        title="Are you absolutely sure?"
-        message="Are you sure you want to reverse this transaction?"
-        method={""}
-        buttonName="Okay"
-      />
+      {hasPermission(roles, 100104) && isModalOpen && (
+        <AddIncomeDialog
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          refetch={refetch}
+          accountsData={accountsData}
+          isLoadingAccounts={isLoadingAccounts}
+          isErrorAccounts={isErrorAccounts}
+          refetchAccounts={refetchAccounts}
+          isRefetchingAccounts={isRefetchingAccounts}
+        />
+      )}
     </>
   );
 }

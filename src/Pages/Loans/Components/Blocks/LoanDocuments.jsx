@@ -29,6 +29,8 @@ import {
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
+import useAuth from "@/MiddleWares/Hooks/useAuth";
+import { hasPermission } from "@/lib/utils";
 
 const ITEMS_PER_PAGE = 6; // Number of items per page
 
@@ -49,27 +51,26 @@ const LoanDocuments = ({ isOpen, isClose }) => {
     isRefetching,
   } = useQuery({
     queryKey: ["loanDocuments", loanId],
-      _queryFn: async () => {
-              const controller = new AbortController();
+    _queryFn: async () => {
+      const controller = new AbortController();
 
-          const response = await axiosPrivate.get(
-            `/loans/${loanId}/documents`,
-            { signal: controller.signal }
-          );
-          return response.data.data.documents || [];
-      },
+      const response = await axiosPrivate.get(`/loans/${loanId}/documents`, {
+        signal: controller.signal,
+      });
+      return response.data.data.documents || [];
+    },
     get queryFn() {
-        return this._queryFn;
+      return this._queryFn;
     },
     set queryFn(value) {
-        this._queryFn = value;
+      this._queryFn = value;
     },
   });
 
   // ✅ Delete Document Mutation
   const deleteMutation = useMutation({
     mutationFn: async (docId) => {
-            const controller = new AbortController();
+      const controller = new AbortController();
 
       await axiosPrivate.delete(`/loans/documents/${docId}`, {
         signal: controller.signal,
@@ -78,10 +79,7 @@ const LoanDocuments = ({ isOpen, isClose }) => {
     },
     onMutate: async (docId) => {
       await queryClient.cancelQueries(["loanDocuments", loanId]);
-      const previousDocs = queryClient.getQueryData([
-        "loanDocuments",
-        loanId,
-      ]);
+      const previousDocs = queryClient.getQueryData(["loanDocuments", loanId]);
 
       queryClient.setQueryData(["loanDocuments", loanId], (oldDocs) =>
         oldDocs?.filter((doc) => doc.document_id !== docId)
@@ -90,10 +88,7 @@ const LoanDocuments = ({ isOpen, isClose }) => {
       return { previousDocs };
     },
     onError: (err, docId, context) => {
-      queryClient.setQueryData(
-        ["loanDocuments", loanId],
-        context.previousDocs
-      );
+      queryClient.setQueryData(["loanDocuments", loanId], context.previousDocs);
       toast({
         title: "Deletion Failed",
         variant: "destructive",
@@ -137,7 +132,9 @@ const LoanDocuments = ({ isOpen, isClose }) => {
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
-
+  const {
+    auth: { roles },
+  } = useAuth();
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 p-4">
@@ -193,16 +190,18 @@ const LoanDocuments = ({ isOpen, isClose }) => {
                   </Button>
 
                   {/* ✅ Delete Button */}
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="flex items-center gap-2"
-                    onClick={() => deleteMutation.mutate(doc.document_id)}
-                    disabled={deleteMutation.isLoading}
-                  >
-                    <Trash2 className="w-4 h-4" />{" "}
-                    {deleteMutation.isLoading ? "Deleting..." : "Delete"}
-                  </Button>
+                  {hasPermission(roles, 100091) && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="flex items-center gap-2"
+                      onClick={() => deleteMutation.mutate(doc.document_id)}
+                      disabled={deleteMutation.isLoading}
+                    >
+                      <Trash2 className="w-4 h-4" />{" "}
+                      {deleteMutation.isLoading ? "Deleting..." : "Delete"}
+                    </Button>
+                  )}
                 </CardFooter>
               </Card>
             );

@@ -141,10 +141,9 @@ const Login = ({ className, ...props }) => {
         </Card>
 
         <footer className="text-center text-sm text-muted-foreground mt-4">
-          &copy; {" "}
-          {import.meta.env.VITE_APP_POWERED_BY}
+          &copy; {import.meta.env.VITE_APP_POWERED_BY}
           {import.meta.env.VITE_APP_COMPANY} <br />
-          {new Date().getFullYear()} {" "} {" All Rights Reserved"}
+          {new Date().getFullYear()} {" All Rights Reserved"}
         </footer>
       </div>
     </div>

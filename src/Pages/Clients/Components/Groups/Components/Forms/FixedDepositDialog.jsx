@@ -237,37 +237,32 @@ const FixedDepositDialog = ({ isOpen, onClose, refetch }) => {
                   name="start_date"
                   control={control}
                   rules={{ required: "Start date is required" }}
-                  render={({ field }) => {
-                    const parsedDate = field.value
-                      ? new Date(field.value)
-                      : null;
-                    return (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant={"outline"}
-                            className="w-full pl-3 text-left font-normal"
-                          >
-                            {parsedDate
-                              ? parsedDate.toLocaleDateString()
-                              : "Pick a date"}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={parsedDate}
-                            onSelect={(date) =>
-                              field.onChange(date?.toISOString().split("T")[0])
-                            }
-                            disabled={(date) => date < new Date("2000-01-01")}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    );
-                  }}
+                  render={({ field }) => (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={"outline"}
+                          className="w-full pl-3 text-left font-normal"
+                        >
+                          {field.value ? (
+                            field.value.toLocaleDateString()
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) => date < new Date("2000-01-01")}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  )}
                 />
 
                 {errors.start_date && (
@@ -285,9 +280,8 @@ const FixedDepositDialog = ({ isOpen, onClose, refetch }) => {
                   control={control}
                   rules={{ required: "End date is required" }}
                   render={({ field }) => {
-                    const parsedDate = field.value
-                      ? new Date(field.value)
-                      : null;
+                    const parsedDate = field.value ?? null;
+
                     return (
                       <Popover>
                         <PopoverTrigger asChild>
@@ -305,9 +299,7 @@ const FixedDepositDialog = ({ isOpen, onClose, refetch }) => {
                           <Calendar
                             mode="single"
                             selected={parsedDate}
-                            onSelect={(date) =>
-                              field.onChange(date?.toISOString().split("T")[0])
-                            }
+                            onSelect={field.onChange}
                             disabled={(date) => date < new Date("2000-01-01")}
                             initialFocus
                           />

@@ -51,12 +51,15 @@ import {
 } from "@/components/ui/sidebar";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
 import { NavSingle } from "./nav-single";
+import { hasPermission, sideBarfilterItems } from "@/lib/utils";
 
 export function AppSidebar({ ...props }) {
   const { auth } = useAuth();
-  const initials = `${auth?.user?.firstname?.[0] || ""}${
-    auth?.user?.lastname?.[0] || ""
+  const initials = `${auth?.user?.firstname?.[0] ?? ""}${
+    auth?.user?.lastname?.[0] ?? ""
   }`.toUpperCase();
+
+  const userPermissions = auth?.roles || [];
 
   const data = {
     user: {
@@ -69,67 +72,87 @@ export function AppSidebar({ ...props }) {
     },
     teams: [
       {
-        name: auth?.user?.sacco,
+        name: auth?.user?.sacco_name,
         logo: GalleryVerticalEnd,
-        plan: auth?.user?.branch,
+        plan: auth?.user?.branch_name,
       },
     ],
     settings: {
       title: "Settings",
+      permissionCodes: [
+        100136, 100137, 100138, 100139, 100140, 100141, 100142, 100143, 100144,
+        100145, 100146, 100147, 100148, 100149, 100150,
+      ],
       items: [
         {
           title: "Business Settings",
           url: "#",
           icon: Settings,
+          permissionCodes: [
+            100136, 100137, 100138, 100139, 100140, 100141, 100142, 100143,
+            100144, 100145, 100146, 100147,
+          ],
           items: [
             {
               title: "Business Profile",
               url: "business-profile",
+              permissionCodes: [100136],
             },
             {
               title: "Business Defaults",
               url: "business-defaults",
+              permissionCodes: [100137],
             },
             {
               title: "Fiscal Years",
               url: "fiscal-years",
+              permissionCodes: [100138],
             },
             {
               title: "Chart Of Accounts",
               url: "chart-of-accounts",
+              permissionCodes: [100139],
             },
             {
               title: "Loan Settings",
               url: "loan-settings",
+              permissionCodes: [100140],
             },
             {
               title: "Fixed Deposit Settings",
               url: "fixed-deposit-settings",
+              permissionCodes: [100141],
             },
 
             {
               title: "Account Deposit Settings",
               url: "account-savings-settings",
+              permissionCodes: [100142],
             },
             {
               title: "Branch Management",
               url: "branch-management",
+              permissionCodes: [100143],
             },
             {
               title: "Vendor Management",
               url: "vendor-management",
+              permissionCodes: [100144],
             },
             {
               title: "Transaction Channels",
               url: "transaction-channels",
+              permissionCodes: [100145],
             },
             {
               title: "Payroll Settings",
               url: "payroll-settings",
+              permissionCodes: [100146],
             },
             {
               title: "Notifications Settings",
               url: "notifications-settings",
+              permissionCodes: [100147],
             },
           ],
         },
@@ -137,55 +160,43 @@ export function AppSidebar({ ...props }) {
           title: "System Settings",
           url: "#",
           icon: Settings2,
+          permissionCodes: [100148, 100149, 100150],
           items: [
             {
               title: "General Config",
               url: "general-config",
+              permissionCodes: [100148],
             },
             {
               title: "Roles",
               url: "system-roles",
+              permissionCodes: [100149],
             },
-            // {
-            //   title: "Backups",
-            //   url: "system-backups",
-            // },
+
             {
               title: "System Notification Triggers",
               url: "system-notification-triggers",
+              permissionCodes: [100150],
             },
-            // {
-            //   title: "Staff, Client Portal & App Status",
-            //   url: "portal-app-config",
-            // },
-            // {
-            //   title: "Client App Config",
-            //   url: "client-app-config",
-            // },
-            // {
-            //   title: "Client Portal Config",
-            //   url: "client-portal-config",
-            // },
-            // {
-            //   title: "System Health",
-            //   url: "system-health",
-            // },
           ],
         },
       ],
     },
     dashboard: {
       title: "Home",
+      permissionCodes: [100001],
       items: [
         {
           name: "Dashboard",
           url: "/dashboard",
           icon: Ungroup,
+          permissionCodes: [100001],
         },
       ],
     },
     clients: {
       title: "Clients",
+      permissionCodes: [100011, 100015],
       items: [
         {
           name: "Clients",
@@ -196,42 +207,44 @@ export function AppSidebar({ ...props }) {
     },
     transactions: {
       title: "Financial Account Transactions",
+      permissionCodes: [100099, 100100, 100101, 100102, 100103],
       items: [
         {
           name: "Savings",
           url: "/savings",
           icon: ArrowUpFromLine,
+          permissionCodes: [100099],
         },
         {
           name: "Withdraws",
           url: "/withdraws",
           icon: ArrowDownFromLine,
+          permissionCodes: [100100],
         },
         {
           name: "Fixed Deposits",
           url: "/fixed-deposits",
           icon: PiggyBank,
+          permissionCodes: [100101],
         },
         {
           name: "Internal Transfers",
           url: "/internal-transfers",
           icon: Rotate3d,
+          permissionCodes: [100102],
         },
         {
           name: "Shares",
           url: "/shares",
           icon: Tangent,
+          permissionCodes: [100103],
         },
-        // {
-        //   name: "School Fees",
-        //   url: "/school-fees",
-        //   icon: GraduationCap,
-        // },
       ],
     },
 
     loans: {
       title: "Loans",
+      permissionCodes: [100067, 100158],
       items: [
         {
           title: "Loans",
@@ -241,46 +254,50 @@ export function AppSidebar({ ...props }) {
             {
               title: "Individual Loans",
               url: "individual-loans",
+              permissionCodes: [100067],
             },
             {
               title: "Group Loans",
               url: "group-loans",
+              permissionCodes: [100158],
             },
-            // {
-            //   title: "Loan Reversals",
-            //   url: "loan-reversals",
-            // },
           ],
         },
       ],
     },
     accounting: {
       title: "Accounting",
+      permissionCodes: [100104, 100107, 100109, 100111],
       items: [
         {
           name: "External Incomes",
           icon: NotebookTabs,
           url: "external-incomes",
+          permissionCodes: [100104],
         },
         {
           name: "Expenses",
           icon: FileDigit,
           url: "expenses",
+          permissionCodes: [100107],
         },
         {
           name: "Journal Entries",
           icon: Hash,
           url: "journal-entries",
+          permissionCodes: [100109],
         },
         {
           name: "Assets",
           icon: ChartCandlestick,
           url: "assets",
+          permissionCodes: [100111],
         },
       ],
     },
     float_management: {
       title: "Float Management, External Balances",
+      permissionCodes: [100135],
       items: [
         {
           name: "Mobile Banking Float Managament",
@@ -306,26 +323,25 @@ export function AppSidebar({ ...props }) {
     },
     human_resource: {
       title: "Human Resource",
+      permissionCodes: [100119, 100174],
       items: [
         {
           name: "Staff Management",
           url: "staff-management",
           icon: PersonStanding,
+          permissionCodes: [100174],
         },
         {
           name: "Payroll",
           url: "payroll",
           icon: BadgeDollarSign,
+          permissionCodes: [100119],
         },
-        // {
-        //   name: "Leave Management",
-        //   url: "leave-management",
-        //   icon: AudioLines,
-        // },
       ],
     },
     bulk_studio: {
       title: "Bulk Studio",
+      permissionCodes: [100125],
       items: [
         {
           title: "Bulk Studio",
@@ -374,80 +390,119 @@ export function AppSidebar({ ...props }) {
     },
     customer_care: {
       title: "Communications, Utlities, CRB",
+      permissionCodes: [100121, 100122, 100123, 100124],
       items: [
         {
           name: "SMS",
           url: "sms",
           icon: MessagesSquare,
+          permissionCodes: [100121],
         },
         {
           name: "Emails",
           url: "emails",
           icon: AtSign,
+          permissionCodes: [100122],
         },
         {
           name: "Utilities",
           url: "utilities",
           icon: Drill,
+          permissionCodes: [100123],
         },
         {
           name: "Credit Reference Bureau",
           url: "credit-reference-bureau",
           icon: Asterisk,
+          permissionCodes: [100124],
         },
       ],
     },
     reports: {
       title: "Reports",
+      permissionCodes: [
+        100126, 100127, 100128, 100129, 100130, 100131, 100132, 100133, 100134,
+        100134,
+      ],
       items: [
         {
           name: "Daily Reports",
           url: "daily-reports",
           icon: Cable,
+          permissionCodes: [100126],
         },
         {
           name: "Accounting Reports",
           url: "accounting-reports",
           icon: FolderGit,
+          permissionCodes: [100127],
         },
         {
           name: "Loans Reports",
           url: "loans-reports",
           icon: BookUp2,
+          permissionCodes: [100128],
         },
         {
           name: "Savings Reports",
           url: "savings-reports",
           icon: Banknote,
+          permissionCodes: [100129],
         },
         {
           name: "Client Reports",
           url: "client-reports",
           icon: LucidePanelsTopLeft,
+          permissionCodes: [100130],
         },
         {
           name: "Deposit Account Reports",
           url: "account-reports",
           icon: Accessibility,
+          permissionCodes: [100131],
         },
         {
           name: "Assets Reports",
           url: "assets-reports",
           icon: School,
+          permissionCodes: [100132],
         },
         {
           name: "Communication Reports",
           url: "communication-reports",
           icon: RadioReceiver,
+          permissionCodes: [100133],
         },
         {
           name: "Activity Log / Audit Trail",
           url: "activity-log",
           icon: Footprints,
+          permissionCodes: [100134],
         },
       ],
     },
   };
+  const filteredSidebar = Object.entries(data).reduce((acc, [key, section]) => {
+    const sectionPerm = section.permissionCodes;
+
+    // 🔥 Pass userPermissions to the filtering function
+    const filteredItems = sideBarfilterItems(section.items, userPermissions);
+
+    // ✅ Only include the section if:
+    // - It has visible children, or
+    // - The section itself has direct permission
+    if (
+      (filteredItems && filteredItems.length > 0) ||
+      hasPermission(userPermissions, sectionPerm)
+    ) {
+      acc[key] = {
+        ...section,
+        items: filteredItems,
+      };
+    }
+
+    return acc;
+  }, {});
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -455,7 +510,7 @@ export function AppSidebar({ ...props }) {
         <TeamSwitcher teams={data.teams} />
       </SidebarHeader>
       <SidebarContent>
-        <NavSingle data={data.dashboard} />
+        {/* <NavSingle data={data.dashboard} />
         <NavSingle data={data.clients} />
         <NavMain data={data.loans} />
         <NavSingle data={data.transactions} />
@@ -466,7 +521,38 @@ export function AppSidebar({ ...props }) {
         <NavSingle data={data.reports} />
         <NavSingle data={data.float_management} />
         <NavMain data={data.settings} />
-        {/* <NavProjects projects={data.projects} /> */}
+        <NavProjects projects={data.projects} /> */}
+        {filteredSidebar.dashboard && (
+          <NavSingle data={filteredSidebar.dashboard} />
+        )}
+        {filteredSidebar.clients && (
+          <NavSingle data={filteredSidebar.clients} />
+        )}
+        {filteredSidebar.loans && <NavMain data={filteredSidebar.loans} />}
+        {filteredSidebar.transactions && (
+          <NavSingle data={filteredSidebar.transactions} />
+        )}
+        {filteredSidebar.accounting && (
+          <NavSingle data={filteredSidebar.accounting} />
+        )}
+        {filteredSidebar.human_resource && (
+          <NavSingle data={filteredSidebar.human_resource} />
+        )}
+        {filteredSidebar.customer_care && (
+          <NavSingle data={filteredSidebar.customer_care} />
+        )}
+        {filteredSidebar.bulk_studio && (
+          <NavMain data={filteredSidebar.bulk_studio} />
+        )}
+        {filteredSidebar.reports && (
+          <NavSingle data={filteredSidebar.reports} />
+        )}
+        {filteredSidebar.float_management && (
+          <NavSingle data={filteredSidebar.float_management} />
+        )}
+        {filteredSidebar.settings && (
+          <NavMain data={filteredSidebar.settings} />
+        )}
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />

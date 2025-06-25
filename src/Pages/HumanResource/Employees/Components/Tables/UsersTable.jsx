@@ -19,6 +19,8 @@ import { toast } from "@/hooks/use-toast";
 import AlertModal from "@/components/AlertModal";
 import EditUserDialog from "../Forms/EditUserDialog";
 import AddUserDialog from "../Forms/AddUserDialog";
+import useAuth from "@/MiddleWares/Hooks/useAuth";
+import { hasPermission } from "@/lib/utils";
 
 export function UsersTable() {
   const navigate = useNavigate();
@@ -49,7 +51,7 @@ export function UsersTable() {
   } = useQuery({
     queryKey: ["users"],
     queryFn: async () => {
-            const controller = new AbortController();
+      const controller = new AbortController();
 
       try {
         const response = await axiosPrivate.get(`/business/employees`, {
@@ -81,7 +83,7 @@ export function UsersTable() {
   const handleCloseModal = () => setIsModalOpen(false);
 
   const handleDeleteUser = async () => {
-          const controller = new AbortController();
+    const controller = new AbortController();
 
     try {
       const response = await axiosPrivate.delete(
@@ -100,6 +102,9 @@ export function UsersTable() {
       });
     }
   };
+  const {
+    auth: { roles },
+  } = useAuth();
 
   // ✅ Table Columns
   const columns = [
@@ -128,7 +133,11 @@ export function UsersTable() {
       header: "User Code",
       cell: ({ row }) => (
         <Link
-          to={`/staff-management/${row.original.user_id}`}
+          to={
+            hasPermission(roles, 100173)
+              ? `/staff-management/${row.original.user_id}`
+              : ""
+          }
           className="capitalize hover:uppercase"
         >
           {row.original.user_identification_code}
@@ -140,7 +149,11 @@ export function UsersTable() {
       header: "First Name",
       cell: ({ row }) => (
         <Link
-          to={`/staff-management/${row.original.user_id}`}
+          to={
+            hasPermission(roles, 100173)
+              ? `/staff-management/${row.original.user_id}`
+              : ""
+          }
           className="capitalize hover:uppercase"
         >
           {row.original.user_firstname}
@@ -152,7 +165,11 @@ export function UsersTable() {
       header: "Last Name",
       cell: ({ row }) => (
         <Link
-          to={`/staff-management/${row.original.user_id}`}
+          to={
+            hasPermission(roles, 100173)
+              ? `/staff-management/${row.original.user_id}`
+              : ""
+          }
           className="capitalize hover:uppercase"
         >
           {row.original.user_lastname}
@@ -163,7 +180,13 @@ export function UsersTable() {
       accessorKey: "user_email",
       header: "Email",
       cell: ({ row }) => (
-        <Link to={`/staff-management/${row.original.user_id}`}>
+        <Link
+          to={
+            hasPermission(roles, 100173)
+              ? `/staff-management/${row.original.user_id}`
+              : ""
+          }
+        >
           {row.original.user_email}
         </Link>
       ),
@@ -219,21 +242,27 @@ export function UsersTable() {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <Link to={`/staff-management/${row.original.user_id}`}>
-                View Staff
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onSelect={() => handleOpenModalEdit(row.original)}
-            >
-              Edit Staff
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => handleOpenDeleteDialog(row.original.user_id)}
-            >
-              Delete Staff
-            </DropdownMenuItem>
+            {hasPermission(roles, 100173) && (
+              <DropdownMenuItem>
+                <Link to={`/staff-management/${row.original.user_id}`}>
+                  View Staff
+                </Link>
+              </DropdownMenuItem>
+            )}
+            {hasPermission(roles, 100113) && (
+              <DropdownMenuItem
+                onSelect={() => handleOpenModalEdit(row.original)}
+              >
+                Edit Staff
+              </DropdownMenuItem>
+            )}
+            {hasPermission(roles, 100114) && (
+              <DropdownMenuItem
+                onClick={() => handleOpenDeleteDialog(row.original.user_id)}
+              >
+                Delete Staff
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -248,17 +277,19 @@ export function UsersTable() {
         fetchData={refetch}
         isLoading={isLoading}
         isRefetching={isRefetching}
-        buttonTitle={"+ Add Staff"}
-        buttonMethod={handleOpenModal}
+        buttonTitle={hasPermission(roles, 100112) ? "+ Add Staff" : ""}
+        buttonMethod={hasPermission(roles, 100112) ? handleOpenModal : ""}
         isError={isError}
       />
-      <AddUserDialog
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        refetch={refetch}
-      />
+      {hasPermission(roles, 100112) && isModalOpen && (
+        <AddUserDialog
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          refetch={refetch}
+        />
+      )}
       {/* ✅ Edit User Modal */}
-      {isModalOpenEdit && (
+      {isModalOpenEdit && hasPermission(roles, 100113) && (
         <EditUserDialog
           isOpen={isModalOpenEdit}
           onClose={handleCloseModalEdit}
@@ -267,14 +298,16 @@ export function UsersTable() {
         />
       )}
       {/* ✅ Delete Confirmation Modal */}
-      <AlertModal
-        showDialog={showDialog}
-        setShowDialog={handleCloseDeleteDialog}
-        title="Are you sure?"
-        message="Do you want to delete this staff?"
-        method={handleDeleteUser}
-        buttonName="Delete"
-      />
+      {hasPermission(roles, 100114) && showDialog && (
+        <AlertModal
+          showDialog={showDialog}
+          setShowDialog={handleCloseDeleteDialog}
+          title="Are you sure?"
+          message="Do you want to delete this staff?"
+          method={handleDeleteUser}
+          buttonName="Delete"
+        />
+      )}
     </>
   );
 }

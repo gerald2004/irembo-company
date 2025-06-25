@@ -452,11 +452,11 @@ const EditUserDialog = ({ isOpen, onClose, refetch, defaultValues }) => {
                             selected={parsedDate}
                             onSelect={(date) => {
                               if (date) {
-                                field.onChange(
-                                  date.toISOString().split("T")[0]
-                                ); // Convert to YYYY-MM-DD
+                                const formattedDate =
+                                  date.toLocaleDateString("en-CA"); // Outputs YYYY-MM-DD in local time
+                                field.onChange(formattedDate);
                               } else {
-                                field.onChange(""); // Clear if no date is selected
+                                field.onChange("");
                               }
                             }}
                           />

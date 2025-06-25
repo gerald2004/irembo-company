@@ -21,6 +21,7 @@ import TransferTransactionDialog from "../Forms/TransferTransactionDialog";
 import AccountChargeDialog from "../Forms/AccountChargeDialog";
 import { formatDateTimestamp, hasPermission } from "@/lib/utils";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
+import InvoicePOS from "@/Pages/Components/InvoicePOS";
 export function AccountsTable() {
   const navigate = useNavigate();
   const axiosPrivate = useAxiosPrivate();
@@ -271,7 +272,63 @@ export function AccountsTable() {
       ),
     },
   ].filter(Boolean);
+  
+  const {auth:{user} } = useAuth();
+  const [receiptData, setReceiptData] = useState([]);
+  const [openReceiptDialog, setOpenReceiptDialog] = useState(false);
+  
+  const handleOpenReceiptDialog = (data, type) => {
 
+    const loadedData = {
+      sacco: {
+        name: user?.sacco_name,
+        address: user?.sacco_address,
+        email: user?.sacco_email,
+        contact: user?.sacco_contact,
+        branch: user?.branch_name,
+      },
+      client: {
+        accountNumber: data?.client?.client_account_number,
+        accountName: `${data?.client?.client_firstname} ${data?.client?.client_lastname}`,
+      },
+      transaction: {
+        amount:
+          type === "savings"
+            ? data?.deposit_transaction_amount
+            : data?.withdraw_transaction_amount,
+        timestamp:
+          type === "savings"
+            ? data?.deposit_transaction_timestamp
+            : data?.withdraw_transaction_timestamp,
+        notes:
+          type === "savings"
+            ? data?.deposit_transaction_notes
+            : data?.withdraw_transaction_notes,
+        notary:
+          type === "savings"
+            ? data?.deposit_transaction_notary
+            : data?.withdraw_transaction_notary,
+        transactionId:
+          type === "savings"
+            ? data?.deposit_transaction_code
+            : data?.withdraw_transaction_code,
+        user: `${data?.user?.user_firstname} ${data?.user?.user_lastname}`,
+      },
+      title:
+        type === "savings"
+          ? "Savings Receipt"
+          : type === "withdraws"
+          ? "Withdraws Receipt"
+          : "Receipt",
+    };
+    // console.log(loadedData);
+    setReceiptData(loadedData);
+    setOpenReceiptDialog(true);
+  }
+  const handleCloseReceiptDialog = () => {
+    setReceiptData([]);
+    setOpenReceiptDialog(false);
+  }
   return (
     <>
       {hasPermission(roles, 100033) && (
@@ -299,6 +356,7 @@ export function AccountsTable() {
           onClose={handleCloseModalDeposit}
           refetch={refetch}
           accountId={accountId}
+          handleOpenReceiptDialog={handleOpenReceiptDialog}
         />
       )}
       {isModalWithdrawOpen && hasPermission(roles, 100042) && (
@@ -307,6 +365,7 @@ export function AccountsTable() {
           onClose={handleCloseModalWithdraw}
           refetch={refetch}
           accountId={accountId}
+          handleOpenReceiptDialog={handleOpenReceiptDialog}
         />
       )}
       {isModalTransferOpen && hasPermission(roles, 100045) && (
@@ -323,6 +382,13 @@ export function AccountsTable() {
           onClose={handleCloseModalCharge}
           refetch={refetch}
           accountId={accountId}
+        />
+      )}
+      {openReceiptDialog && receiptData && (
+        <InvoicePOS
+          data={receiptData}
+          onClose={handleCloseReceiptDialog}
+          isOpen={openReceiptDialog}
         />
       )}
     </>

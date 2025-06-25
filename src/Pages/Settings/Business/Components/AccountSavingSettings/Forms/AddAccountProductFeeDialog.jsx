@@ -77,7 +77,7 @@ const AddAccountProductFeeDialog = ({
       trigger: data.trigger,
       ...(data.calculated_as === "range" ? { amount_ranges: data.ranges } : {}),
     };
-    // console.log(payload);
+    console.log(payload);
     try {
       const response = await axiosPrivate.post(
         "/settings/saving-accounts/autocharges",

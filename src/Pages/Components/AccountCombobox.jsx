@@ -69,7 +69,7 @@ export function AccountCombobox({
                   {accounts?.map((account) => (
                     <CommandItem
                       key={account.value}
-                      value={account.value} // Pass the account ID
+                      value={account.label} // Pass the account ID
                       onSelect={() => {
                         onAccountSelect(account.value); // Update selected account
                         setOpen(false); // Close the dropdown

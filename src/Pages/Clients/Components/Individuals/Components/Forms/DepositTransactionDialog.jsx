@@ -39,7 +39,13 @@ import {
   LockKeyhole,
 } from "lucide-react";
 
-const DepositTransactionDialog = ({ isOpen, onClose, refetch, accountId }) => {
+const DepositTransactionDialog = ({
+  isOpen,
+  onClose,
+  refetch,
+  accountId,
+  handleOpenReceiptDialog,
+}) => {
   const axiosPrivate = useAxiosPrivate();
   const { id: clientId } = useParams(); // ✅ Get client_id from params
 
@@ -85,6 +91,7 @@ const DepositTransactionDialog = ({ isOpen, onClose, refetch, accountId }) => {
       reset();
       refetch();
       onClose();
+      handleOpenReceiptDialog(response.data.data, "savings");
     } catch (error) {
       const errorMessage =
         error?.response?.data?.messages || "No server response";

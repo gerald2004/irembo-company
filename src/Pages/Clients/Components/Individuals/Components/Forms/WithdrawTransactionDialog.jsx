@@ -39,7 +39,13 @@ import {
   LockKeyhole,
 } from "lucide-react";
 
-const WithdrawTransactionDialog = ({ isOpen, onClose, refetch, accountId }) => {
+const WithdrawTransactionDialog = ({
+  isOpen,
+  onClose,
+  refetch,
+  accountId,
+  handleOpenReceiptDialog,
+}) => {
   const axiosPrivate = useAxiosPrivate();
   const { id: clientId } = useParams(); // ✅ Get client_id from params
 
@@ -64,7 +70,7 @@ const WithdrawTransactionDialog = ({ isOpen, onClose, refetch, accountId }) => {
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
 
   const onSubmit = async (data) => {
-          const controller = new AbortController();
+    const controller = new AbortController();
 
     try {
       const payload = {
@@ -72,11 +78,11 @@ const WithdrawTransactionDialog = ({ isOpen, onClose, refetch, accountId }) => {
         client_id: clientId,
         client_account_id: accountId,
       };
-    //   console.log(payload);
+      //   console.log(payload);
       const response = await axiosPrivate.post(
         "/accounting/withdraw/withdraws",
         payload,
-        {signal: controller.signal}
+        { signal: controller.signal }
       );
       toast({
         title: "Success",
@@ -85,6 +91,7 @@ const WithdrawTransactionDialog = ({ isOpen, onClose, refetch, accountId }) => {
       reset();
       refetch();
       onClose();
+      handleOpenReceiptDialog(response.data.data, "withdraws");
     } catch (error) {
       const errorMessage =
         error?.response?.data?.messages || "No server response";

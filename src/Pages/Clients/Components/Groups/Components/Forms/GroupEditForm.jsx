@@ -305,11 +305,7 @@ const GroupEditForm = ({defaultValues}) => {
                             <Calendar
                               mode="single"
                               selected={parsedDate}
-                              onSelect={(date) =>
-                                field.onChange(
-                                  date?.toISOString().split("T")[0]
-                                )
-                              }
+                              onSelect={field.onChange}
                               disabled={(date) => date < new Date("2000-01-01")}
                               initialFocus
                             />

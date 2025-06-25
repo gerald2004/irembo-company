@@ -33,11 +33,11 @@ const AddFiscalYearDialog = ({ isOpen, onClose, refetch }) => {
   } = useForm();
 
   const onSubmit = async (data) => {
-          const controller = new AbortController();
+    const controller = new AbortController();
 
     data.is_active = 1;
     // console.log(data);
-    try {  
+    try {
       await axiosPrivate.post("/settings/fiscal-years", data, {
         signal: controller.signal,
       });

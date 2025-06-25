@@ -158,3 +158,27 @@ export function hasPermission(roles, codes) {
   // Handle single permission check
   return userPermissions.includes(codes);
 }
+
+export const sideBarfilterItems = (items = [], userRoles = []) =>
+  items
+    .map((item) => {
+      // If it has nested items, recursively filter them
+      if (item.items) {
+        const filteredSubItems = sideBarfilterItems(item.items, userRoles);
+        if (filteredSubItems.length > 0) {
+          return { ...item, items: filteredSubItems };
+        }
+        return null;
+      }
+
+      // Check permission for leaf-level item
+      if (
+        !item.permissionCodes ||
+        hasPermission(userRoles, item.permissionCodes)
+      ) {
+        return item;
+      }
+
+      return null;
+    })
+    .filter(Boolean);

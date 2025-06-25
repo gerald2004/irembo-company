@@ -38,6 +38,8 @@ import AlertModal from "@/components/AlertModal";
 import { Badge } from "@/components/ui/badge";
 import { formatDateTimestamp } from "@/lib/utils";
 import { useDebounce } from "@/lib/utils";
+import useAuth from "@/MiddleWares/Hooks/useAuth";
+import InvoicePOS from "@/Pages/Components/InvoicePOS";
 export function SavingsTable() {
   const navigate = useNavigate();
   const [sorting, setSorting] = useState([]);
@@ -84,7 +86,42 @@ export function SavingsTable() {
     },
     keepPreviousData: true,
   });
+  const {
+    auth: { user },
+  } = useAuth();
+  const [openReceipt, setOpenReceipt] = useState(false);
+  const [receiptData, setReceiptData] = useState(false);
 
+  const onOpenReceipt = async (data) => {
+    const loadedData = {
+      sacco: {
+        name: user?.sacco_name,
+        address: user?.sacco_address,
+        email: user?.sacco_email,
+        contact: user?.sacco_contact,
+        branch: user?.branch_name,
+      },
+      client: {
+        accountNumber: data?.account_number,
+        accountName: data?.account_name,
+      },
+      transaction: {
+        amount: data?.deposit_amount,
+        timestamp: data?.deposit_transaction_timestamp,
+        notes: data?.deposit_transaction_notes,
+        notary: data?.deposit_transaction_notary,
+        transactionId: data?.deposit_transaction_code,
+        user: data?.user
+      },
+      title: "Savings Receipt",
+    };
+    setReceiptData(loadedData);
+    setOpenReceipt(true);
+  };
+  const onCloseReceipt = async () => {
+    setReceiptData([]);
+    setOpenReceipt(false);
+  };
   const columns = [
     {
       id: "select",
@@ -145,7 +182,7 @@ export function SavingsTable() {
       ),
     },
     {
-      id: "name",
+      id: "account_name",
       header: "Client Name",
       cell: ({ row }) => (
         <Link
@@ -180,7 +217,7 @@ export function SavingsTable() {
     {
       id: "actions",
       header: "Actions",
-      cell: () => (
+      cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -191,7 +228,9 @@ export function SavingsTable() {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Receipt</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onOpenReceipt(row.original)}>
+              Receipt
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -479,6 +518,13 @@ export function SavingsTable() {
           method={() => setShowDialog(false)}
           // buttonName="Close"
           // modalSize="325px"
+        />
+      )}
+      {openReceipt && (
+        <InvoicePOS
+          data={receiptData}
+          onClose={onCloseReceipt}
+          isOpen={openReceipt}
         />
       )}
     </div>

@@ -56,7 +56,12 @@ export function RolesTable() {
       accessorKey: "name",
       header: "Name",
       cell: ({ row }) => (
-        <p className="capitalize hover:uppercase">{row.original.name}</p>
+        <Link
+          className="capitalize hover:uppercase"
+          to={`/system-roles/edit-role/${row.original.id}`}
+        >
+          {row.original.name}
+        </Link>
       ),
     },
 
@@ -84,7 +89,9 @@ export function RolesTable() {
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
-              <Link to={`/system-roles/edit-role/${row.original.id}`}>Edit</Link>
+              <Link to={`/system-roles/edit-role/${row.original.id}`}>
+                Edit
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => handleOpenDeleteDialog(row.original.id)}

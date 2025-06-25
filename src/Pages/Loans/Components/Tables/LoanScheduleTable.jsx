@@ -18,11 +18,16 @@ import LoanGeneralAdjustmentDialog from "../Forms/LoanGeneralAdjustmentDialog";
 import LoanRolloverDialog from "../Forms/LoanRolloverDialog";
 import LoanRescheduleDialog from "../Forms/LoanRescheduleDialog";
 import LoanSingleRepayment from "../Forms/LoanSingleRepayment";
-import { formatDateTimestamp, prepareDataForExport } from "@/lib/utils";
+import {
+  formatDateTimestamp,
+  hasPermission,
+  prepareDataForExport,
+} from "@/lib/utils";
 import { useRef } from "react";
 import fileDownload from "js-file-download";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { toast } from "@/hooks/use-toast";
+import useAuth from "@/MiddleWares/Hooks/useAuth";
 
 export function LoanScheduleTable({
   data,
@@ -31,7 +36,8 @@ export function LoanScheduleTable({
   isRefetching,
   isError,
   loanStatus,
-  loansData, totals
+  loansData,
+  totals,
 }) {
   const axiosPrivate = useAxiosPrivate();
   const processedData = data?.map((loan) => ({
@@ -48,6 +54,9 @@ export function LoanScheduleTable({
         parseFloat(loan.loan_schedule_interest_paid) +
         parseFloat(loan.loan_schedule_principal_paid)),
   }));
+  const {
+    auth: { roles },
+  } = useAuth();
   const tableRef = useRef(null);
   const columns = [
     {
@@ -189,19 +198,27 @@ export function LoanScheduleTable({
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => handleOpenPayModal(row.original)}>
-              Pay Schedule
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => handleOpenDialog("penalty", row.original)}
-            >
-              Adjust Penalty
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => handleOpenDialog("interest", row.original)}
-            >
-              Adjust Interest
-            </DropdownMenuItem>
+            {hasPermission(roles, 100083) && (
+              <DropdownMenuItem
+                onClick={() => handleOpenPayModal(row.original)}
+              >
+                Pay Schedule
+              </DropdownMenuItem>
+            )}
+            {hasPermission(roles, 100084) && (
+              <DropdownMenuItem
+                onClick={() => handleOpenDialog("penalty", row.original)}
+              >
+                Adjust Penalty
+              </DropdownMenuItem>
+            )}{" "}
+            {hasPermission(roles, 100085) && (
+              <DropdownMenuItem
+                onClick={() => handleOpenDialog("interest", row.original)}
+              >
+                Adjust Interest
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -267,7 +284,7 @@ export function LoanScheduleTable({
       const data = {
         data: exportData,
         loans: loansData,
-        title: "Loan Schedule",
+        title: "Loan Amortization Schedule",
         totals: totals,
         colspan: 2,
         mode: {
@@ -287,7 +304,7 @@ export function LoanScheduleTable({
       setIsDownloading(false);
     } catch (error) {
       console.log(error);
-      
+
       const errorMessage =
         error?.response?.data?.messages || "No server response";
       toast({
@@ -303,30 +320,46 @@ export function LoanScheduleTable({
       <div className="flex flex-wrap items-center gap-4 border p-6 rounded-lg shadow-sm">
         {loanStatus === "disbursed" && (
           <>
-            <Button size="sm" onClick={handleRepaymentOpenDialog}>
-              Pay Loan
-            </Button>
-            <Button size="sm" onClick={handleRescheduleOpenDialog}>
-              Reschedule
-            </Button>
-            <Button size="sm" onClick={handleRolloverOpenDialog}>
-              Rollover
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => handleGeneralOpenDialog("penalty")}
-            >
-              Adjust Penalty
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => handleGeneralOpenDialog("interest")}
-            >
-              Adjust Interest
-            </Button>
-            <Button size="sm" onClick={() => onDownload()} disabled={isDownloading}>
-              Download Schedule
-            </Button>
+            {hasPermission(roles, 100077) && (
+              <Button size="sm" onClick={handleRepaymentOpenDialog}>
+                Pay Loan
+              </Button>
+            )}
+            {hasPermission(roles, 100078) && (
+              <Button size="sm" onClick={handleRescheduleOpenDialog}>
+                Reschedule
+              </Button>
+            )}
+            {hasPermission(roles, 100079) && (
+              <Button size="sm" onClick={handleRolloverOpenDialog}>
+                Rollover
+              </Button>
+            )}
+            {hasPermission(roles, 100080) && (
+              <Button
+                size="sm"
+                onClick={() => handleGeneralOpenDialog("penalty")}
+              >
+                Adjust Penalty
+              </Button>
+            )}
+            {hasPermission(roles, 100081) && (
+              <Button
+                size="sm"
+                onClick={() => handleGeneralOpenDialog("interest")}
+              >
+                Adjust Interest
+              </Button>
+            )}
+            {hasPermission(roles, 100082) && (
+              <Button
+                size="sm"
+                onClick={() => onDownload()}
+                disabled={isDownloading}
+              >
+                Download Schedule
+              </Button>
+            )}
           </>
         )}
       </div>
@@ -339,40 +372,52 @@ export function LoanScheduleTable({
         isRefetching={isRefetching}
         isError={isError}
       />
-      <LoanSingleScheduleRepayment
-        isOpen={showPayModal}
-        onClose={handleClosePayModal}
-        refetch={refetch}
-        scheduleData={schedule}
-      />
-      <LoanSingleRepayment
-        isOpen={showRepaymentDialog}
-        onClose={handleRepaymentCloseDialog}
-        refetch={refetch}
-      />
-      <LoanAdjustmentDialog
-        refetch={refetch}
-        isOpen={showDialog}
-        onClose={handleCloseDialog}
-        actionType={action}
-        scheduleData={schedule}
-      />
-      <LoanGeneralAdjustmentDialog
-        refetch={refetch}
-        isOpen={showGeneralDialog}
-        onClose={handleGeneralCloseDialog}
-        actionType={action}
-      />
-      <LoanRolloverDialog
-        refetch={refetch}
-        isOpen={showRolloverDialog}
-        onClose={handleRolloverCloseDialog}
-      />
-      <LoanRescheduleDialog
-        refetch={refetch}
-        isOpen={showRescheduleDialog}
-        onClose={handleRescheduleCloseDialog}
-      />
+      {hasPermission(roles, 100083) && showPayModal && (
+        <LoanSingleScheduleRepayment
+          isOpen={showPayModal}
+          onClose={handleClosePayModal}
+          refetch={refetch}
+          scheduleData={schedule}
+        />
+      )}
+      {hasPermission(roles, 100077) && showRepaymentDialog && (
+        <LoanSingleRepayment
+          isOpen={showRepaymentDialog}
+          onClose={handleRepaymentCloseDialog}
+          refetch={refetch}
+        />
+      )}
+      {hasPermission(roles, [100084, 100085]) && showDialog && (
+        <LoanAdjustmentDialog
+          refetch={refetch}
+          isOpen={showDialog}
+          onClose={handleCloseDialog}
+          actionType={action}
+          scheduleData={schedule}
+        />
+      )}
+      {hasPermission(roles, [100080, 100081]) && showGeneralDialog && (
+        <LoanGeneralAdjustmentDialog
+          refetch={refetch}
+          isOpen={showGeneralDialog}
+          onClose={handleGeneralCloseDialog}
+          actionType={action}
+        />
+      )}
+      {hasPermission(roles, 100079) && showRolloverDialog && (
+        <LoanRolloverDialog
+          refetch={refetch}
+          isOpen={showRolloverDialog}
+          onClose={handleRolloverCloseDialog}
+        />
+      )}
+      {hasPermission(roles, 100078) && showRescheduleDialog && (
+        <LoanRescheduleDialog
+          refetch={refetch}
+          isOpen={showRescheduleDialog}
+          onClose={handleRescheduleCloseDialog}
+        />
+      )}
     </>
   );
 }
