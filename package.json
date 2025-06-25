@@ -1,5 +1,5 @@
 {
-  "name": "furaha_link_ventures",
+  "name": "furaha-banking",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -65,6 +65,7 @@
     "lucide-react": "^0.453.0",
     "material-react-table": "^3.0.1",
     "next-themes": "^0.4.4",
+    "number-to-words": "^1.2.4",
     "prop-types": "^15.8.1",
     "react": "^18.3.1",
     "react-chartjs-2": "^5.2.0",
