@@ -11,7 +11,7 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // ✅ Increase to 5MB (default is 2MB)
       },
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "logo.png", "logo.png"],
+      includeAssets: ["favicon.ico", "logo912.png", "logo912.png"],
       manifest: {
         name: "Furaha Banking Management Information System",
         short_name: "Furaha Banking",
