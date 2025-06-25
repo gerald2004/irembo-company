@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "generate-pwa-assets": "pwa-assets-generator --preset minimal public/logo.png"
+    "generate-pwa-assets": "pwa-assets-generator --preset minimal public/logo912.png"
   },
   "dependencies": {
     "@emotion/react": "^11.13.3",
