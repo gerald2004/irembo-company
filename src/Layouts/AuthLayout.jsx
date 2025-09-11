@@ -90,12 +90,12 @@ const AuthLayout = () => {
                         )}
                       </MenubarContent>
                     </MenubarMenu>
-                    <Separator orientation="vertical" />
                   </>
                 )}
 
                 {hasPermission(roles, 100099) && (
                   <>
+                    <Separator orientation="vertical" />
                     <MenubarMenu>
                       <MenubarTrigger>Savings</MenubarTrigger>
                       <MenubarContent>
@@ -106,11 +106,11 @@ const AuthLayout = () => {
                         )}
                       </MenubarContent>
                     </MenubarMenu>
-                    <Separator orientation="vertical" />
                   </>
                 )}
                 {hasPermission(roles, 100100) && (
                   <>
+                    <Separator orientation="vertical" />
                     <MenubarMenu>
                       <MenubarTrigger>Withdraws</MenubarTrigger>
                       <MenubarContent>
@@ -121,11 +121,11 @@ const AuthLayout = () => {
                         )}
                       </MenubarContent>
                     </MenubarMenu>
-                    <Separator orientation="vertical" />
                   </>
                 )}
                 {hasPermission(roles, [100151, 100067]) && (
                   <>
+                    <Separator orientation="vertical" />
                     <MenubarMenu>
                       <MenubarTrigger>Loans</MenubarTrigger>
                       <MenubarContent>
@@ -141,24 +141,26 @@ const AuthLayout = () => {
                         )}
                       </MenubarContent>
                     </MenubarMenu>
-                    <Separator orientation="vertical" />
                   </>
                 )}
                 {hasPermission(roles, 100125) && (
-                  <MenubarMenu>
-                    <MenubarTrigger>Bulk Studio</MenubarTrigger>
-                    <MenubarContent>
-                      <MenubarItem>Bulk Client Registration</MenubarItem>
-                      <MenubarItem>Bulk Group Registration</MenubarItem>
-                      <MenubarItem>Bulk Savings</MenubarItem>
-                      <MenubarItem>Bulk Withdraws</MenubarItem>
-                      <MenubarItem>Bulk Transfers</MenubarItem>
-                      <MenubarItem>Bulk Loan Applications</MenubarItem>
-                      <MenubarItem>Bulk Shares</MenubarItem>
-                      <MenubarItem>Bulk SMS Alerts</MenubarItem>
-                      <MenubarItem>Bulk Email Alerts</MenubarItem>
-                    </MenubarContent>
-                  </MenubarMenu>
+                  <>
+                    <Separator orientation="vertical" />
+                    <MenubarMenu>
+                      <MenubarTrigger>Bulk Studio</MenubarTrigger>
+                      <MenubarContent>
+                        <MenubarItem>Bulk Client Registration</MenubarItem>
+                        <MenubarItem>Bulk Group Registration</MenubarItem>
+                        <MenubarItem>Bulk Savings</MenubarItem>
+                        <MenubarItem>Bulk Withdraws</MenubarItem>
+                        <MenubarItem>Bulk Transfers</MenubarItem>
+                        <MenubarItem>Bulk Loan Applications</MenubarItem>
+                        <MenubarItem>Bulk Shares</MenubarItem>
+                        <MenubarItem>Bulk SMS Alerts</MenubarItem>
+                        <MenubarItem>Bulk Email Alerts</MenubarItem>
+                      </MenubarContent>
+                    </MenubarMenu>
+                  </>
                 )}
               </Menubar>
               <div className="hidden md:flex items-center space-x-4">

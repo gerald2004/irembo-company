@@ -1,8 +1,10 @@
 {
+  "version": 2,
   "rewrites": [
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+      "source": "/v2/:path*",
+      "destination": "https://api.furahabanking.com/v2/:path*"
+    },
+    { "source": "/:path*", "destination": "/index.html" }
   ]
 }

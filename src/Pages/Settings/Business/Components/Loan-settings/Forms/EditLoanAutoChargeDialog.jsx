@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { useFieldArray, useForm, Controller } from "react-hook-form";
 import {
   Dialog,
   DialogContent,
@@ -25,7 +25,9 @@ import { toast } from "@/hooks/use-toast";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { AccountCombobox } from "@/Pages/Components/AccountCombobox";
 
-const EditLoanFeeDialog = ({
+const EMPTY_RANGES = [{ min: "", max: "", charge: "" }];
+
+export default function EditLoanFeeDialog({
   isOpen,
   onClose,
   refetch,
@@ -35,81 +37,130 @@ const EditLoanFeeDialog = ({
   isErrorAccounts,
   refetchAccounts,
   isRefetchingAccounts,
-}) => {
+}) {
   const axiosPrivate = useAxiosPrivate();
+
   const {
     register,
     handleSubmit,
+    control,
     setValue,
     reset,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm();
+  } = useForm({
+    defaultValues: {
+      title: "",
+      type: "", // "value" | "percentage" | "range"
+      value: "",
+      nature: "", // "normal" | "saving"
+      priority: "", // "mandatory" | "adjustment"
+      trigger: "", // etc...
+      ranges: [],
+    },
+  });
+
+  const { fields, append, remove, replace } = useFieldArray({
+    control,
+    name: "ranges",
+  });
+
   const [selectedAccounts, setSelectedAccounts] = useState({
-    account: null,
+    account_id: null,
     receivable_account: null,
   });
-  useEffect(() => {
-    if (defaultValues) {
-      for (const [key, value] of Object.entries(defaultValues)) {
-        setValue(key, value);
-      }
-      setSelectedAccounts({
-        account_id: defaultValues.account?.account_id || null,
-        receivable_account:
-          defaultValues.receivable_account?.account_id || null,
-      });
-    }
-  }, [defaultValues, setValue]);
-  const onSubmit = async (data) => {
-          const controller = new AbortController();
 
+  // Load defaults when dialog opens / defaults change
+  useEffect(() => {
+    if (!defaultValues) return;
+
+    reset({
+      title: defaultValues.title ?? "",
+      type: defaultValues.type ?? "",
+      value: defaultValues.type === "range" ? "" : defaultValues.value ?? "",
+      nature: defaultValues.nature ?? "",
+      priority: defaultValues.priority ?? "",
+      trigger: defaultValues.trigger ?? "",
+      ranges: defaultValues.type === "range" ? defaultValues.value ?? [] : [],
+    });
+
+    setSelectedAccounts({
+      account_id: defaultValues.account?.account_id ?? null,
+      receivable_account: defaultValues.receivable_account?.account_id ?? null,
+    });
+  }, [defaultValues, reset]);
+
+  // Keep value/ranges in sync when type switches
+  const chargeType = watch("type");
+  useEffect(() => {
+    if (chargeType === "range") {
+      setValue("value", "");
+      if (!fields.length) replace(EMPTY_RANGES);
+    } else {
+      replace([]); // clear ranges when not 'range'
+    }
+  }, [chargeType, fields.length, replace, setValue]);
+
+  // Submit
+  const onSubmit = async (data) => {
     const payload = {
       ...data,
       account_id: selectedAccounts.account_id,
       receivable_account: selectedAccounts.receivable_account,
+      // ensure numbers where needed
+      value: data.value === "" ? null : Number(data.value),
+      ranges: (data.ranges || []).map((r) => ({
+        min: r.min === "" ? null : Number(r.min),
+        max: r.max === "" ? null : Number(r.max),
+        charge: r.charge === "" ? null : Number(r.charge),
+      })),
     };
+
     try {
-      const response = await axiosPrivate.patch(
+      const res = await axiosPrivate.patch(
         `/settings/loans/autocharges/${defaultValues?.id}`,
-        payload,
-        { signal: controller.signal }
+        payload
       );
+
       toast({
         title: "Success",
-        description:
-          response?.data?.messages || "Loan fee updated successfully",
+        description: res?.data?.messages || "Loan fee updated successfully",
       });
-      reset();
-      refetch();
-      onClose();
+
+      refetch?.();
+      onClose?.();
     } catch (error) {
-      const errorMessage =
-        error?.response?.data?.messages || "No server response";
+      const msg = error?.response?.data?.messages || "No server response";
       toast({
         title: "Uh oh! Something went wrong.",
         variant: "destructive",
-        description: errorMessage,
+        description: msg,
       });
     }
   };
-    const penaltyType = watch("type");
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px]">
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose?.();
+      }}
+    >
+      <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Loan Fee</DialogTitle>
           <DialogDescription>
             Modify the fields below to update your Loan Fee.
           </DialogDescription>
+
           <DialogClose asChild>
             <button
               className="absolute right-4 top-4 rounded-sm opacity-70 
-                ring-offset-background transition-opacity hover:opacity-100 
-                focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 
-                disabled:pointer-events-none"
+              ring-offset-background transition-opacity hover:opacity-100 
+              focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 
+              disabled:pointer-events-none"
               onClick={onClose}
+              type="button"
             >
               <X className="h-4 w-4" />
             </button>
@@ -131,95 +182,97 @@ const EditLoanFeeDialog = ({
               )}
             </div>
 
-            {/* Type (value/percentage) */}
+            {/* Charge Type */}
             <div>
-              <Label htmlFor="type">Charge Type</Label>
-              <Select
-                defaultValue={defaultValues?.type}
-                onValueChange={(val) =>
-                  setValue("type", val, { shouldValidate: true })
-                }
-              >
-                <SelectTrigger
-                  {...register("type", { required: "Charge Type is required" })}
-                >
-                  <SelectValue placeholder="Select Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="value">Value</SelectItem>
-                  <SelectItem value="percentage">Percentage</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Charge Type</Label>
+              <Controller
+                name="type"
+                control={control}
+                rules={{ required: "Charge Type is required" }}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="value">Value</SelectItem>
+                      <SelectItem value="percentage">Percentage</SelectItem>
+                      <SelectItem value="range">Range</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
               {errors.type && (
                 <p className="text-red-500 text-sm">{errors.type.message}</p>
               )}
             </div>
 
-            {/* Value */}
-            <div>
-              <Label htmlFor="value">
-                {penaltyType === "percentage"
-                  ? "Percentage (%)"
-                  : "Charge Amount"}
-              </Label>
-              <Input
-                id="value"
-                type="number"
-                step="0.01"
-                placeholder={
-                  penaltyType === "percentage"
-                    ? "Enter Percentage (%)"
-                    : "Enter Charge"
-                }
-                {...register("value", {
-                  required: `${
-                    penaltyType === "percentage"
-                      ? "Percentage is required"
-                      : "Charge is required"
-                  }`,
-                })}
-              />
-              {errors.value && (
-                <p className="text-red-500 text-sm">{errors.value.message}</p>
-              )}
-            </div>
+            {/* Value (hidden when range) */}
+            {chargeType !== "range" && (
+              <div>
+                <Label htmlFor="value">
+                  {chargeType === "percentage"
+                    ? "Percentage (%)"
+                    : "Charge Amount"}
+                </Label>
+                <Input
+                  id="value"
+                  type="number"
+                  step="0.01"
+                  placeholder={
+                    chargeType === "percentage"
+                      ? "Enter Percentage (%)"
+                      : "Enter Charge"
+                  }
+                  {...register("value", {
+                    required:
+                      chargeType === "range"
+                        ? false
+                        : chargeType === "percentage"
+                        ? "Percentage is required"
+                        : "Charge is required",
+                  })}
+                />
+                {errors.value && (
+                  <p className="text-red-500 text-sm">{errors.value.message}</p>
+                )}
+              </div>
+            )}
 
-            {/* Nature (normal/saving) */}
+            {/* Nature */}
             <div>
-              <Label htmlFor="nature">Nature</Label>
-              <Select
-                defaultValue={defaultValues?.nature}
-                onValueChange={(val) =>
-                  setValue("nature", val, { shouldValidate: true })
-                }
-              >
-                <SelectTrigger
-                  {...register("nature", { required: "Nature is required" })}
-                >
-                  <SelectValue placeholder="Select Nature" />
-                </SelectTrigger>
-                <SelectContent>
-                  {/* You had 'normal' in the example. If your DB is 'special/saving', adapt as needed */}
-                  <SelectItem value="normal">Normal Charge</SelectItem>
-                  <SelectItem value="saving">Saving Charge</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Nature</Label>
+              <Controller
+                name="nature"
+                control={control}
+                rules={{ required: "Nature is required" }}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Nature" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="normal">Normal Charge</SelectItem>
+                      <SelectItem value="saving">Saving Charge</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
               {errors.nature && (
                 <p className="text-red-500 text-sm">{errors.nature.message}</p>
               )}
             </div>
 
-            {/* Account Combobox */}
+            {/* Income Account */}
             <AccountCombobox
               label="Income Account"
               selectedAccount={selectedAccounts.account_id}
               onAccountSelect={(value) =>
                 setSelectedAccounts((prev) => ({
                   ...prev,
-                  account_id: parseInt(value, 10),
+                  account_id: value ? parseInt(value, 10) : null,
                 }))
               }
-              // pass in your loaded data
               accountsData={accountsData}
               isLoading={isLoadingAccounts}
               isError={isErrorAccounts}
@@ -227,17 +280,16 @@ const EditLoanFeeDialog = ({
               isRefetching={isRefetchingAccounts}
             />
 
-            {/* Receivable Account Combobox */}
+            {/* Receivable Account */}
             <AccountCombobox
               label="Income Receivable Account"
               selectedAccount={selectedAccounts.receivable_account}
               onAccountSelect={(value) =>
                 setSelectedAccounts((prev) => ({
                   ...prev,
-                  receivable_account: parseInt(value, 10),
+                  receivable_account: value ? parseInt(value, 10) : null,
                 }))
               }
-              // pass in your loaded data
               accountsData={accountsData}
               isLoading={isLoadingAccounts}
               isError={isErrorAccounts}
@@ -245,27 +297,25 @@ const EditLoanFeeDialog = ({
               isRefetching={isRefetchingAccounts}
             />
 
-            {/* Priority (mandatory/adjustment) */}
+            {/* Priority */}
             <div>
-              <Label htmlFor="priority">Priority</Label>
-              <Select
-                defaultValue={defaultValues?.priority}
-                onValueChange={(val) =>
-                  setValue("priority", val, { shouldValidate: true })
-                }
-              >
-                <SelectTrigger
-                  {...register("priority", {
-                    required: "Priority is required",
-                  })}
-                >
-                  <SelectValue placeholder="Select Priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="mandatory">Mandatory</SelectItem>
-                  <SelectItem value="adjustment">Adjustment</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Priority</Label>
+              <Controller
+                name="priority"
+                control={control}
+                rules={{ required: "Priority is required" }}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Priority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mandatory">Mandatory</SelectItem>
+                      <SelectItem value="adjustment">Adjustment</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
               {errors.priority && (
                 <p className="text-red-500 text-sm">
                   {errors.priority.message}
@@ -273,41 +323,93 @@ const EditLoanFeeDialog = ({
               )}
             </div>
 
-            {/* Trigger (manual, on_application, etc.) */}
+            {/* Trigger */}
             <div>
-              <Label htmlFor="trigger">Trigger</Label>
-              <Select
-                defaultValue={defaultValues?.trigger}
-                onValueChange={(val) =>
-                  setValue("trigger", val, { shouldValidate: true })
-                }
-              >
-                <SelectTrigger
-                  {...register("trigger", { required: "Trigger is required" })}
-                >
-                  <SelectValue placeholder="Select Trigger" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="manual">Manual</SelectItem>
-                  <SelectItem value="on_application">On Application</SelectItem>
-                  <SelectItem value="on_disbursement">
-                    On Disbursement
-                  </SelectItem>
-                  <SelectItem value="on_payoff">On Payoff</SelectItem>
-                  <SelectItem value="on_reschedule">On Reschedule</SelectItem>
-                  <SelectItem value="on_loan_top_up">On Loan Top-Up</SelectItem>
-                  <SelectItem value="on_loan_reversal">
-                    On Loan Reversal
-                  </SelectItem>
-                  <SelectItem value="on_rollover">On Rollover</SelectItem>
-                  <SelectItem value="on_payment">On Payment</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Trigger</Label>
+              <Controller
+                name="trigger"
+                control={control}
+                rules={{ required: "Trigger is required" }}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Trigger" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="manual">Manual</SelectItem>
+                      <SelectItem value="on_application">
+                        On Application
+                      </SelectItem>
+                      <SelectItem value="on_disbursement">
+                        On Disbursement
+                      </SelectItem>
+                      <SelectItem value="on_payoff">On Payoff</SelectItem>
+                      <SelectItem value="on_reschedule">
+                        On Reschedule
+                      </SelectItem>
+                      <SelectItem value="on_loan_top_up">
+                        On Loan Top-Up
+                      </SelectItem>
+                      <SelectItem value="on_loan_reversal">
+                        On Loan Reversal
+                      </SelectItem>
+                      <SelectItem value="on_rollover">On Rollover</SelectItem>
+                      <SelectItem value="on_payment">On Payment</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
               {errors.trigger && (
                 <p className="text-red-500 text-sm">{errors.trigger.message}</p>
               )}
             </div>
           </div>
+
+          {/* Ranges */}
+          {chargeType === "range" &&
+            fields.map((field, index) => (
+              <div
+                key={field.id}
+                className="grid grid-cols-4 gap-2 items-center"
+              >
+                <Input
+                  placeholder="Min"
+                  type="number"
+                  step="0.01"
+                  {...register(`ranges.${index}.min`)}
+                />
+                <Input
+                  placeholder="Max"
+                  type="number"
+                  step="0.01"
+                  {...register(`ranges.${index}.max`)}
+                />
+                <Input
+                  placeholder="Charge"
+                  type="number"
+                  step="0.01"
+                  {...register(`ranges.${index}.charge`)}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => remove(index)}
+                  variant="destructive"
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+
+          {chargeType === "range" && (
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => append({ min: "", max: "", charge: "" })}
+            >
+              Add Range
+            </Button>
+          )}
 
           <DialogFooter>
             <Button type="submit" disabled={isSubmitting}>
@@ -318,6 +420,4 @@ const EditLoanFeeDialog = ({
       </DialogContent>
     </Dialog>
   );
-};
-
-export default EditLoanFeeDialog;
+}

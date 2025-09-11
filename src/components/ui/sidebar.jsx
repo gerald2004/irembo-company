@@ -156,7 +156,7 @@ const Sidebar = React.forwardRef((
 
   if (isMobile) {
     return (
-      (<Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
+      (<Sheet open={openMobile} onOpenChange={setOpenMobile} defaultCloseOnInteractOutside={false} {...props}>
         <SheetContent
           data-sidebar="sidebar"
           data-mobile="true"
@@ -238,10 +238,11 @@ const SidebarTrigger = React.forwardRef(({ className, onClick, ...props }, ref) 
 SidebarTrigger.displayName = "SidebarTrigger"
 
 const SidebarRail = React.forwardRef(({ className, ...props }, ref) => {
-  const { toggleSidebar } = useSidebar()
+  const { toggleSidebar , state } = useSidebar()
+   if (state === "expanded") return null;
 
   return (
-    (<button
+    <button
       ref={ref}
       data-sidebar="rail"
       aria-label="Toggle Sidebar"
@@ -255,9 +256,11 @@ const SidebarRail = React.forwardRef(({ className, ...props }, ref) => {
         "group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:left-full group-data-[collapsible=offcanvas]:hover:bg-sidebar",
         "[[data-side=left][data-collapsible=offcanvas]_&]:-right-2",
         "[[data-side=right][data-collapsible=offcanvas]_&]:-left-2",
+        "group-data-[state=expanded]:pointer-events-none",
         className
       )}
-      {...props} />)
+      {...props}
+    />
   );
 })
 SidebarRail.displayName = "SidebarRail"

@@ -45,7 +45,7 @@ export function AccountCombobox({
             className="w-full justify-between"
           >
             {selectedAccount
-              ? accounts?.find((acc) => acc.value == selectedAccount)?.label
+              ? accounts?.find((acc) => acc.value === selectedAccount)?.label
               : "Select account..."}
             <ChevronsUpDown className="opacity-50" />
           </Button>
@@ -69,17 +69,17 @@ export function AccountCombobox({
                   {accounts?.map((account) => (
                     <CommandItem
                       key={account.value}
-                      value={account.label}
+                      value={account.label} // Pass the account ID
                       onSelect={() => {
-                        onAccountSelect(account.value);
-                        setOpen(false);
+                        onAccountSelect(account.value); // Update selected account
+                        setOpen(false); // Close the dropdown
                       }}
                     >
                       {account.label}
                       <Check
                         className={cn(
                           "ml-auto",
-                          selectedAccount == account.value
+                          selectedAccount === account.value
                             ? "opacity-100"
                             : "opacity-0"
                         )}

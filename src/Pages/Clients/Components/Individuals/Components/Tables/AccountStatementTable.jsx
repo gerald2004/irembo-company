@@ -23,6 +23,7 @@ import ClientStatementQuery from "../Queries/ClientStatementQuery";
 import { toast } from "@/hooks/use-toast";
 import fileDownload from "js-file-download";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
+import ReverseStatementTransaction from "../Forms/ReverseStatementTransaction";
 
 const AccountStatementTable = () => {
   const { client_id: clientAccountId } = useParams(); // ✅ Get client_account_id from URL
@@ -71,6 +72,18 @@ const AccountStatementTable = () => {
   const handleFilterChange = (data) => {
     setFilters(data);
     refetch();
+  };
+  const [transactionId, setTransactionId] = useState([]);
+  const [openModal, setOpenModal] = useState(false);
+
+  const handleReverseTransactionOpen = (data) => {
+    setOpenModal(true);
+    setTransactionId(data);
+  };
+
+  const handleReverseTransactionClose = () => {
+    setOpenModal(false);
+    setTransactionId([]);
   };
 
   const columns = [
@@ -147,7 +160,7 @@ const AccountStatementTable = () => {
     {
       id: "actions",
       header: "Actions",
-      cell: () => (
+      cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -158,7 +171,13 @@ const AccountStatementTable = () => {
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {hasPermission(roles, 100041) && (
-              <DropdownMenuItem>Reverse Transaction</DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() =>
+                  handleReverseTransactionOpen(row.original.statement_id)
+                }
+              >
+                Reverse Transaction
+              </DropdownMenuItem>
             )}
           </DropdownMenuContent>
         </DropdownMenu>
@@ -286,6 +305,14 @@ const AccountStatementTable = () => {
         isError={isError}
         colSpan={5}
       />
+      {openModal && (
+        <ReverseStatementTransaction
+          transactionId={transactionId}
+          isOpen={openModal}
+          refetch={refetch}
+          onClose={handleReverseTransactionClose}
+        />
+      )}
     </div>
   );
 };

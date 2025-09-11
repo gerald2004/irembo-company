@@ -20,6 +20,7 @@ import {
 } from "@/lib/utils";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { useTills } from "@/Queries/Settings/tills";
+
 const TillReportQuery = ({
   onFilterChange,
   isRefetching,
@@ -42,7 +43,6 @@ const TillReportQuery = ({
     to: new Date(),
   });
 
-  // ✅ Update date range
   const handleDateChange = (range) => {
     if (range?.from && range?.to) {
       setDateRange({
@@ -52,12 +52,19 @@ const TillReportQuery = ({
     }
   };
 
-  // ✅ Submit Handler
   const onSubmit = () => {
+    const selectedTillInfo = tills.find(
+      (till) => String(till.till_id) === selectedTill
+    );
+    const tillName = selectedTillInfo
+      ? `${selectedTillInfo.staff.user_firstname} ${selectedTillInfo.staff.user_lastname}`
+      : "";
+
     onFilterChange({
       startDate: dateRange.from.toLocaleDateString("en-CA"),
       endDate: dateRange.to.toLocaleDateString("en-CA"),
       till_id: selectedTill,
+      till_name: tillName,
     });
     reset();
   };
@@ -89,15 +96,15 @@ const TillReportQuery = ({
           getValidDate(filters.endDate, new Date())
         ),
       },
-      title: title,
+      title: filters.till_name ? `Till Sheet - ${filters.till_name}` : title,
     };
-    // console.log(dataDownload);
+
     try {
       setIsDownloading(true);
       let response;
       if (type === "pdf") {
         response = await axiosPrivate.post(
-          `/export/general/pdf`, // <-- Your endpoint
+          `/export/general/pdf`,
           { data: dataDownload },
           {
             responseType: "blob",
@@ -108,7 +115,7 @@ const TillReportQuery = ({
 
       if (type === "xlsx") {
         response = await axiosPrivate.post(
-          `/export/general/excel`, // <-- Your endpoint
+          `/export/general/excel`,
           { data: dataDownload },
           {
             responseType: "blob",
@@ -138,28 +145,29 @@ const TillReportQuery = ({
       setIsDownloading(false);
     }
   };
+
   const filteredTills = useMemo(() => {
     if (auth?.user?.data_privilege === "branch") {
       return tills.filter(
         (till) => till.staff?.branch_id === auth.user?.branch_id
       );
     }
-    return tills; // for SACCO level, return all tills
+    return tills;
   }, [tills, auth]);
+
   return (
     <div className="flex items-center justify-center space-x-2">
       <form
         onSubmit={handleSubmit(onSubmit)}
         className="flex items-center space-x-2"
       >
-        {/* Date Picker */}
         <div className="w-max-[300px]">
           <CalendarDateRangePicker
             defaultValue={dateRange}
             onChange={handleDateChange}
           />
         </div>
-        {/* Branch Selector */}
+
         {["branch", "sacco"].includes(auth?.user?.data_privilege) && (
           <Controller
             name="till_id"
@@ -188,7 +196,6 @@ const TillReportQuery = ({
           />
         )}
 
-        {/* Submit Button */}
         <Button size="sm" type="submit" disabled={isRefetching}>
           {isRefetching ? "Updating..." : "Update"}
         </Button>

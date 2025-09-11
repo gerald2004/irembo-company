@@ -80,7 +80,7 @@ export function LoanFees() {
   };
 
   const handleDeleteLoanProduct = async () => {
-          const controller = new AbortController();
+    const controller = new AbortController();
 
     try {
       const response = await axiosPrivate.delete(
@@ -138,13 +138,13 @@ export function LoanFees() {
       header: "Deduction Type",
       cell: ({ row }) => <p className="capitalize">{row.original.type}</p>,
     },
-    {
-      accessorKey: "value",
-      header: "Deduction Value",
-      cell: ({ row }) => (
-        <p className="capitalize">{row.original.value.toLocaleString()}</p>
-      ),
-    },
+    // {
+    //   accessorKey: "value",
+    //   header: "Deduction Value",
+    //   cell: ({ row }) => (
+    //     <p className="capitalize">{row.original.value.toLocaleString()}</p>
+    //   ),
+    // },
     {
       id: "actions",
       header: "Actions",
@@ -183,7 +183,7 @@ export function LoanFees() {
   } = useQuery({
     queryKey: ["account-votes"],
     queryFn: async () => {
-            const controller = new AbortController();
+      const controller = new AbortController();
 
       const response = await axiosPrivate.get("/settings/accounts/account", {
         signal: controller.signal,

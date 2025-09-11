@@ -303,21 +303,25 @@ export function AppSidebar({ ...props }) {
           name: "Mobile Banking Float Managament",
           icon: TabletSmartphone,
           url: "mobile-banking-float-management",
+          permissionCodes: [100135],
         },
         {
           name: "SMS Float Managament",
           icon: Mails,
           url: "sms-float-management",
+          permissionCodes: [100135],
         },
         {
           name: "Utilities Float Management",
           icon: UtilityPole,
           url: "utilities-float-management",
+          permissionCodes: [100135],
         },
         {
           name: "CRB Float Management",
           icon: CreditCard,
           url: "crb-float-management",
+          permissionCodes: [100135],
         },
       ],
     },
@@ -347,41 +351,51 @@ export function AppSidebar({ ...props }) {
           title: "Bulk Studio",
           url: "#",
           icon: Target,
+          permissionCodes: [100125],
           items: [
             {
               title: "Bulk Client Registration",
+              permissionCodes: [100125],
               url: "bulk-client-registration",
             },
             {
               title: "Bulk Group Registration",
+              permissionCodes: [100125],
               url: "bulk-group-registration",
             },
             {
               title: "Bulk Savings",
+              permissionCodes: [100125],
               url: "bulk-savings",
             },
             {
               title: "Bulk Withdraws",
+              permissionCodes: [100125],
               url: "bulk-withdraws",
             },
             {
               title: "Bulk Transfers",
+              permissionCodes: [100125],
               url: "bulk-transfers",
             },
             {
               title: "Bulk Loan Applications",
+              permissionCodes: [100125],
               url: "bulk-loan-applications",
             },
             {
               title: "Bulk Shares",
+              permissionCodes: [100125],
               url: "bulk-shares",
             },
             {
               title: "Bulk SMS Alerts",
+              permissionCodes: [100125],
               url: "bulk-sms-alerts",
             },
             {
               title: "Bulk Email Alerts",
+              permissionCodes: [100125],
               url: "bulk-email-alerts",
             },
           ],
@@ -488,9 +502,6 @@ export function AppSidebar({ ...props }) {
     // 🔥 Pass userPermissions to the filtering function
     const filteredItems = sideBarfilterItems(section.items, userPermissions);
 
-    // ✅ Only include the section if:
-    // - It has visible children, or
-    // - The section itself has direct permission
     if (
       (filteredItems && filteredItems.length > 0) ||
       hasPermission(userPermissions, sectionPerm)

@@ -170,7 +170,8 @@ export default function InvoicePOS({ data, onClose, isOpen }) {
               <p>
                 Powered by{" "}
                 <span className="font-medium">
-                  {import.meta.env.VITE_APP_NAME}
+                  {import.meta.env.VITE_APP_POWERED_BY}{" "}
+                  {import.meta.env.VITE_APP_COMPANY}
                 </span>
               </p>
             </div>

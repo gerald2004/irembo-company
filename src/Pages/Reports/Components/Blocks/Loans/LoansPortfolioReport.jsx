@@ -9,9 +9,10 @@ import {
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
-import DatatableReport from "@/Pages/Components/DatatableReport";
+// import DatatableReport from "@/Pages/Components/DatatableReport";
 import LoanGeneralReportQuery from "../Queries/LoanGeneralReportQuery";
 import { useState, useRef } from "react";
+import DatatableReportTwo from "@/Pages/Components/DatatableReportTwo";
 
 const LoansPortfolioReport = () => {
   const axiosPrivate = useAxiosPrivate();
@@ -63,6 +64,11 @@ const LoansPortfolioReport = () => {
   );
   const totalAmountDue = data?.reduce(
     (sum, loan) => sum + loan.overdue_principal,
+    0
+  );
+
+  const totalOutstandingBalance = data?.reduce(
+    (sum, loan) => sum + loan.outstanding_principal,
     0
   );
 
@@ -128,6 +134,15 @@ const LoansPortfolioReport = () => {
       ),
     },
     {
+      accessorKey: "outstanding_principal",
+      header: "Outstanding Principal",
+      cell: ({ row }) => (
+        <p className="capitalize text-xs">
+          {parseFloat(row.original.outstanding_principal).toLocaleString()}
+        </p>
+      ),
+    },
+    {
       accessorKey: "overdue_principal",
       header: "Overdue Principal",
       cell: ({ row }) => (
@@ -186,13 +201,14 @@ const LoansPortfolioReport = () => {
               orientation: "L",
             }}
             totals={{
-              totalAmountDisbursed: totalAmountDisbursed,
-              totalAmountDue: totalAmountDue,
+              totalDebit: totalAmountDisbursed,
+              totalOutstandingBalance: totalOutstandingBalance,
+              totalCredit: totalAmountDue,
             }}
             title={"Loans Portofolio Report"}
           />
           <div className="max-w-[1200px]">
-            <DatatableReport
+            <DatatableReportTwo
               ref={tableRef}
               columns={columns}
               data={data ?? []}
@@ -200,9 +216,12 @@ const LoansPortfolioReport = () => {
               isLoading={isLoading}
               isRefetching={isRefetching}
               isError={isError}
-              colSpan={3}
-              totalDebit={totalAmountDisbursed}
-              totalCredit={totalAmountDue}
+              colSpan={1}
+              summaryFields={{
+                totalDebit: totalAmountDisbursed,
+                totalOutstandingBalance: totalOutstandingBalance,
+                totalCredit: totalAmountDue,
+              }}
             />
           </div>
         </div>

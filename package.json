@@ -1,5 +1,5 @@
 {
-  "name": "furaha-banking",
+  "name": "furaha_link_ventures",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "generate-pwa-assets": "pwa-assets-generator --preset minimal public/logo912.png"
+    "generate-pwa-assets": "pwa-assets-generator --preset minimal public/icon.png"
   },
   "dependencies": {
     "@emotion/react": "^11.13.3",
@@ -65,6 +65,7 @@
     "lucide-react": "^0.453.0",
     "material-react-table": "^3.0.1",
     "next-themes": "^0.4.4",
+    "node-fetch": "^3.3.2",
     "number-to-words": "^1.2.4",
     "prop-types": "^15.8.1",
     "react": "^18.3.1",

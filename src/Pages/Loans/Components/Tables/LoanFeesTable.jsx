@@ -91,15 +91,15 @@ export function LoanFeesTable() {
         <p className="text-xs capitalize">{row?.original?.loan_charge_title}</p>
       ),
     },
-    {
-      accessorKey: "loan_charge_rate_type",
-      header: "Type",
-      cell: ({ row }) => (
-        <Badge className="text-xs capitalize">
-          {row?.original?.loan_charge_rate_type}
-        </Badge>
-      ),
-    },
+    // {
+    //   accessorKey: "loan_charge_rate_type",
+    //   header: "Type",
+    //   cell: ({ row }) => (
+    //     <Badge className="text-xs capitalize">
+    //       {row?.original?.loan_charge_rate_type}
+    //     </Badge>
+    //   ),
+    // },
     {
       accessorKey: "loan_charge_status",
       header: "Status",

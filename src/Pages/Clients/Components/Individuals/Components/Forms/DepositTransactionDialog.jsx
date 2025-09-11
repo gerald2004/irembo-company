@@ -1,6 +1,8 @@
 /* eslint-disable react/prop-types */
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
+import { useQuery } from "@tanstack/react-query";
+
 import {
   Dialog,
   DialogContent,
@@ -38,6 +40,7 @@ import {
   Info,
   LockKeyhole,
 } from "lucide-react";
+import { AccountCombobox } from "@/Pages/Components/AccountCombobox copy";
 
 const DepositTransactionDialog = ({
   isOpen,
@@ -48,12 +51,33 @@ const DepositTransactionDialog = ({
 }) => {
   const axiosPrivate = useAxiosPrivate();
   const { id: clientId } = useParams(); // ✅ Get client_id from params
+  const [selectedAccounts, setSelectedAccounts] = useState({
+    deposit_transaction_account_id: null,
+  });
+
+  const {
+    data: accountsData,
+    isLoading: isLoadingAccounts,
+    isError: isErrorAccounts,
+    refetch: refetchAccounts,
+    isRefetching: isRefetchingAccounts,
+  } = useQuery({
+    queryKey: ["account-votes"],
+    queryFn: async () => {
+      const controller = new AbortController();
+      const response = await axiosPrivate.get("/settings/accounts/account", {
+        signal: controller.signal,
+      });
+      return response.data.data.accounts;
+    },
+  });
 
   const {
     register,
     handleSubmit,
     control,
     trigger,
+    watch,
     reset,
     formState: { errors, isSubmitting },
   } = useForm();
@@ -77,6 +101,8 @@ const DepositTransactionDialog = ({
         ...data,
         client_id: clientId,
         client_account_id: accountId,
+        deposit_transaction_account_id:
+          selectedAccounts.deposit_transaction_account_id,
       };
       //   console.log(payload);
       const response = await axiosPrivate.post(
@@ -113,7 +139,7 @@ const DepositTransactionDialog = ({
       label: "PinCode",
     },
   ];
-
+const depositMethod = watch("deposit_transaction_method");
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent className="sm:max-w-[600px]">
@@ -212,6 +238,28 @@ const DepositTransactionDialog = ({
                   </p>
                 )}
               </div>
+
+              {depositMethod && depositMethod !== "cash" && (
+                <div>
+                  <AccountCombobox
+                    label="Asset Account Vote"
+                    selectedAccount={
+                      selectedAccounts.deposit_transaction_account_id
+                    }
+                    onAccountSelect={(value) =>
+                      setSelectedAccounts((prev) => ({
+                        ...prev,
+                        deposit_transaction_account_id: parseInt(value),
+                      }))
+                    }
+                    accountsData={accountsData}
+                    isLoading={isLoadingAccounts}
+                    isError={isErrorAccounts}
+                    refetch={refetchAccounts}
+                    isRefetching={isRefetchingAccounts}
+                  />
+                </div>
+              )}
               <div>
                 <Label htmlFor="deposit_transaction_notary">Notary</Label>
                 <Input

@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import { useForm } from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +42,7 @@ const AddLoanAutoChargeDialog = ({
     handleSubmit,
     setValue,
     reset,
+    control,
     watch,
     formState: { errors, isSubmitting },
   } = useForm();
@@ -51,14 +52,22 @@ const AddLoanAutoChargeDialog = ({
     receivable_account: null,
   });
 
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "ranges",
+  });
+
   const onSubmit = async (data) => {
-          const controller = new AbortController();
+    const controller = new AbortController();
 
     const payload = {
       product: params.id,
       ...data,
       ...selectedAccounts,
+      // ...(data.calculated_as === "range" ? { amount_ranges: data.ranges } : {}),
     };
+    console.log(payload);
+
     try {
       // Adjust endpoint to your actual URL
       const response = await axiosPrivate.post(
@@ -86,11 +95,10 @@ const AddLoanAutoChargeDialog = ({
   };
 
   const penaltyType = watch("type");
-  
-
+  const calculatedAs = watch("type");
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add Loan Auto Charge</DialogTitle>
           <DialogDescription>
@@ -134,42 +142,43 @@ const AddLoanAutoChargeDialog = ({
                 <SelectContent>
                   <SelectItem value="value">Value</SelectItem>
                   <SelectItem value="percentage">Percentage</SelectItem>
+                  <SelectItem value="range">Range</SelectItem>
                 </SelectContent>
               </Select>
               {errors.type && (
                 <p className="text-red-500 text-sm">{errors.type.message}</p>
               )}
             </div>
-
-            <div>
-              <Label htmlFor="value">
-                {" "}
-                {penaltyType === "percentage"
-                  ? "Percentage (%)"
-                  : "Charge Amount"}
-              </Label>
-              <Input
-                id="value"
-                type="number"
-                step="0.01"
-                placeholder={
-                  penaltyType === "percentage"
-                    ? "Enter Percentage (%)"
-                    : "Enter Charge"
-                }
-                {...register("value", {
-                  required: `${
+            {calculatedAs !== "range" && (
+              <div>
+                <Label htmlFor="value">
+                  {" "}
+                  {penaltyType === "percentage"
+                    ? "Percentage (%)"
+                    : "Charge Amount"}
+                </Label>
+                <Input
+                  id="value"
+                  type="number"
+                  step="0.01"
+                  placeholder={
                     penaltyType === "percentage"
-                      ? "Percentage is required"
-                      : "Charge is required"
-                  }`,
-                })}
-              />
-              {errors.value && (
-                <p className="text-red-500 text-sm">{errors.value.message}</p>
-              )}
-            </div>
-
+                      ? "Enter Percentage (%)"
+                      : "Enter Charge"
+                  }
+                  {...register("value", {
+                    required: `${
+                      penaltyType === "percentage"
+                        ? "Percentage is required"
+                        : "Charge is required"
+                    }`,
+                  })}
+                />
+                {errors.value && (
+                  <p className="text-red-500 text-sm">{errors.value.message}</p>
+                )}
+              </div>
+            )}
             <div>
               <Label htmlFor="nature">Nature</Label>
               <Select
@@ -286,6 +295,33 @@ const AddLoanAutoChargeDialog = ({
               )}
             </div>
           </div>
+          {calculatedAs === "range" &&
+            fields.map((field, index) => (
+              <div key={field.id} className="grid grid-cols-3 gap-2">
+                <Input placeholder="Min" {...register(`ranges.${index}.min`)} />
+                <Input placeholder="Max" {...register(`ranges.${index}.max`)} />
+                <Input
+                  placeholder="Charge"
+                  {...register(`ranges.${index}.charge`)}
+                />
+                <Button
+                  size="sm"
+                  onClick={() => remove(index)}
+                  variant="destructive"
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+          {calculatedAs === "range" && (
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => append({ min: "", max: "", charge: "" })}
+            >
+              Add Range
+            </Button>
+          )}
           <DialogFooter>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Submitting..." : "Submit"}
