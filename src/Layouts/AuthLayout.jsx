@@ -1,4 +1,4 @@
-import { Link, Outlet } from "react-router-dom";
+import { Link, Outlet, useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/menubar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Moon, Sun, Bell } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -26,151 +25,166 @@ import { useTheme } from "@/components/theme-provider";
 import { Separator } from "@/components/ui/separator";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
 import useLogout from "@/MiddleWares/Hooks/useLogout";
-import { useNavigate } from "react-router-dom";
-
 import AlertModal from "@/components/AlertModal";
 import LoanCalculatorDialog from "@/Pages/Components/LoanCalculatorDialog";
 import { hasPermission } from "@/lib/utils";
 
 const AuthLayout = () => {
   const [notifications, setNotifications] = useState(0);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [showCalculator, setShowCalculator] = useState(false);
+
   const { setTheme } = useTheme();
   const { auth } = useAuth();
+  const roles = auth?.roles;
   const initials = `${auth?.user?.firstname?.[0] || ""}${
     auth?.user?.lastname?.[0] || ""
   }`.toUpperCase();
+
   const logout = useLogout();
   const navigate = useNavigate();
   const signOut = async () => {
     await logout();
     navigate("/");
   };
+
   useEffect(() => {
     setNotifications(0);
   }, []);
-  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
-  const [showCalculator, setShowCalculator] = useState(false);
-  const roles = auth?.roles;
+
   return (
-    <div className="flex flex-col">
-      <SidebarProvider>
-        <div className="flex flex-col lg:flex-row w-full">
-          <div className="hidden lg:block fixed top-0 w-64 h-full"></div>
+    <SidebarProvider>
+      {/* Lock viewport height; route scrolling to <main> only */}
+      <div className="h-screen w-full overflow-hidden bg-background">
+        {/* Make sidebar FIXED on lg+ so it doesn’t take layout space */}
+        <div className="lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:w-64">
           <AppSidebar />
+        </div>
 
-          <SidebarTrigger className="w-12 h-12 p-2 text-xl" />
-          <div className="lg:hidden"></div>
+        {/* Content column; offset for fixed sidebar on lg */}
+        <div className="relative h-full flex flex-col min-w-0 lg:pl-64">
+          {/* Header (compact & sticky) */}
+          <header className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75 border-b">
+            <div className="flex items-center justify-between px-3 md:px-4 lg:px-5 h-12">
+              <div className="flex items-center gap-2 min-w-0">
+                {/* Mobile: open sidebar drawer */}
+                <SidebarTrigger
+                  className="md:hidden w-9 h-9 p-2"
+                  aria-label="Open sidebar"
+                />
 
-          <div className="flex-grow">
-            <div className="sticky top-0 bg-background z-10 flex items-center justify-between p-4">
-              <Menubar className="hidden md:flex">
-                {hasPermission(roles, [100007, 100011, 100015, 100012]) && (
-                  <>
-                    <MenubarMenu>
-                      <MenubarTrigger>Clients</MenubarTrigger>
-                      <MenubarContent>
-                        {hasPermission(roles, 100007) && (
-                          <MenubarItem>
-                            <Link to="clients/individual/new">
-                              New Individual
-                            </Link>
-                            <MenubarShortcut></MenubarShortcut>
-                          </MenubarItem>
-                        )}
-                        {hasPermission(roles, 100012) && (
-                          <MenubarItem>
-                            <Link to="clients/group/new">New Group</Link>
-                            <MenubarShortcut></MenubarShortcut>
-                          </MenubarItem>
-                        )}
-                        {hasPermission(roles, [100011, 100015]) && (
-                          <MenubarItem>
-                            <Link to="clients">View Clients</Link>
-                          </MenubarItem>
-                        )}
-                      </MenubarContent>
-                    </MenubarMenu>
-                  </>
-                )}
+                <Menubar className="hidden md:flex">
+                  {hasPermission(roles, [100007, 100011, 100015, 100012]) && (
+                    <>
+                      <MenubarMenu>
+                        <MenubarTrigger>Clients</MenubarTrigger>
+                        <MenubarContent>
+                          {hasPermission(roles, 100007) && (
+                            <MenubarItem>
+                              <Link to="clients/individual/new">
+                                New Individual
+                              </Link>
+                              <MenubarShortcut />
+                            </MenubarItem>
+                          )}
+                          {hasPermission(roles, 100012) && (
+                            <MenubarItem>
+                              <Link to="clients/group/new">New Group</Link>
+                              <MenubarShortcut />
+                            </MenubarItem>
+                          )}
+                          {hasPermission(roles, [100011, 100015]) && (
+                            <MenubarItem>
+                              <Link to="clients">View Clients</Link>
+                            </MenubarItem>
+                          )}
+                        </MenubarContent>
+                      </MenubarMenu>
+                    </>
+                  )}
 
-                {hasPermission(roles, 100099) && (
-                  <>
-                    <Separator orientation="vertical" />
-                    <MenubarMenu>
-                      <MenubarTrigger>Savings</MenubarTrigger>
-                      <MenubarContent>
-                        {hasPermission(roles, 100099) && (
+                  {hasPermission(roles, 100099) && (
+                    <>
+                      <Separator orientation="vertical" />
+                      <MenubarMenu>
+                        <MenubarTrigger>Savings</MenubarTrigger>
+                        <MenubarContent>
                           <MenubarItem>
                             <Link to="savings">View Savings</Link>
                           </MenubarItem>
-                        )}
-                      </MenubarContent>
-                    </MenubarMenu>
-                  </>
-                )}
-                {hasPermission(roles, 100100) && (
-                  <>
-                    <Separator orientation="vertical" />
-                    <MenubarMenu>
-                      <MenubarTrigger>Withdraws</MenubarTrigger>
-                      <MenubarContent>
-                        {hasPermission(roles, 100100) && (
+                        </MenubarContent>
+                      </MenubarMenu>
+                    </>
+                  )}
+
+                  {hasPermission(roles, 100100) && (
+                    <>
+                      <Separator orientation="vertical" />
+                      <MenubarMenu>
+                        <MenubarTrigger>Withdraws</MenubarTrigger>
+                        <MenubarContent>
                           <MenubarItem>
                             <Link to="withdraws">View Withdraws</Link>
                           </MenubarItem>
-                        )}
-                      </MenubarContent>
-                    </MenubarMenu>
-                  </>
-                )}
-                {hasPermission(roles, [100151, 100067]) && (
-                  <>
-                    <Separator orientation="vertical" />
-                    <MenubarMenu>
-                      <MenubarTrigger>Loans</MenubarTrigger>
-                      <MenubarContent>
-                        {hasPermission(roles, 100067) && (
-                          <MenubarItem>
-                            <Link to="individual-loans">View Loans</Link>
-                          </MenubarItem>
-                        )}
-                        {hasPermission(roles, 100151) && (
-                          <MenubarItem onClick={() => setShowCalculator(true)}>
-                            Loan Calculator
-                          </MenubarItem>
-                        )}
-                      </MenubarContent>
-                    </MenubarMenu>
-                  </>
-                )}
-                {hasPermission(roles, 100125) && (
-                  <>
-                    <Separator orientation="vertical" />
-                    <MenubarMenu>
-                      <MenubarTrigger>Bulk Studio</MenubarTrigger>
-                      <MenubarContent>
-                        <MenubarItem>Bulk Client Registration</MenubarItem>
-                        <MenubarItem>Bulk Group Registration</MenubarItem>
-                        <MenubarItem>Bulk Savings</MenubarItem>
-                        <MenubarItem>Bulk Withdraws</MenubarItem>
-                        <MenubarItem>Bulk Transfers</MenubarItem>
-                        <MenubarItem>Bulk Loan Applications</MenubarItem>
-                        <MenubarItem>Bulk Shares</MenubarItem>
-                        <MenubarItem>Bulk SMS Alerts</MenubarItem>
-                        <MenubarItem>Bulk Email Alerts</MenubarItem>
-                      </MenubarContent>
-                    </MenubarMenu>
-                  </>
-                )}
-              </Menubar>
-              <div className="hidden md:flex items-center space-x-4">
-                <div>
+                        </MenubarContent>
+                      </MenubarMenu>
+                    </>
+                  )}
+
+                  {hasPermission(roles, [100151, 100067]) && (
+                    <>
+                      <Separator orientation="vertical" />
+                      <MenubarMenu>
+                        <MenubarTrigger>Loans</MenubarTrigger>
+                        <MenubarContent>
+                          {hasPermission(roles, 100067) && (
+                            <MenubarItem>
+                              <Link to="individual-loans">View Loans</Link>
+                            </MenubarItem>
+                          )}
+                          {hasPermission(roles, 100151) && (
+                            <MenubarItem
+                              onClick={() => setShowCalculator(true)}
+                            >
+                              Loan Calculator
+                            </MenubarItem>
+                          )}
+                        </MenubarContent>
+                      </MenubarMenu>
+                    </>
+                  )}
+
+                  {hasPermission(roles, 100125) && (
+                    <>
+                      <Separator orientation="vertical" />
+                      <MenubarMenu>
+                        <MenubarTrigger>Bulk Studio</MenubarTrigger>
+                        <MenubarContent>
+                          <MenubarItem>Bulk Client Registration</MenubarItem>
+                          <MenubarItem>Bulk Group Registration</MenubarItem>
+                          <MenubarItem>Bulk Savings</MenubarItem>
+                          <MenubarItem>Bulk Withdraws</MenubarItem>
+                          <MenubarItem>Bulk Transfers</MenubarItem>
+                          <MenubarItem>Bulk Loan Applications</MenubarItem>
+                          <MenubarItem>Bulk Shares</MenubarItem>
+                          <MenubarItem>Bulk SMS Alerts</MenubarItem>
+                          <MenubarItem>Bulk Email Alerts</MenubarItem>
+                        </MenubarContent>
+                      </MenubarMenu>
+                    </>
+                  )}
+                </Menubar>
+              </div>
+
+              <div className="hidden md:flex items-center space-x-3">
+                <div className="min-w-0">
                   <Input
                     type="search"
                     placeholder="Search..."
-                    className="md:w-[100px] lg:w-[200px]"
+                    className="w-[160px] lg:w-[220px]"
                   />
                 </div>
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="icon">
@@ -191,13 +205,11 @@ const AuthLayout = () => {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+
                 <div className="relative">
                   <Bell className="w-6 h-7 cursor-pointer" />
                   {notifications > 0 && (
-                    <span
-                      className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full"
-                      style={{ fontSize: "8px" }}
-                    >
+                    <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold leading-none text-white bg-red-600 rounded-full">
                       {notifications}
                     </span>
                   )}
@@ -229,8 +241,11 @@ const AuthLayout = () => {
                 </Menubar>
               </div>
             </div>
+          </header>
 
-            <div className="p-6">
+          {/* MAIN: takes remaining height; internal scrolling only */}
+          <main className="flex-1 min-h-0 min-w-0 overflow-auto">
+            <div className="px-3 md:px-4 lg:px-5 py-3 md:py-4 lg:py-5 min-w-0 [*:first-child]:mt-0 [*:last-child]:mb-0">
               <Outlet />
 
               {showLogoutDialog && (
@@ -241,7 +256,6 @@ const AuthLayout = () => {
                   message="Would you like to log out?"
                   method={signOut}
                   buttonName="Logout"
-                  // modalSize="325px"
                 />
               )}
               {showCalculator && (
@@ -251,10 +265,10 @@ const AuthLayout = () => {
                 />
               )}
             </div>
-          </div>
+          </main>
         </div>
-      </SidebarProvider>
-    </div>
+      </div>
+    </SidebarProvider>
   );
 };
 
