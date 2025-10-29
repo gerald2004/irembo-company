@@ -19,6 +19,7 @@ import Roles from "@/Pages/Settings/System/Roles";
 import AddRoles from "@/Pages/Settings/System/AddRoles";
 import EditRoles from "@/Pages/Settings/System/EditRoles";
 import GeneralConfigurationTriggers from "@/Pages/Settings/System/GeneralConfigurationTriggers";
+import TransactionChannelLinkedAccounts from "@/Pages/Settings/Business/TransactionChannelLinkedAccounts";
 
 const settingsRoutes = [
   // Business Settings
@@ -69,6 +70,11 @@ const settingsRoutes = [
   {
     path: "/transaction-channels",
     element: <TransactionChannels />,
+    roles: [100145],
+  },
+  {
+    path: "/transaction-linked-accounts",
+    element: <TransactionChannelLinkedAccounts />,
     roles: [100145],
   },
   { path: "/payroll-settings", element: <PayrollSettings />, roles: [100146] },

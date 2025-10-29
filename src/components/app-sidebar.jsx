@@ -54,7 +54,7 @@ import { NavSingle } from "./nav-single";
 import { hasPermission, sideBarfilterItems } from "@/lib/utils";
 
 export function AppSidebar({ ...props }) {
-  const { auth } = useAuth();
+  const { auth, setAuth } = useAuth();
   const initials = `${auth?.user?.firstname?.[0] ?? ""}${
     auth?.user?.lastname?.[0] ?? ""
   }`.toUpperCase();
@@ -142,6 +142,11 @@ export function AppSidebar({ ...props }) {
             {
               title: "Transaction Channels",
               url: "transaction-channels",
+              permissionCodes: [100145],
+            },
+            {
+              title: "Transaction Linked Accounts",
+              url: "transaction-linked-accounts",
               permissionCodes: [100145],
             },
             {
@@ -515,6 +520,28 @@ export function AppSidebar({ ...props }) {
     return acc;
   }, {});
 
+  const handleBranchSwitched = ({ branch_id, branch_name }) => {
+    // 1) update auth in memory
+    setAuth((prev) => {
+      const next = {
+        ...prev,
+        current_branch_id: Number(branch_id),
+        user: {
+          ...prev?.user,
+          branch_id: Number(branch_id),
+          branch_name,
+        },
+      };
+      try {
+        window.location.reload(); // 2) persist if you hydrate from LS
+      } catch {
+        // no worries
+      }
+      return next;
+    });
+  };
+
+
   const userId = auth?.user?.user_id; // whichever you store
   const currentBranchId = auth?.current_branch_id ?? auth?.user?.branch_id;
   const allowedBranches = auth?.allowed_branches ?? [];
@@ -527,22 +554,7 @@ export function AppSidebar({ ...props }) {
           businessName={auth?.user?.sacco_name}
           currentBranchId={currentBranchId}
           allowedBranches={allowedBranches}
-          onSwitched={({ branch_id, branch_name }) => {
-            if (typeof auth?.setAuth === "function") {
-              auth.setAuth((prev) => ({
-                ...prev,
-                user: {
-                  ...prev.user,
-                  branch_id,
-                  branch_name: branch_name || prev.user?.branch_name,
-                },
-                current_branch_id: branch_id,
-              }));
-            } else {
-              // fallback
-              // window.location.reload();
-            }
-          }}
+          onSwitched={handleBranchSwitched}
         />
       </SidebarHeader>
       <SidebarContent>
