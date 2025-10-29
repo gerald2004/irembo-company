@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -17,9 +18,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useEffect, useState } from "react";
 import { toast } from "@/hooks/use-toast";
+
 const BusinessDefaults = () => {
   const axiosPrivate = useAxiosPrivate();
 
+  // Defaults
   const {
     data: defaultsData,
     isLoading,
@@ -28,16 +31,15 @@ const BusinessDefaults = () => {
   } = useQuery({
     queryKey: ["business-defaults"],
     queryFn: async () => {
-            const controller = new AbortController();
-
-      const response = await axiosPrivate.get("/settings/business/defaults", {
+      const controller = new AbortController();
+      const res = await axiosPrivate.get("/settings/business/defaults", {
         signal: controller.signal,
       });
-      return response.data.data.business_defaults;
+      return res.data?.data?.business_defaults;
     },
   });
 
-  // Fetch accounts data for dropdown
+  // Accounts
   const {
     data: accountsData,
     isLoading: isLoadingAccounts,
@@ -47,12 +49,11 @@ const BusinessDefaults = () => {
   } = useQuery({
     queryKey: ["account-votes"],
     queryFn: async () => {
-            const controller = new AbortController();
-
-      const response = await axiosPrivate.get("/settings/accounts/account", {
+      const controller = new AbortController();
+      const res = await axiosPrivate.get("/settings/accounts/account", {
         signal: controller.signal,
       });
-      return response.data.data.accounts;
+      return res.data?.data?.accounts;
     },
   });
 
@@ -63,82 +64,75 @@ const BusinessDefaults = () => {
     formState: { errors, isSubmitting },
   } = useForm({
     defaultValues: {
-      currency: null,
-      penalty_account: null,
-      share_account: null,
-      interest_account: null,
-      disbursment_account: null,
+      currency: "",
       share_price: "",
-      writeoff_expense_account: null,
-      writeoff_income_account: null,
-      loan_fund_account: null,
-      bad_loans_account: null,
-      transfer_clearing_account: null,
-      onUpdate: null,
-      member_saving_account: null,
-      compulsory_saving_account: null,
-      penalty_receivable_account: null,
-      interest_receivable_account: null,
-      frozen_funds_account: null,
-      default_capital_account: null,
+      onUpdate: "",
     },
   });
 
+  // We keep account IDs separately to match your payload keys
   const [selectedAccounts, setSelectedAccounts] = useState({
+    member_saving_account: null,
     penalty_account: null,
     penalty_receivable_account: null,
-    interest_receivable_account: null,
     share_account: null,
     interest_account: null,
+    interest_receivable_account: null,
+    frozen_funds_account: null,
     disbursment_account: null,
-    writeoff_expense_account: null,
-    writeoff_income_account: null,
     bad_loans_account: null,
     transfer_clearing_account: null,
-    member_saving_account: null,
-    frozen_funds_account: null,
+    writeoff_expense_account: null,
+    writeoff_income_account: null,
     default_capital_account: null,
+    // NEW:
+    monitoring_fees_account: null,
   });
 
-  // Initialize form with fetched defaults
+  // Hydrate form + selected accounts from defaults
   useEffect(() => {
-    if (defaultsData) {
-      reset({
-        share_price: defaultsData.share_price || "",
-        currency: defaultsData.currency,
-        onUpdate: defaultsData.onUpdate,
-      });
-      setSelectedAccounts({
-        penalty_account: defaultsData.penalty_account?.id || null,
-        share_account: defaultsData.share_account?.id || null,
-        interest_account: defaultsData.interest_account?.id || null,
-        disbursment_account: defaultsData.disbursment_account?.id || null,
-        bad_loans_account: defaultsData.bad_loans_account?.id || null,
-        transfer_clearing_account:
-          defaultsData.transfer_clearing_account?.id || null,
-        writeoff_expense_account:
-          defaultsData.writeoff_expense_account?.id || null,
-        writeoff_income_account:
-          defaultsData.writeoff_income_account?.id || null,
-        member_saving_account: defaultsData.member_saving_account.id || null,
-        penalty_receivable_account:
-          defaultsData.penalty_receivable_account.id || null,
-        interest_receivable_account:
-          defaultsData.interest_receivable_account.id || null,
-        frozen_funds_account: defaultsData.frozen_funds_account.id || null,
-        default_capital_account:
-          defaultsData.default_capital_account.id || null,
-      });
-    }
+    if (!defaultsData) return;
+
+    reset({
+      share_price: defaultsData?.share_price ?? "",
+      currency: defaultsData?.currency ?? "",
+      onUpdate: defaultsData?.onUpdate ?? "",
+    });
+
+    setSelectedAccounts({
+      member_saving_account: defaultsData?.member_saving_account?.id ?? null,
+      penalty_account: defaultsData?.penalty_account?.id ?? null,
+      penalty_receivable_account:
+        defaultsData?.penalty_receivable_account?.id ?? null,
+      share_account: defaultsData?.share_account?.id ?? null,
+      interest_account: defaultsData?.interest_account?.id ?? null,
+      interest_receivable_account:
+        defaultsData?.interest_receivable_account?.id ?? null,
+      frozen_funds_account: defaultsData?.frozen_funds_account?.id ?? null,
+      disbursment_account: defaultsData?.disbursment_account?.id ?? null,
+      bad_loans_account: defaultsData?.bad_loans_account?.id ?? null,
+      transfer_clearing_account:
+        defaultsData?.transfer_clearing_account?.id ?? null,
+      writeoff_expense_account:
+        defaultsData?.writeoff_expense_account?.id ?? null,
+      writeoff_income_account:
+        defaultsData?.writeoff_income_account?.id ?? null,
+      default_capital_account:
+        defaultsData?.default_capital_account?.id ?? null,
+      // NEW:
+      monitoring_fees_account:
+        defaultsData?.monitoring_fees_account?.id ?? null,
+    });
   }, [defaultsData, reset]);
 
   const onSubmit = async (data) => {
-          const controller = new AbortController();
+    const controller = new AbortController();
 
     const payload = {
       ...data,
       ...selectedAccounts,
     };
+
     try {
       const response = await axiosPrivate.patch(
         `/settings/business/defaults`,
@@ -146,15 +140,18 @@ const BusinessDefaults = () => {
         { signal: controller.signal }
       );
       toast({ title: "Success", description: response?.data?.messages });
-      reset();
-      refetch();
+      refetch(); // refresh with latest
     } catch (error) {
       const errorMessage =
-        error?.response?.data?.messages || "No server response";
+        error?.response?.data?.messages ||
+        error?.response?.data?.message ||
+        "No server response";
       toast({
         title: "Uh oh! Something went wrong.",
         variant: "destructive",
-        description: errorMessage,
+        description: Array.isArray(errorMessage)
+          ? errorMessage.join(", ")
+          : errorMessage,
       });
     }
   };
@@ -172,6 +169,7 @@ const BusinessDefaults = () => {
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
+
       <div className="flex-col md:flex">
         <div className="border-b" />
         <div className="flex-1 space-y-4 p-0 pt-2">
@@ -180,6 +178,7 @@ const BusinessDefaults = () => {
               Business Defaults
             </h5>
           </div>
+
           <div className="max-w-4xl mx-auto p-6 space-y-6">
             {isLoadingAccounts || isRefetchingAccounts ? (
               <Skeleton className="h-[500px] rounded-xl" />
@@ -195,15 +194,12 @@ const BusinessDefaults = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {isLoading ? (
                         <>
-                          <Skeleton className="h-10 w-full rounded-lg" />
-                          <Skeleton className="h-10 w-full rounded-lg" />
-                          <Skeleton className="h-10 w-full rounded-lg" />
-                          <Skeleton className="h-10 w-full rounded-lg" />
-                          <Skeleton className="h-10 w-full rounded-lg" />
-                          <Skeleton className="h-10 w-full rounded-lg" />
-                          <Skeleton className="h-10 w-full rounded-lg" />
-                          <Skeleton className="h-10 w-full rounded-lg" />
-                          <Skeleton className="h-10 w-full rounded-lg" />
+                          {Array.from({ length: 10 }).map((_, i) => (
+                            <Skeleton
+                              key={i}
+                              className="h-10 w-full rounded-lg"
+                            />
+                          ))}
                         </>
                       ) : isError ? (
                         <Button onClick={refetch}>Retry</Button>
@@ -222,19 +218,7 @@ const BusinessDefaults = () => {
                             }
                             accountsData={accountsData}
                           />
-                          {/* <AccountCombobox
-                            label="Compulsory Savings Account"
-                            selectedAccount={
-                              selectedAccounts.compulsory_saving_account
-                            }
-                            onAccountSelect={(value) =>
-                              setSelectedAccounts((prev) => ({
-                                ...prev,
-                                compulsory_saving_account: value,
-                              }))
-                            }
-                            accountsData={accountsData}
-                          /> */}
+
                           <AccountCombobox
                             label="Penalty Account"
                             selectedAccount={selectedAccounts.penalty_account}
@@ -246,6 +230,7 @@ const BusinessDefaults = () => {
                             }
                             accountsData={accountsData}
                           />
+
                           <AccountCombobox
                             label="Receivable Penalty Account"
                             selectedAccount={
@@ -259,6 +244,7 @@ const BusinessDefaults = () => {
                             }
                             accountsData={accountsData}
                           />
+
                           <AccountCombobox
                             label="Share Account"
                             selectedAccount={selectedAccounts.share_account}
@@ -270,6 +256,7 @@ const BusinessDefaults = () => {
                             }
                             accountsData={accountsData}
                           />
+
                           <AccountCombobox
                             label="Interest Account"
                             selectedAccount={selectedAccounts.interest_account}
@@ -281,6 +268,7 @@ const BusinessDefaults = () => {
                             }
                             accountsData={accountsData}
                           />
+
                           <AccountCombobox
                             label="Receivable Interest Account"
                             selectedAccount={
@@ -294,6 +282,7 @@ const BusinessDefaults = () => {
                             }
                             accountsData={accountsData}
                           />
+
                           <AccountCombobox
                             label="Frozen Funds Account"
                             selectedAccount={
@@ -307,6 +296,7 @@ const BusinessDefaults = () => {
                             }
                             accountsData={accountsData}
                           />
+
                           <AccountCombobox
                             label="Loan Portfolio Account"
                             selectedAccount={
@@ -320,6 +310,7 @@ const BusinessDefaults = () => {
                             }
                             accountsData={accountsData}
                           />
+
                           <AccountCombobox
                             label="Bad Loans Account"
                             selectedAccount={selectedAccounts.bad_loans_account}
@@ -331,6 +322,7 @@ const BusinessDefaults = () => {
                             }
                             accountsData={accountsData}
                           />
+
                           <AccountCombobox
                             label="Transfer Clearing Account"
                             selectedAccount={
@@ -344,6 +336,7 @@ const BusinessDefaults = () => {
                             }
                             accountsData={accountsData}
                           />
+
                           <AccountCombobox
                             label="Write Off Expense Account"
                             selectedAccount={
@@ -357,6 +350,7 @@ const BusinessDefaults = () => {
                             }
                             accountsData={accountsData}
                           />
+
                           <AccountCombobox
                             label="Write Off Income Account"
                             selectedAccount={
@@ -370,6 +364,7 @@ const BusinessDefaults = () => {
                             }
                             accountsData={accountsData}
                           />
+
                           <AccountCombobox
                             label="Business Default Account"
                             selectedAccount={
@@ -379,6 +374,21 @@ const BusinessDefaults = () => {
                               setSelectedAccounts((prev) => ({
                                 ...prev,
                                 default_capital_account: value,
+                              }))
+                            }
+                            accountsData={accountsData}
+                          />
+
+                          {/* NEW — Monitoring Fees Account */}
+                          <AccountCombobox
+                            label="Monitoring Fees Account"
+                            selectedAccount={
+                              selectedAccounts.monitoring_fees_account
+                            }
+                            onAccountSelect={(value) =>
+                              setSelectedAccounts((prev) => ({
+                                ...prev,
+                                monitoring_fees_account: value,
                               }))
                             }
                             accountsData={accountsData}
@@ -400,11 +410,12 @@ const BusinessDefaults = () => {
                               </p>
                             )}
                           </div>
+
                           <div>
                             <Label htmlFor="currency">Currency</Label>
                             <Input
                               id="currency"
-                              placeholder="Enter share price"
+                              placeholder="Enter currency (e.g., UGX)"
                               className="mt-1"
                               {...register("currency", {
                                 required: "Currency is required",
@@ -416,19 +427,21 @@ const BusinessDefaults = () => {
                               </p>
                             )}
                           </div>
+
                           <div className="">
                             <Label htmlFor="timestamp">Last Updated</Label>
                             <Input
                               id="timestamp"
                               placeholder="Last Updated"
                               className="mt-1"
-                              disabled={true}
+                              disabled
                               {...register("onUpdate")}
                             />
                           </div>
                         </>
                       )}
                     </div>
+
                     <Button
                       className="mt-2"
                       type="submit"

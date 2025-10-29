@@ -45,14 +45,24 @@ const Login = ({ className, ...props }) => {
         withCredentials: true,
       });
 
-      const { accessToken, sessionId, roles, user, fiscal_year } =
-        response.data.data;
+      const {
+        accessToken,
+        sessionId,
+        roles,
+        user,
+        fiscal_year,
+        current_branch_id,
+        allowed_branches,
+        
+      } = response.data.data;
       setAuth({
         sessionid: sessionId,
         accessToken,
         roles,
         user,
         fiscalYear: fiscal_year,
+        current_branch_id: current_branch_id,
+        allowed_branches: allowed_branches,
       });
       navigate(from, { replace: true });
     } catch (error) {

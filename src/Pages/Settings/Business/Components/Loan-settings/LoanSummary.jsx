@@ -8,13 +8,7 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const LoanSummary = ({
-  isLoading,
-  isError,
-  loanProduct,
-  error,
-  loanStats = [],
-}) => {
+const LoanSummary = ({ isLoading, isError, loanProduct = {}, error }) => {
   if (isLoading) {
     return (
       <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -50,103 +44,163 @@ const LoanSummary = ({
   if (isError) {
     return (
       <div className="text-red-500 text-center font-bold">
-        Error: {error.message}
+        Error: {error?.message || "Failed to load loan product"}
       </div>
     );
   }
 
-  return (
-    <>
-      <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="shadow-lg rounded-xl">
-          <CardHeader className="p-4 rounded-t-xl">
-            <CardTitle className="text-xl font-semibold">
-              {loanProduct.title} 
-            </CardTitle>
-            <div className="border-b" />
-            <CardDescription className="text-sm capitalize">{`Type: ${loanProduct.type}`}</CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 space-y-4 text-sm">
-            <p className="flex items-center">
-              <span className="w-1/3">Interest Rate:</span>
-              <span className="capitalize">{loanProduct.interest_rate}%</span>
-            </p>
-            <p className="flex items-center">
-              <span className="w-1/3">Product Interval:</span>
-              <span className="capitalize">{loanProduct.product_interval}</span>
-            </p>
-            <p className="flex items-center">
-              <span className="w-1/3">Penalty Interval:</span>
-              <span className="capitalize">{loanProduct.penalty_interval}</span>
-            </p>
-            <p className="flex items-center">
-              <span className="w-1/3">Penalty Value:</span>
-              <span className="capitalize">
-                {loanProduct.penalty_value}{" "}
-                {loanProduct.penalty_mode === "percentage" ? "%" : ""}
-              </span>
-            </p>
-            <p className="flex items-center">
-              <span className="w-1/3">Penalty Offset Period:</span>
-              <span className="capitalize">
-                {loanProduct.penalty_offset_period}{" "}
-                {loanProduct.penalty_offset_interval || ""}
-              </span>
-            </p>
-            <p className="flex items-center">
-              <span className="w-1/3">Penalty Grace Period:</span>
-              <span className="capitalize">
-                {loanProduct.penalty_grace_period}{" "}
-                {loanProduct.penalty_grace_period_interval}
-              </span>
-            </p>
-            <p className="flex items-center">
-              <span className="w-1/3">Last Updated:</span>
-              <span>{loanProduct.timestamp}</span>
-            </p>
-          </CardContent>
-        </Card>
+  // Helpers to keep UI clean even when fields are missing
+  const fmt = (v, fallback = "N/A") =>
+    v === undefined || v === null || v === "" ? fallback : v;
 
-        <Card className="shadow-lg rounded-xl">
-          <CardHeader className="p-4 rounded-t-xl">
-            <CardTitle className="text-xl font-semibold">
-              Loan Product Statistics
-            </CardTitle>
-            <div className="border-b" />
-          </CardHeader>
-          <CardContent className="p-4 space-y-4 text-sm">
-            <p className="flex items-center">
-              <span className="w-2/3">Active Loans:</span>
-              <span>{loanStats.activeLoans}</span>
-            </p>
-            <p className="flex items-center">
-              <span className="w-2/3">Loans in Arrears:</span>
-              <span>{loanStats.loansInArrears}</span>
-            </p>
-            <p className="flex items-center">
-              <span className="w-2/3">Paid Off Loans:</span>
-              <span>{loanStats.paidOffLoans}</span>
-            </p>
-            <p className="flex items-center">
-              <span className="w-2/3">Written Off Loans:</span>
-              <span>{loanStats.writtenOffLoans}</span>
-            </p>
-            <p className="flex items-center">
-              <span className="w-2/3">Settled Loans:</span>
-              <span>{loanStats.settledLoans}</span>
-            </p>
-            <p className="flex items-center">
-              <span className="w-2/3">Defaulted Loans:</span>
-              <span>{loanStats.defaultedLoans}</span>
-            </p>
-            <p className="flex items-center">
-              <span className="w-2/3">Locked Loans:</span>
-              <span>{loanStats.lockedLoans}</span>
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    </>
+  const pct = (v) => (v === undefined || v === null ? "N/A" : `${v}%`);
+
+  const penaltyValue =
+    loanProduct.penalty_mode === "percentage"
+      ? `${fmt(loanProduct.penalty_value, 0)}%`
+      : `${fmt(loanProduct.penalty_value, 0)}`;
+
+  const monitoringEnabled =
+    Number(loanProduct.monitoring_fee_enabled) === 1 ? "Yes" : "No";
+
+  const monitoringType =
+    loanProduct.monitoring_fee_type === "fixed"
+      ? "Fixed"
+      : loanProduct.monitoring_fee_type === "percent"
+      ? "Percentage"
+      : "N/A";
+
+  const monitoringValue =
+    loanProduct.monitoring_fee_type === "percent"
+      ? pct(loanProduct.monitoring_fee_value)
+      : fmt(loanProduct.monitoring_fee_value);
+
+  const monitoringBase = fmt(loanProduct.monitoring_fee_base, "principal");
+
+  return (
+    <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Left: Core product details */}
+      <Card className="shadow-lg rounded-xl">
+        <CardHeader className="p-4 rounded-t-xl">
+          <CardTitle className="text-xl font-semibold">
+            {fmt(loanProduct.title)}
+          </CardTitle>
+          <div className="border-b" />
+          <CardDescription className="text-sm capitalize">
+            {`Type: ${fmt(loanProduct.type).toString()}`}
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="p-4 space-y-4 text-sm">
+          <p className="flex items-center">
+            <span className="w-1/3">Interest Rate:</span>
+            <span className="capitalize">{pct(loanProduct.interest_rate)}</span>
+          </p>
+
+          <p className="flex items-center">
+            <span className="w-1/3">Product Interval:</span>
+            <span className="capitalize">
+              {fmt(loanProduct.product_interval)}
+            </span>
+          </p>
+
+          <div className="border-t my-2" />
+
+          <p className="flex items-center">
+            <span className="w-1/3">Penalty Interval:</span>
+            <span className="capitalize">
+              {fmt(loanProduct.penalty_interval)}
+            </span>
+          </p>
+
+          <p className="flex items-center">
+            <span className="w-1/3">Penalty Value:</span>
+            <span className="capitalize">{penaltyValue}</span>
+          </p>
+
+          <p className="flex items-center">
+            <span className="w-1/3">Penalty Offset:</span>
+            <span className="capitalize">
+              {fmt(loanProduct.penalty_offset_period, 0)}{" "}
+              {fmt(loanProduct.penalty_offset_interval, "")}
+            </span>
+          </p>
+
+          <p className="flex items-center">
+            <span className="w-1/3">Penalty Grace:</span>
+            <span className="capitalize">
+              {fmt(loanProduct.penalty_grace_period, 0)}{" "}
+              {fmt(loanProduct.penalty_grace_period_interval, "")}
+            </span>
+          </p>
+
+          <div className="border-t my-2" />
+
+          <p className="flex items-center">
+            <span className="w-1/3">Last Updated:</span>
+            <span>{fmt(loanProduct.onUpdate || loanProduct.timestamp)}</span>
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Right: Monitoring & policy (replaces “Loan Product Statistics”) */}
+      <Card className="shadow-lg rounded-xl">
+        <CardHeader className="p-4 rounded-t-xl">
+          <CardTitle className="text-xl font-semibold">
+            Monitoring & Policy
+          </CardTitle>
+          <div className="border-b" />
+          <CardDescription className="text-sm">
+            Product-level oversight and fee configuration
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="p-4 space-y-4 text-sm">
+          <p className="flex items-center">
+            <span className="w-2/3">Monitoring Fee Enabled:</span>
+            <span>{monitoringEnabled}</span>
+          </p>
+
+          <p className="flex items-center">
+            <span className="w-2/3">Monitoring Fee Type:</span>
+            <span>{monitoringType}</span>
+          </p>
+
+          <p className="flex items-center">
+            <span className="w-2/3">Monitoring Fee Value:</span>
+            <span>{monitoringEnabled === "Yes" ? monitoringValue : "N/A"}</span>
+          </p>
+
+          <p className="flex items-center">
+            <span className="w-2/3">Monitoring Fee Base:</span>
+            <span className="capitalize">
+              {monitoringEnabled === "Yes" ? monitoringBase : "N/A"}
+            </span>
+          </p>
+
+          <div className="border-t my-2" />
+
+          <p className="flex items-center">
+            <span className="w-2/3">Penalty Grace Policy:</span>
+            <span className="capitalize">
+              {fmt(loanProduct.penalty_grace_period, 0)}{" "}
+              {fmt(loanProduct.penalty_grace_period_interval, "")}
+            </span>
+          </p>
+
+          <p className="flex items-center">
+            <span className="w-2/3">Penalty Offset Policy:</span>
+            <span className="capitalize">
+              {fmt(loanProduct.penalty_offset_period, 0)}{" "}
+              {fmt(loanProduct.penalty_offset_interval, "")}
+            </span>
+          </p>
+
+          <div className="border-t my-2" />
+
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

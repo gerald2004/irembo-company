@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import LoanSingleScheduleRepayment from "../Forms/LoanSingleScheduleRepayment";
 import LoanAdjustmentDialog from "../Forms/LoanAdjustmentDialog";
 import LoanGeneralAdjustmentDialog from "../Forms/LoanGeneralAdjustmentDialog";
@@ -23,7 +23,6 @@ import {
   hasPermission,
   prepareDataForExport,
 } from "@/lib/utils";
-import { useRef } from "react";
 import fileDownload from "js-file-download";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { toast } from "@/hooks/use-toast";
@@ -40,24 +39,44 @@ export function LoanScheduleTable({
   totals,
 }) {
   const axiosPrivate = useAxiosPrivate();
-  const processedData = data?.map((loan) => ({
-    ...loan,
-    amount_paid:
-      parseFloat(loan.loan_schedule_penalty_paid) +
-      parseFloat(loan.loan_schedule_interest_paid) +
-      parseFloat(loan.loan_schedule_principal_paid),
-    balance:
-      parseFloat(loan.loan_schedule_penalties) +
-      parseFloat(loan.loan_schedule_interest) +
-      parseFloat(loan.loan_schedule_principal) -
-      (parseFloat(loan.loan_schedule_penalty_paid) +
-        parseFloat(loan.loan_schedule_interest_paid) +
-        parseFloat(loan.loan_schedule_principal_paid)),
-  }));
   const {
     auth: { roles },
   } = useAuth();
+
+  // number helpers to avoid NaN on null/empty
+  const n = (v) => Number(v ?? 0);
+  const fmt = (v) => n(v).toLocaleString();
+  // optional: tame floating point drift
+  const round2 = (x) => Math.round((n(x) + Number.EPSILON) * 100) / 100;
+
+  const processedData =
+    data?.map((loan) => {
+      const p = n(loan.loan_schedule_principal);
+      const i = n(loan.loan_schedule_interest);
+      const pe = n(loan.loan_schedule_penalties);
+      // ✅ use the correct field name
+      const m = n(loan.loan_schedule_monitoring_amount);
+
+      const pp = n(loan.loan_schedule_principal_paid);
+      const ip = n(loan.loan_schedule_interest_paid);
+      const pep = n(loan.loan_schedule_penalty_paid);
+      const mp = n(loan.loan_schedule_monitoring_paid);
+
+      const totalDue = round2(p + i + pe + m);
+      const totalPaid = round2(pp + ip + pep + mp);
+
+      // Optional: never show tiny negative due to rounding
+      const balance = Math.max(0, round2(totalDue - totalPaid));
+
+      return {
+        ...loan,
+        amount_paid: totalPaid,
+        balance,
+      };
+    }) ?? [];
+
   const tableRef = useRef(null);
+
   const columns = [
     {
       id: "select",
@@ -99,9 +118,7 @@ export function LoanScheduleTable({
       accessorKey: "loan_schedule_principal",
       header: "Principal",
       cell: ({ row }) => (
-        <p className="text-xs">
-          {parseFloat(row.original.loan_schedule_principal).toLocaleString()}
-        </p>
+        <p className="text-xs">{fmt(row.original.loan_schedule_principal)}</p>
       ),
     },
     {
@@ -109,9 +126,7 @@ export function LoanScheduleTable({
       header: "Principal Paid",
       cell: ({ row }) => (
         <p className="text-xs">
-          {parseFloat(
-            row.original.loan_schedule_principal_paid
-          ).toLocaleString()}
+          {fmt(row.original.loan_schedule_principal_paid)}
         </p>
       ),
     },
@@ -119,9 +134,7 @@ export function LoanScheduleTable({
       accessorKey: "loan_schedule_interest",
       header: "Interest",
       cell: ({ row }) => (
-        <p className="text-xs">
-          {parseFloat(row.original.loan_schedule_interest).toLocaleString()}
-        </p>
+        <p className="text-xs">{fmt(row.original.loan_schedule_interest)}</p>
       ),
     },
     {
@@ -129,9 +142,27 @@ export function LoanScheduleTable({
       header: "Interest Paid",
       cell: ({ row }) => (
         <p className="text-xs">
-          {parseFloat(
-            row.original.loan_schedule_interest_paid
-          ).toLocaleString()}
+          {fmt(row.original.loan_schedule_interest_paid)}
+        </p>
+      ),
+    },
+
+    // ✅ Monitoring columns
+    {
+      accessorKey: "loan_schedule_monitoring_amount",
+      header: "Monitoring Fees",
+      cell: ({ row }) => (
+        <p className="text-xs">
+          {fmt(row.original.loan_schedule_monitoring_amount)}
+        </p>
+      ),
+    },
+    {
+      accessorKey: "loan_schedule_monitoring_paid",
+      header: "Monitoring Fees Paid",
+      cell: ({ row }) => (
+        <p className="text-xs">
+          {fmt(row.original.loan_schedule_monitoring_paid)}
         </p>
       ),
     },
@@ -139,9 +170,7 @@ export function LoanScheduleTable({
       accessorKey: "loan_schedule_penalties",
       header: "Penalties",
       cell: ({ row }) => (
-        <p className="text-xs">
-          {parseFloat(row.original.loan_schedule_penalties).toLocaleString()}
-        </p>
+        <p className="text-xs">{fmt(row.original.loan_schedule_penalties)}</p>
       ),
     },
     {
@@ -149,10 +178,11 @@ export function LoanScheduleTable({
       header: "Penalties Paid",
       cell: ({ row }) => (
         <p className="text-xs">
-          {parseFloat(row.original.loan_schedule_penalty_paid).toLocaleString()}
+          {fmt(row.original.loan_schedule_penalty_paid)}
         </p>
       ),
     },
+
     {
       accessorKey: "loan_schedule_payment_status",
       header: "Payment Status",
@@ -175,15 +205,13 @@ export function LoanScheduleTable({
       id: "amount_paid",
       header: "Amount Paid",
       cell: ({ row }) => (
-        <p className="text-xs">{row.original.amount_paid.toLocaleString()}</p>
+        <p className="text-xs">{fmt(row.original.amount_paid)}</p>
       ),
     },
     {
       id: "balance",
       header: "Balance",
-      cell: ({ row }) => (
-        <p className="text-xs">{row.original.balance.toLocaleString()}</p>
-      ),
+      cell: ({ row }) => <p className="text-xs">{fmt(row.original.balance)}</p>,
     },
     {
       id: "actions",
@@ -211,12 +239,19 @@ export function LoanScheduleTable({
               >
                 Adjust Penalty
               </DropdownMenuItem>
-            )}{" "}
+            )}
             {hasPermission(roles, 100085) && (
               <DropdownMenuItem
                 onClick={() => handleOpenDialog("interest", row.original)}
               >
                 Adjust Interest
+              </DropdownMenuItem>
+            )}
+            {hasPermission(roles, 100085) && (
+              <DropdownMenuItem
+                onClick={() => handleOpenDialog("monitoring", row.original)}
+              >
+                Adjust Monitoring Fees
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>
@@ -227,9 +262,9 @@ export function LoanScheduleTable({
 
   const [showPayModal, setShowPayModal] = useState(false);
   const [schedule, setSchedule] = useState([]);
-  const handleOpenPayModal = (data) => {
+  const handleOpenPayModal = (rowData) => {
     setShowPayModal(true);
-    setSchedule(data);
+    setSchedule(rowData);
   };
   const handleClosePayModal = () => {
     setShowPayModal(false);
@@ -237,13 +272,12 @@ export function LoanScheduleTable({
   };
 
   const [showDialog, setShowDialog] = useState(false);
-
   const [action, setAction] = useState("");
 
-  const handleOpenDialog = (action, data) => {
+  const handleOpenDialog = (act, rowData) => {
     setShowDialog(true);
-    setAction(action);
-    setSchedule(data);
+    setAction(act);
+    setSchedule(rowData);
   };
   const handleCloseDialog = () => {
     setShowDialog(false);
@@ -252,10 +286,9 @@ export function LoanScheduleTable({
   };
 
   const [showGeneralDialog, setShowGeneralDialog] = useState(false);
-
-  const handleGeneralOpenDialog = (action) => {
+  const handleGeneralOpenDialog = (act) => {
     setShowGeneralDialog(true);
-    setAction(action);
+    setAction(act);
   };
   const handleGeneralCloseDialog = () => {
     setShowGeneralDialog(false);
@@ -263,58 +296,55 @@ export function LoanScheduleTable({
   };
 
   const [showRolloverDialog, setShowRolloverDialog] = useState(false);
-
   const handleRolloverOpenDialog = () => setShowRolloverDialog(true);
   const handleRolloverCloseDialog = () => setShowRolloverDialog(false);
-  const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
 
+  const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
   const handleRescheduleOpenDialog = () => setShowRescheduleDialog(true);
   const handleRescheduleCloseDialog = () => setShowRescheduleDialog(false);
 
   const [showRepaymentDialog, setShowRepaymentDialog] = useState(false);
-
   const handleRepaymentOpenDialog = () => setShowRepaymentDialog(true);
   const handleRepaymentCloseDialog = () => setShowRepaymentDialog(false);
+
   const [isDownloading, setIsDownloading] = useState(false);
+
   const onDownload = async () => {
     const controller = new AbortController();
     try {
       setIsDownloading(true);
       const exportData = prepareDataForExport(tableRef.current, processedData);
-      const data = {
+      const payload = {
         data: exportData,
         loans: loansData,
         title: "Loan Amortization Schedule",
-        totals: totals,
+        totals,
         colspan: 2,
-        mode: {
-          format: "A4-L",
-          orientation: "L",
-        },
+        mode: { format: "A4-L", orientation: "L" },
       };
-      // console.log(data);
       const response = await axiosPrivate.post(
         `/export/loan-schedule/pdf`,
-        { data: data },
+        { data: payload },
         { responseType: "blob", signal: controller.signal }
       );
       const unix = Math.round(+new Date() / 1000);
-      const download_title = unix + "loan-schedule.pdf";
-      fileDownload(response.data, download_title);
+      const filename = `${unix}-loan-schedule.pdf`;
+      fileDownload(response.data, filename);
       setIsDownloading(false);
     } catch (error) {
-      console.log(error);
-
       const errorMessage =
         error?.response?.data?.messages || "No server response";
       toast({
         title: "Uh oh! Something went wrong.",
         variant: "destructive",
-        description: errorMessage,
+        description: Array.isArray(errorMessage)
+          ? errorMessage.join(", ")
+          : errorMessage,
       });
       setIsDownloading(false);
     }
   };
+
   return (
     <>
       <div className="flex flex-wrap items-center gap-4 border p-6 rounded-lg shadow-sm">
@@ -343,6 +373,14 @@ export function LoanScheduleTable({
                 Adjust Penalty
               </Button>
             )}
+            {hasPermission(roles, 100080) && (
+              <Button
+                size="sm"
+                onClick={() => handleGeneralOpenDialog("monitoring")}
+              >
+                Adjust Monitoring Fees
+              </Button>
+            )}
             {hasPermission(roles, 100081) && (
               <Button
                 size="sm"
@@ -352,26 +390,24 @@ export function LoanScheduleTable({
               </Button>
             )}
             {hasPermission(roles, 100082) && (
-              <Button
-                size="sm"
-                onClick={() => onDownload()}
-                disabled={isDownloading}
-              >
+              <Button size="sm" onClick={onDownload} disabled={isDownloading}>
                 Download Schedule
               </Button>
             )}
           </>
         )}
       </div>
+
       <Datatable
         ref={tableRef}
         columns={columns}
-        data={processedData ?? []}
+        data={processedData}
         fetchData={refetch}
         isLoading={isLoading}
         isRefetching={isRefetching}
         isError={isError}
       />
+
       {hasPermission(roles, 100083) && showPayModal && (
         <LoanSingleScheduleRepayment
           isOpen={showPayModal}
@@ -380,6 +416,7 @@ export function LoanScheduleTable({
           scheduleData={schedule}
         />
       )}
+
       {hasPermission(roles, 100077) && showRepaymentDialog && (
         <LoanSingleRepayment
           isOpen={showRepaymentDialog}
@@ -387,6 +424,7 @@ export function LoanScheduleTable({
           refetch={refetch}
         />
       )}
+
       {hasPermission(roles, [100084, 100085]) && showDialog && (
         <LoanAdjustmentDialog
           refetch={refetch}
@@ -396,6 +434,7 @@ export function LoanScheduleTable({
           scheduleData={schedule}
         />
       )}
+
       {hasPermission(roles, [100080, 100081]) && showGeneralDialog && (
         <LoanGeneralAdjustmentDialog
           refetch={refetch}
@@ -404,6 +443,7 @@ export function LoanScheduleTable({
           actionType={action}
         />
       )}
+
       {hasPermission(roles, 100079) && showRolloverDialog && (
         <LoanRolloverDialog
           refetch={refetch}
@@ -411,6 +451,7 @@ export function LoanScheduleTable({
           onClose={handleRolloverCloseDialog}
         />
       )}
+
       {hasPermission(roles, 100078) && showRescheduleDialog && (
         <LoanRescheduleDialog
           refetch={refetch}

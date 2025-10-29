@@ -20,6 +20,8 @@ const useRefreshToken = () => {
         roles: response.data.data.roles,
         user: response.data.data.user,
         fiscalYear: response.data.data.fiscal_year,
+        current_branch_id: response.data.data.current_branch_id,
+        allowed_branches: response.data.data.allowed_branches,
       };
     });
     return response.data.accessToken;

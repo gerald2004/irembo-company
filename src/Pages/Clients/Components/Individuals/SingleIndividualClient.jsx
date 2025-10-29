@@ -16,6 +16,7 @@ import Communication from "./Components/Communication";
 import { SharesTable } from "./Components/Tables/SharesTable";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
 import { hasPermission } from "@/lib/utils";
+import ClientAccountIntelligence from "./Components/Blocks/ClientAccountIntelligence";
 
 const SingleIndividualClient = () => {
   const navigate = useNavigate();
@@ -95,6 +96,11 @@ const SingleIndividualClient = () => {
                 {hasPermission(roles, 100064) && (
                   <TabsTrigger value="shares">Shares</TabsTrigger>
                 )}
+                {hasPermission(roles, 100064) && (
+                  <TabsTrigger value="client-intelligence">
+                    Client Intelligence
+                  </TabsTrigger>
+                )}
               </TabsList>
             </div>
             <TabsContent value="summary" className="space-y-4">
@@ -116,6 +122,9 @@ const SingleIndividualClient = () => {
             </TabsContent>
             <TabsContent value="shares" className="space-y-4">
               {hasPermission(roles, 100064) && <SharesTable />}
+            </TabsContent>
+            <TabsContent value="client-intelligence" className="space-y-4">
+              {hasPermission(roles, 100064) && <ClientAccountIntelligence clientId={params.id} />}
             </TabsContent>
           </Tabs>
         </div>

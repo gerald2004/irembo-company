@@ -18,24 +18,38 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Download, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "@/hooks/use-toast";
 import { axiosPrivate } from "@/Config/Axios";
 import fileDownload from "js-file-download";
 
 const LoanCalculator = ({ data, isOpen, onClose }) => {
-  const loanData = data?.loanCalculator?.loan_schedule;
-  const loanProductData = data?.loanCalculator?.loan_product;
-  const charges = data.loanCharges;
+  // support both shapes: {loanCalculator:{...}} or flat
+  const payload = data?.loanCalculator ?? data ?? {};
 
-  // Calculate totals
-  const totalInterest =
-    Math.round(loanData?.reduce((sum, row) => sum + row?.interest, 0) / 10) *
-    10;
+  const loanData = payload?.loan_schedule ?? [];
+  const loanProductData = payload?.loan_product ?? {};
+  const extraCharges = payload?.charges ?? data?.loanCharges ?? []; // non-monitoring charges from API
 
-  const totalPrincipal =
-    Math.round(loanData?.reduce((sum, row) => sum + row?.principal, 0) / 10) *
-    10;
+  // totals (your original nearest-10 rounding)
+  const { totalInterest, totalPrincipal } = useMemo(() => {
+    const tInt =
+      Math.round(
+        (loanData?.reduce((sum, r) => sum + Number(r?.interest || 0), 0) || 0) /
+          10
+      ) * 10;
+    const tPrin =
+      Math.round(
+        (loanData?.reduce((sum, r) => sum + Number(r?.principal || 0), 0) ||
+          0) / 10
+      ) * 10;
+    return { totalInterest: tInt, totalPrincipal: tPrin };
+  }, [loanData]);
+
+  // MONITORING FEES (still calculated for totals/export, but not shown in Charges table)
+  const monitoringTotal = useMemo(() => {
+    return loanData?.reduce((sum, r) => sum + Number(r?.fee || 0), 0) || 0;
+  }, [loanData]);
 
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -43,21 +57,21 @@ const LoanCalculator = ({ data, isOpen, onClose }) => {
     const controller = new AbortController();
     try {
       setIsDownloading(true);
-      const data = {
+      const send = {
         loanData,
         loanProductData,
-        charges,
+        charges: extraCharges, // exclude monitoring from the bottom list
+        monitoringTotal, // keep for PDF template if needed
         totalInterest,
         totalPrincipal,
       };
       const response = await axiosPrivate.post(
         `/export/loan-calculator/pdf`,
-        { data: data },
+        { data: send },
         { responseType: "blob", signal: controller.signal }
       );
-       const unix = Math.round(+new Date() / 1000);
-      const download_title = unix + "_loan-calculation.pdf";
-      fileDownload(response.data, download_title);
+      const unix = Math.floor(Date.now() / 1000);
+      fileDownload(response.data, `${unix}_loan-calculation.pdf`);
       setIsDownloading(false);
       onClose();
     } catch (error) {
@@ -66,17 +80,24 @@ const LoanCalculator = ({ data, isOpen, onClose }) => {
       toast({
         title: "Uh oh! Something went wrong.",
         variant: "destructive",
-        description: errorMessage,
+        description: Array.isArray(errorMessage)
+          ? errorMessage.join(", ")
+          : String(errorMessage),
       });
       setIsDownloading(false);
     }
   };
+
   return (
     <div className="p-6">
       <h2 className="text-2xl font-semibold mb-4">Loan Calculator</h2>
 
-      {/* Open Dialog Button */}
-      <Dialog open={isOpen} onOpenChange={() => {}}>
+      <Dialog
+        open={isOpen}
+        onOpenChange={(open) => {
+          if (!open) onClose();
+        }}
+      >
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Loan Calculator</DialogTitle>
@@ -92,6 +113,8 @@ const LoanCalculator = ({ data, isOpen, onClose }) => {
               </button>
             </DialogClose>
           </DialogHeader>
+
+          {/* Loan Terms */}
           <div>
             <h6 className="capitalize text-center">Loan Terms</h6>
             <div className="border rounded-lg shadow-md overflow-hidden">
@@ -128,7 +151,8 @@ const LoanCalculator = ({ data, isOpen, onClose }) => {
               </Table>
             </div>
           </div>
-          {/* Loan Schedule Table */}
+
+          {/* Loan Schedule */}
           <h6 className="capitalize text-center">Loan Schedule</h6>
           <div className="border rounded-lg shadow-md max-h-[50vh] overflow-y-auto">
             <Table>
@@ -138,6 +162,7 @@ const LoanCalculator = ({ data, isOpen, onClose }) => {
                   <TableHead className="text-end">Date</TableHead>
                   <TableHead className="text-end">Principal</TableHead>
                   <TableHead className="text-end">Interest</TableHead>
+                  <TableHead className="text-end">Fees</TableHead>
                   <TableHead className="text-end">Payment</TableHead>
                   <TableHead className="text-end">Principal Balance</TableHead>
                 </TableRow>
@@ -145,19 +170,26 @@ const LoanCalculator = ({ data, isOpen, onClose }) => {
               <TableBody>
                 {loanData?.map((row, index) => (
                   <TableRow key={index}>
-                    <TableCell className="text-end">{row?.period}</TableCell>
+                    <TableCell className="text-end">
+                      {row?.period ?? row?.no}
+                    </TableCell>
                     <TableCell className="text-end">{row?.date}</TableCell>
                     <TableCell className="text-end">
-                      {row?.principal?.toLocaleString()}
+                      {Number(row?.principal || 0).toLocaleString()}
                     </TableCell>
                     <TableCell className="text-end">
-                      {row?.interest?.toLocaleString()}
+                      {Number(row?.interest || 0).toLocaleString()}
                     </TableCell>
                     <TableCell className="text-end">
-                      {row?.payment?.toLocaleString()}
+                      {Number(row?.fee || 0).toLocaleString()}
                     </TableCell>
                     <TableCell className="text-end">
-                      {row?.balance?.toLocaleString()}
+                      {Number(
+                        row?.payment ?? row?.amount ?? 0
+                      ).toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-end">
+                      {Number(row?.balance || 0).toLocaleString()}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -165,13 +197,18 @@ const LoanCalculator = ({ data, isOpen, onClose }) => {
                   <TableCell className="text-end">Total</TableCell>
                   <TableCell className="text-end"></TableCell>
                   <TableCell className="text-end">
-                    {totalPrincipal?.toLocaleString()}
+                    {Number(totalPrincipal).toLocaleString()}
                   </TableCell>
                   <TableCell className="text-end">
-                    {totalInterest?.toLocaleString()}
+                    {Number(totalInterest).toLocaleString()}
                   </TableCell>
                   <TableCell className="text-end">
-                    {(totalInterest + totalPrincipal)?.toLocaleString()}
+                    {Number(monitoringTotal).toLocaleString()}
+                  </TableCell>
+                  <TableCell className="text-end">
+                    {Number(
+                      totalInterest + totalPrincipal + monitoringTotal
+                    ).toLocaleString()}
                   </TableCell>
                   <TableCell className="text-end"></TableCell>
                 </TableRow>
@@ -179,6 +216,7 @@ const LoanCalculator = ({ data, isOpen, onClose }) => {
             </Table>
           </div>
 
+          {/* Charges — monitoring fees REMOVED here as requested */}
           <div>
             <h6 className="capitalize text-center">Charges</h6>
             <div className="border rounded-lg shadow-md overflow-hidden">
@@ -190,15 +228,14 @@ const LoanCalculator = ({ data, isOpen, onClose }) => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {charges?.map((row, index) => (
+                  {extraCharges?.map((row, index) => (
                     <TableRow key={index}>
                       <TableCell className="text-end">{row?.title}</TableCell>
                       <TableCell className="text-end">
                         {row?.type === "value"
-                          ? row?.value?.toLocaleString()
-                          : (
-                              (row?.value * totalPrincipal) /
-                              100
+                          ? Number(row?.value || 0).toLocaleString()
+                          : Number(
+                              ((row?.value || 0) * totalPrincipal) / 100
                             ).toLocaleString()}
                       </TableCell>
                     </TableRow>
@@ -208,10 +245,10 @@ const LoanCalculator = ({ data, isOpen, onClose }) => {
             </div>
           </div>
 
-          {/* Buttons */}
+          {/* Actions */}
           <DialogFooter>
-            <Button type="submit" onClick={onDownload} disabled={isDownloading}>
-              Download <Download />
+            <Button type="button" onClick={onDownload} disabled={isDownloading}>
+              {isDownloading ? "Preparing..." : "Download"} <Download />
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -515,10 +515,35 @@ export function AppSidebar({ ...props }) {
     return acc;
   }, {});
 
+  const userId = auth?.user?.user_id; // whichever you store
+  const currentBranchId = auth?.current_branch_id ?? auth?.user?.branch_id;
+  const allowedBranches = auth?.allowed_branches ?? [];
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <TeamSwitcher
+          userId={userId}
+          businessName={auth?.user?.sacco_name}
+          currentBranchId={currentBranchId}
+          allowedBranches={allowedBranches}
+          onSwitched={({ branch_id, branch_name }) => {
+            if (typeof auth?.setAuth === "function") {
+              auth.setAuth((prev) => ({
+                ...prev,
+                user: {
+                  ...prev.user,
+                  branch_id,
+                  branch_name: branch_name || prev.user?.branch_name,
+                },
+                current_branch_id: branch_id,
+              }));
+            } else {
+              // fallback
+              // window.location.reload();
+            }
+          }}
+        />
       </SidebarHeader>
       <SidebarContent>
         {/* <NavSingle data={data.dashboard} />

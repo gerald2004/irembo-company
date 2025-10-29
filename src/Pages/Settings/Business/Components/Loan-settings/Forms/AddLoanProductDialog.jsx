@@ -29,6 +29,7 @@ import {
   AlertTriangle,
   Check,
   X,
+  Settings2,
 } from "lucide-react";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { toast } from "@/hooks/use-toast";
@@ -44,18 +45,51 @@ const AddLoanProductDialog = ({ isOpen, onClose, refetch }) => {
     watch,
     formState: { errors, isSubmitting },
   } = useForm();
+
   const [step, setStep] = useState(1);
 
+  // Watch fields used for conditional UI/validation
+  const penaltyMode = watch("penalty_mode");
+  const monitoringEnabled = watch("monitoring_fee_enabled"); // "on" | "off"
+  const monitoringType = watch("monitoring_fee_type"); // "percentage" | "value"
+
   const validateStep = async () => {
+    // We keep your pattern: fields are registered only when visible,
+    // so `trigger()` won’t validate future steps.
     const valid = await trigger();
-    if (valid && step < 3) {
+    if (valid && step < 4) {
       setStep((prev) => prev + 1);
     }
   };
 
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
+
   const onSubmit = async (data) => {
-          const controller = new AbortController();
+    const controller = new AbortController();
+
+    // If monitoring is ON, enforce minimal validation here as a guard
+    if (data.monitoring_fee_enabled === "on") {
+      if (!data.monitoring_fee_type) {
+        toast({
+          title: "Validation",
+          variant: "destructive",
+          description: "Monitoring fee type is required.",
+        });
+        return;
+      }
+      if (
+        data.monitoring_fee_value === undefined ||
+        data.monitoring_fee_value === "" ||
+        Number(data.monitoring_fee_value) < 0
+      ) {
+        toast({
+          title: "Validation",
+          variant: "destructive",
+          description: "Monitoring fee value must be a non-negative number.",
+        });
+        return;
+      }
+    }
 
     try {
       const response = await axiosPrivate.post(
@@ -65,15 +99,17 @@ const AddLoanProductDialog = ({ isOpen, onClose, refetch }) => {
       );
       toast({ title: "Success", description: response?.data?.messages });
       reset();
-      refetch();
-      onClose();
+      refetch?.();
+      onClose?.();
     } catch (error) {
       const errorMessage =
         error?.response?.data?.messages || "No server response";
       toast({
         title: "Uh oh! Something went wrong.",
         variant: "destructive",
-        description: errorMessage,
+        description: Array.isArray(errorMessage)
+          ? errorMessage.join(", ")
+          : errorMessage,
       });
     }
   };
@@ -91,12 +127,15 @@ const AddLoanProductDialog = ({ isOpen, onClose, refetch }) => {
       icon: <Check className="w-6 h-6 text-green-500" />,
       label: "Offset Period",
     },
+    {
+      icon: <Settings2 className="w-6 h-6 text-purple-500" />,
+      label: "Monitoring Fee",
+    },
   ];
-  const penaltyMode = watch("penalty_mode");
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[640px]">
         <DialogHeader>
           <DialogTitle>Add Loan Product</DialogTitle>
           <DialogDescription>
@@ -104,33 +143,39 @@ const AddLoanProductDialog = ({ isOpen, onClose, refetch }) => {
           </DialogDescription>
           <DialogClose asChild>
             <button
-              className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
-              onClick={onClose}
+              className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
+              onClick={() => {
+                reset();
+                setStep(1);
+                onClose?.();
+              }}
             >
               <X className="h-4 w-4" />
             </button>
           </DialogClose>
         </DialogHeader>
 
+        {/* Stepper */}
         <div className="flex items-center space-x-4 my-1">
-          {stepIcons.map((stepIcon, index) => (
+          {stepIcons.map((s, i) => (
             <div
-              key={index}
+              key={i}
               className={`flex items-center ${
-                step > index + 1 ? "opacity-100" : "opacity-50"
+                step > i + 1 ? "opacity-100" : "opacity-50"
               } transition-opacity`}
             >
-              {stepIcon.icon}
-              <span className="ml-2 text-sm font-medium">{stepIcon.label}</span>
-              {index < stepIcons.length - 1 && (
-                <div className="h-[2px] w-8 bg-gray-300 mx-2"></div>
+              {s.icon}
+              <span className="ml-2 text-sm font-medium">{s.label}</span>
+              {i < stepIcons.length - 1 && (
+                <div className="h-[2px] w-8 bg-gray-300 mx-2" />
               )}
             </div>
           ))}
         </div>
-        <Progress value={(step / 3) * 100} className="my-1" />
+        <Progress value={(step / 4) * 100} className="my-1" />
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* STEP 1 */}
           {step === 1 && (
             <fieldset className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -143,12 +188,13 @@ const AddLoanProductDialog = ({ isOpen, onClose, refetch }) => {
                   <p className="text-red-500 text-sm">{errors.title.message}</p>
                 )}
               </div>
+
               <div>
                 <Label>Type</Label>
                 <Select
-                  onValueChange={(value) => {
-                    setValue("type", value, { shouldValidate: true });
-                  }}
+                  onValueChange={(value) =>
+                    setValue("type", value, { shouldValidate: true })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue
@@ -171,9 +217,9 @@ const AddLoanProductDialog = ({ isOpen, onClose, refetch }) => {
               <div>
                 <Label>Loan Interval</Label>
                 <Select
-                  onValueChange={(value) => {
-                    setValue("interval", value, { shouldValidate: true });
-                  }}
+                  onValueChange={(value) =>
+                    setValue("interval", value, { shouldValidate: true })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue
@@ -196,6 +242,7 @@ const AddLoanProductDialog = ({ isOpen, onClose, refetch }) => {
                   </p>
                 )}
               </div>
+
               <div>
                 <Label htmlFor="interest_rate">Interest Rate</Label>
                 <Input
@@ -215,16 +262,17 @@ const AddLoanProductDialog = ({ isOpen, onClose, refetch }) => {
             </fieldset>
           )}
 
+          {/* STEP 2 */}
           {step === 2 && (
             <fieldset className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label>Penalty Interval</Label>
                 <Select
-                  onValueChange={(value) => {
+                  onValueChange={(value) =>
                     setValue("penalty_interval", value, {
                       shouldValidate: true,
-                    });
-                  }}
+                    })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue
@@ -247,11 +295,12 @@ const AddLoanProductDialog = ({ isOpen, onClose, refetch }) => {
                   </p>
                 )}
               </div>
+
               <div>
                 <Label htmlFor="penalty_amount">
                   {penaltyMode === "percentage"
                     ? "Percentage (%)"
-                    : "Charge Amount"}{" "}
+                    : "Charge Amount"}
                 </Label>
                 <Input
                   id="penalty_amount"
@@ -276,12 +325,13 @@ const AddLoanProductDialog = ({ isOpen, onClose, refetch }) => {
                   </p>
                 )}
               </div>
+
               <div>
                 <Label>Penalty Mode</Label>
                 <Select
-                  onValueChange={(value) => {
-                    setValue("penalty_mode", value, { shouldValidate: true });
-                  }}
+                  onValueChange={(value) =>
+                    setValue("penalty_mode", value, { shouldValidate: true })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue
@@ -305,6 +355,7 @@ const AddLoanProductDialog = ({ isOpen, onClose, refetch }) => {
             </fieldset>
           )}
 
+          {/* STEP 3 */}
           {step === 3 && (
             <fieldset className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -324,14 +375,15 @@ const AddLoanProductDialog = ({ isOpen, onClose, refetch }) => {
                   </p>
                 )}
               </div>
+
               <div>
                 <Label>Penalty Offset Interval</Label>
                 <Select
-                  onValueChange={(value) => {
+                  onValueChange={(value) =>
                     setValue("penalty_offset_interval", value, {
                       shouldValidate: true,
-                    });
-                  }}
+                    })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue
@@ -355,6 +407,7 @@ const AddLoanProductDialog = ({ isOpen, onClose, refetch }) => {
                   </p>
                 )}
               </div>
+
               <div>
                 <Label htmlFor="penalty_grace_period">
                   Penalty Grace Period
@@ -372,14 +425,15 @@ const AddLoanProductDialog = ({ isOpen, onClose, refetch }) => {
                   </p>
                 )}
               </div>
+
               <div>
                 <Label>Penalty Grace Period Interval</Label>
                 <Select
-                  onValueChange={(value) => {
+                  onValueChange={(value) =>
                     setValue("penalty_grace_period_interval", value, {
                       shouldValidate: true,
-                    });
-                  }}
+                    })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue
@@ -406,6 +460,116 @@ const AddLoanProductDialog = ({ isOpen, onClose, refetch }) => {
             </fieldset>
           )}
 
+          {/* STEP 4 — MONITORING FEE */}
+          {step === 4 && (
+            <fieldset className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>Monitoring Fee</Label>
+                <Select
+                  onValueChange={(value) =>
+                    setValue("monitoring_fee_enabled", value, {
+                      shouldValidate: true,
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder="Turn On or Off"
+                      {...register("monitoring_fee_enabled", {
+                        required: "Select On or Off",
+                      })}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="off">Off</SelectItem>
+                    <SelectItem value="on">On</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.monitoring_fee_enabled && (
+                  <p className="text-red-500 text-sm">
+                    {errors.monitoring_fee_enabled.message}
+                  </p>
+                )}
+              </div>
+
+              <div
+                className={`${
+                  monitoringEnabled === "on"
+                    ? ""
+                    : "opacity-50 pointer-events-none"
+                }`}
+              >
+                <Label>Monitoring Fee Type</Label>
+                <Select
+                  onValueChange={(value) =>
+                    setValue("monitoring_fee_type", value, {
+                      shouldValidate: true,
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder="Select Type"
+                      {...register("monitoring_fee_type", {
+                        validate: (v) =>
+                          monitoringEnabled === "on"
+                            ? !!v || "Monitoring fee type is required"
+                            : true,
+                      })}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="value">Fixed</SelectItem>
+                    <SelectItem value="percentage">Percentage</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.monitoring_fee_type && (
+                  <p className="text-red-500 text-sm">
+                    {errors.monitoring_fee_type.message}
+                  </p>
+                )}
+              </div>
+
+              <div
+                className={`${
+                  monitoringEnabled === "on"
+                    ? ""
+                    : "opacity-50 pointer-events-none"
+                } md:col-span-2`}
+              >
+                <Label htmlFor="monitoring_fee_value">
+                  {monitoringType === "percentage"
+                    ? "Monitoring Percentage (%)"
+                    : "Monitoring Amount"}
+                </Label>
+                <Input
+                  id="monitoring_fee_value"
+                  type="number"
+                  step="0.01"
+                  placeholder={
+                    monitoringType === "percentage"
+                      ? "Enter Percentage (%)"
+                      : "Enter Amount"
+                  }
+                  {...register("monitoring_fee_value", {
+                    validate: (v) => {
+                      if (monitoringEnabled !== "on") return true;
+                      const n = Number(v);
+                      if (Number.isNaN(n)) return "Must be a number";
+                      if (n < 0) return "Must be non-negative";
+                      return true;
+                    },
+                  })}
+                />
+                {errors.monitoring_fee_value && (
+                  <p className="text-red-500 text-sm">
+                    {errors.monitoring_fee_value.message}
+                  </p>
+                )}
+              </div>
+            </fieldset>
+          )}
+
           <DialogFooter>
             <div className="flex justify-end w-full">
               {step > 1 && (
@@ -418,15 +582,13 @@ const AddLoanProductDialog = ({ isOpen, onClose, refetch }) => {
                   <ArrowLeft className="mr-2" /> Back
                 </Button>
               )}
-              {step < 3 ? (
+
+              {step < 4 ? (
                 <Button type="button" onClick={validateStep}>
                   Next <ArrowRight className="ml-2" />
                 </Button>
               ) : (
-                ""
-              )}
-              {step === 3 && (
-                <Button type="submit">
+                <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? (
                     "Saving Please wait ..."
                   ) : (

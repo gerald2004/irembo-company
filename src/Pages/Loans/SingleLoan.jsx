@@ -23,6 +23,7 @@ import { LoanGuarantorsTable } from "./Components/Tables/LoanGuarantorsTable";
 import { LoanFeesTable } from "./Components/Tables/LoanFeesTable";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
 import { hasPermission } from "@/lib/utils";
+import LoanIntelligenceDashboard from "./Components/Blocks/LoanIntelligenceDashboard";
 const SingleLoan = () => {
   const navigate = useNavigate();
   const axiosPrivate = useAxiosPrivate();
@@ -156,6 +157,11 @@ const SingleLoan = () => {
                         Transactions
                       </TabsTrigger>
                     )}
+                    {hasPermission(roles, 100161) && (
+                      <TabsTrigger value="loan-intelligence">
+                        Loan Intelligence
+                      </TabsTrigger>
+                    )}
                   </>
                 )}
 
@@ -185,6 +191,14 @@ const SingleLoan = () => {
                 <LoanSummary
                   data={data?.loan_application}
                   totals={data?.totals}
+                  refetch={refetch}
+                />
+              )}
+            </TabsContent>
+            <TabsContent value="loan-intelligence" className="space-y-4">
+              {hasPermission(roles, 100159) && (
+                <LoanIntelligenceDashboard
+                  loanId={params.loanid}
                   refetch={refetch}
                 />
               )}
