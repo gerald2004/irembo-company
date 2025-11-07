@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -23,27 +24,29 @@ import EditTransactionTillDialog from "../Forms/EditTransactionTillDialog";
 export function TransactionTillTable() {
   const navigate = useNavigate();
   const axiosPrivate = useAxiosPrivate();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isModalOpenEdit, setIsModalOpenEdit] = useState(false);
-  const [defaultData, setDefaultData] = useState([]);
+  const [defaultData, setDefaultData] = useState(null);
+
   const [showDialog, setShowDialog] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
 
-  // ✅ Handle Modals
-  const handleOpenModal = () => setIsModalOpen(true);
-  const handleCloseModal = () => setIsModalOpen(false);
+  const openAdd = () => setIsModalOpen(true);
+  const closeAdd = () => setIsModalOpen(false);
 
-  const handleOpenModalEdit = (data) => {
+  const openEdit = (row) => {
+    setDefaultData(row);
     setIsModalOpenEdit(true);
-    setDefaultData(data);
   };
-
-  const handleCloseModalEdit = () => {
+  const closeEdit = () => {
+    setDefaultData(null);
     setIsModalOpenEdit(false);
-    setDefaultData([]);
   };
 
-  // ✅ Fetch Transaction Tills
+  // ─────────────────────────────────────────────────────────
+  // Fetch tills list
+  // ─────────────────────────────────────────────────────────
   const {
     data = [],
     isLoading,
@@ -53,14 +56,12 @@ export function TransactionTillTable() {
   } = useQuery({
     queryKey: ["transaction_tills"],
     queryFn: async () => {
-            const controller = new AbortController();
-
-      const fetchURL = `/settings/transaction-channels`;
+      const controller = new AbortController();
       try {
-        const response = await axiosPrivate.get(fetchURL, {
+        const res = await axiosPrivate.get("/settings/transaction-channels", {
           signal: controller.signal,
         });
-        return response?.data?.data?.transaction_tills ?? [];
+        return res?.data?.data?.transaction_tills ?? [];
       } catch (error) {
         if (error?.response?.status === 401) {
           navigate("/", { state: { from: location }, replace: true });
@@ -70,77 +71,80 @@ export function TransactionTillTable() {
     },
     keepPreviousData: true,
   });
-   const {
-     data: accountsData,
-     isLoading: isLoadingAccounts,
-     isError: isErrorAccounts,
-     refetch: refetchAccounts,
-     isRefetching: isRefetchingAccounts,
-   } = useQuery({
-     queryKey: ["account-votes"],
-     queryFn: async () => {
-            const controller = new AbortController();
 
-       const response = await axiosPrivate.get("/settings/accounts/account", {
-         signal: controller.signal,
-       });
-       return response.data.data.accounts;
-     },
-   });
-const {
-  data: staffList = []
-} = useQuery({
-  queryKey: ["users"],
-  queryFn: async () => {
-          const controller = new AbortController();
-
-    try {
-      const response = await axiosPrivate.get(`/business/employees`, {
+  // Accounts (for dialogs)
+  const {
+    data: accountsData,
+    isLoading: isLoadingAccounts,
+    isError: isErrorAccounts,
+    refetch: refetchAccounts,
+    isRefetching: isRefetchingAccounts,
+  } = useQuery({
+    queryKey: ["account-votes"],
+    queryFn: async () => {
+      const controller = new AbortController();
+      const res = await axiosPrivate.get("/settings/accounts/account", {
         signal: controller.signal,
       });
-      return response?.data?.data?.users ?? [];
-    } catch (error) {
-      if (error?.response?.status === 401) {
-        navigate("/", { state: { from: location }, replace: true });
+      return res?.data?.data?.accounts ?? [];
+    },
+  });
+
+  // Staff (for dialogs)
+  const { data: staffList = [] } = useQuery({
+    queryKey: ["users"],
+    queryFn: async () => {
+      const controller = new AbortController();
+      try {
+        const res = await axiosPrivate.get(`/business/employees`, {
+          signal: controller.signal,
+        });
+        return res?.data?.data?.users ?? [];
+      } catch (error) {
+        if (error?.response?.status === 401) {
+          navigate("/", { state: { from: location }, replace: true });
+        }
+        throw error;
       }
-      throw error;
-    }
-  },
-  keepPreviousData: true,
-});
-  // ✅ Handle Delete Till
-  const handleOpenDeleteDialog = (id) => {
+    },
+    keepPreviousData: true,
+  });
+
+  // ─────────────────────────────────────────────────────────
+  // Delete flow
+  // ─────────────────────────────────────────────────────────
+  const confirmDelete = (id) => {
     setSelectedId(id);
     setShowDialog(true);
   };
-
-  const handleCloseDeleteDialog = () => {
+  const closeDelete = () => {
     setSelectedId(null);
     setShowDialog(false);
   };
 
-  const handleDeleteTill = async () => {
-          const controller = new AbortController();
-
+  const doDelete = async () => {
+    const controller = new AbortController();
     try {
-      const response = await axiosPrivate.delete(
+      const res = await axiosPrivate.delete(
         `/settings/transaction-channels/${selectedId}`,
         { signal: controller.signal }
       );
-      toast({ title: "Success", description: response?.data?.messages });
+      toast({ title: "Success", description: res?.data?.messages });
       refetch();
+      closeDelete();
     } catch (error) {
-      const errorMessage =
-        error?.response?.data?.messages || "No server response";
+      const msg = error?.response?.data?.messages || "No server response";
       toast({
         title: "Uh oh! Something went wrong.",
         variant: "destructive",
-        description: errorMessage,
+        description: msg,
       });
     }
   };
 
-  // ✅ Table Columns
+  // ─────────────────────────────────────────────────────────
+  // Table columns
+  // ─────────────────────────────────────────────────────────
   const columns = [
     {
       id: "select",
@@ -165,23 +169,28 @@ const {
     {
       accessorKey: "staff",
       header: "Staff Name",
-      cell: ({ row }) => (
-        <p className="capitalize">
-          {row.original.staff?.user_identification_code}{" "}
-          {row.original.staff?.user_firstname}{" "}
-          {row.original.staff?.user_lastname}
-        </p>
-      ),
+      cell: ({ row }) => {
+        const s = row.original?.staff;
+        return (
+          <p className="capitalize">
+            {s?.user_identification_code
+              ? `${s.user_identification_code} `
+              : ""}
+            {s?.user_firstname || ""} {s?.user_lastname || ""}
+          </p>
+        );
+      },
     },
+    // ✅ Now that tills link directly to COA, read from account relation
     {
       accessorKey: "account.account_title",
       header: "Linked Account",
-      cell: ({ row }) => <p>{row.original.account?.account_title || "N/A"}</p>,
+      cell: ({ row }) => <p>{row.original?.account?.account_title || "N/A"}</p>,
     },
     {
       accessorKey: "description",
       header: "Description",
-      cell: ({ row }) => <p>{row.original.description || "N/A"}</p>,
+      cell: ({ row }) => <p>{row.original?.description || "N/A"}</p>,
     },
     {
       id: "actions",
@@ -196,13 +205,11 @@ const {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onSelect={() => handleOpenModalEdit(row.original)}
-            >
+            <DropdownMenuItem onSelect={() => openEdit(row.original)}>
               Edit Till
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => handleOpenDeleteDialog(row.original.till_id)}
+              onClick={() => confirmDelete(row.original.till_id)}
             >
               Delete Till
             </DropdownMenuItem>
@@ -221,13 +228,13 @@ const {
         isLoading={isLoading}
         isRefetching={isRefetching}
         buttonTitle={"+ Add Transaction Till"}
-        buttonMethod={handleOpenModal}
+        buttonMethod={openAdd}
         isError={isError}
       />
-      {/* ✅ Add Till Modal */}
+
       <AddTransactionTillDialog
         isOpen={isModalOpen}
-        onClose={handleCloseModal}
+        onClose={closeAdd}
         refetch={refetch}
         accountsData={accountsData}
         isLoadingAccounts={isLoadingAccounts}
@@ -236,10 +243,10 @@ const {
         isRefetchingAccounts={isRefetchingAccounts}
         staffList={staffList}
       />
-      {/* ✅ Edit Till Modal */}
+
       <EditTransactionTillDialog
         isOpen={isModalOpenEdit}
-        onClose={handleCloseModalEdit}
+        onClose={closeEdit}
         refetch={refetch}
         defaultValues={defaultData}
         accountsData={accountsData}
@@ -249,13 +256,13 @@ const {
         isRefetchingAccounts={isRefetchingAccounts}
         staffList={staffList}
       />
-      {/* ✅ Delete Confirmation Modal */}
+
       <AlertModal
         showDialog={showDialog}
-        setShowDialog={handleCloseDeleteDialog}
+        setShowDialog={closeDelete}
         title="Are you sure?"
         message="Do you want to delete this transaction till?"
-        method={handleDeleteTill}
+        method={doDelete}
         buttonName="Delete"
       />
     </>

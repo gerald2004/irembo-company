@@ -25,7 +25,7 @@ import { toast } from "@/hooks/use-toast";
 import { AccountCombobox } from "@/Pages/Components/AccountCombobox";
 import { Textarea } from "@/components/ui/textarea";
 
-const AddTransactionTillDialog = ({
+export default function AddTransactionTillDialog({
   isOpen,
   onClose,
   refetch,
@@ -35,25 +35,23 @@ const AddTransactionTillDialog = ({
   refetchAccounts,
   isRefetchingAccounts,
   staffList,
-}) => {
+}) {
   const axiosPrivate = useAxiosPrivate();
   const {
     register,
     handleSubmit,
     reset,
     control,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isSubmitted },
   } = useForm();
 
   const [selectedAccount, setSelectedAccount] = useState(null);
 
-  // ✅ Handle Form Submission
   const onSubmit = async (data) => {
-          const controller = new AbortController();
-
+    const controller = new AbortController();
     const payload = {
       staff_id: data.staff_id,
-      linked_account: selectedAccount,
+      linked_account: selectedAccount, // expects linked_accounts.linked_account_id
       description: data.description,
     };
     try {
@@ -68,6 +66,7 @@ const AddTransactionTillDialog = ({
           response?.data?.messages || "Transaction Till added successfully",
       });
       reset();
+      setSelectedAccount(null);
       refetch?.();
       onClose();
     } catch (error) {
@@ -81,9 +80,16 @@ const AddTransactionTillDialog = ({
     }
   };
 
+  const accountError = isSubmitted && !selectedAccount;
+
   return (
-    <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-[400px]">
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <DialogContent className="sm:max-w-[420px]">
         <DialogHeader>
           <DialogTitle>Add Transaction Till</DialogTitle>
           <DialogDescription>
@@ -91,7 +97,7 @@ const AddTransactionTillDialog = ({
           </DialogDescription>
           <DialogClose asChild>
             <button
-              className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
+              className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
               onClick={onClose}
             >
               <X className="h-4 w-4" />
@@ -102,47 +108,44 @@ const AddTransactionTillDialog = ({
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Staff Selection */}
           <div>
-            <Label>Select Staff</Label>
+            <Label>Staff</Label>
             <Controller
               name="staff_id"
               control={control}
               rules={{ required: "Staff is required" }}
               render={({ field }) => (
                 <Select
-                  value={field.value || ""} // Ensure empty value shows placeholder
-                  onValueChange={(value) => {
-                    field.onChange(value); // Update react-hook-form state
-                  }}
+                  value={field.value || ""}
+                  onValueChange={field.onChange}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select Staff"></SelectValue>
+                    <SelectValue placeholder="Select Staff" />
                   </SelectTrigger>
                   <SelectContent>
                     {staffList.length > 0 ? (
-                      staffList.map((staff) => (
-                        <SelectItem
-                          key={staff.user_id}
-                          value={String(staff.user_id)}
-                        >
-                          {staff.user_firstname} {staff.user_lastname} (
-                          {staff.user_identification_code})
+                      staffList.map((s) => (
+                        <SelectItem key={s.user_id} value={String(s.user_id)}>
+                          {s.user_firstname} {s.user_lastname} (
+                          {s.user_identification_code})
                         </SelectItem>
                       ))
                     ) : (
-                      <SelectItem value="">No Staff Available</SelectItem>
+                      <div className="px-2 py-1 text-sm text-muted-foreground">
+                        No Staff Available
+                      </div>
                     )}
                   </SelectContent>
                 </Select>
               )}
             />
             {errors.staff_id && (
-              <p className="text-red-500 text-sm">{errors.staff_id.message}</p>
+              <p className="text-red-500 text-xs">{errors.staff_id.message}</p>
             )}
           </div>
 
-          {/* Account Selection */}
+          {/* Linked Account (from COA via LinkedAccount) */}
           <AccountCombobox
-            label="Linked Account"
+            label="Linked Account (control)"
             selectedAccount={selectedAccount}
             onAccountSelect={(value) => setSelectedAccount(parseInt(value))}
             accountsData={accountsData}
@@ -151,9 +154,12 @@ const AddTransactionTillDialog = ({
             refetch={refetchAccounts}
             isRefetching={isRefetchingAccounts}
           />
+          {accountError && (
+            <p className="text-red-500 text-xs">Linked account is required</p>
+          )}
 
           {/* Description */}
-          <div className="col-span-2">
+          <div>
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
@@ -163,7 +169,7 @@ const AddTransactionTillDialog = ({
               })}
             />
             {errors.description && (
-              <p className="text-red-500 text-sm">
+              <p className="text-red-500 text-xs">
                 {errors.description.message}
               </p>
             )}
@@ -178,6 +184,4 @@ const AddTransactionTillDialog = ({
       </DialogContent>
     </Dialog>
   );
-};
-
-export default AddTransactionTillDialog;
+}

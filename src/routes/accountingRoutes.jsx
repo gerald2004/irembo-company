@@ -4,6 +4,9 @@ import JournalEntries from "@/Pages/Accounting/JournalEntries";
 import JournalEntriesDetails from "@/Pages/Accounting/JournalEntriesDetails";
 import AccountEntriesDetails from "@/Pages/Accounting/AccountEntriesDetails";
 import Assets from "@/Pages/Accounting/Assets";
+import OpeningDay from "@/Pages/Accounting/OpeningDay";
+import ClosingDay from "@/Pages/Accounting/ClosingDay";
+import CashTransfers from "@/Pages/Accounting/CashTransfers";
 
 const accountingRoutes = [
   {
@@ -22,6 +25,16 @@ const accountingRoutes = [
     roles: [100109],
   },
   {
+    path: "/opening-a-business-day",
+    element: <OpeningDay />,
+    roles: [100109],
+  },
+  {
+    path: "/closing-a-business-day",
+    element: <ClosingDay />,
+    roles: [100109],
+  },
+  {
     path: "/journal-entries/:journalId",
     element: <JournalEntriesDetails />,
     roles: [100169],
@@ -34,6 +47,11 @@ const accountingRoutes = [
   {
     path: "/assets",
     element: <Assets />,
+    roles: [100111],
+  },
+  {
+    path: "/cash-transfers",
+    element: <CashTransfers />,
     roles: [100111],
   },
 ];

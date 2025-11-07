@@ -25,7 +25,7 @@ import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { AccountCombobox } from "@/Pages/Components/AccountCombobox";
 import { Textarea } from "@/components/ui/textarea";
 
-const EditTransactionTillDialog = ({
+export default function EditTransactionTillDialog({
   isOpen,
   onClose,
   refetch,
@@ -36,7 +36,7 @@ const EditTransactionTillDialog = ({
   refetchAccounts,
   isRefetchingAccounts,
   staffList,
-}) => {
+}) {
   const axiosPrivate = useAxiosPrivate();
   const {
     control,
@@ -44,30 +44,28 @@ const EditTransactionTillDialog = ({
     handleSubmit,
     setValue,
     reset,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isSubmitted },
   } = useForm();
 
   const [selectedAccount, setSelectedAccount] = useState(null);
 
-  // ✅ Load Default Values when editing
   useEffect(() => {
     if (defaultValues) {
-      for (const [key, value] of Object.entries(defaultValues)) {
-        setValue(key, value);
-      }
-      setSelectedAccount(defaultValues.account?.account_id || null);
-
-      // ✅ Set Default Staff ID if Exists
-      if (defaultValues.staff?.user_id) {
+      for (const [k, v] of Object.entries(defaultValues)) setValue(k, v);
+      // set default staff_id in select
+      if (defaultValues.staff?.user_id)
         setValue("staff_id", String(defaultValues.staff.user_id));
-      }
+      // set linked account selection
+      setSelectedAccount(
+        defaultValues?.linked?.linked_account_id ||
+          defaultValues?.linked_account ||
+          null
+      );
     }
   }, [defaultValues, setValue]);
 
-  // ✅ Handle Form Submission
   const onSubmit = async (data) => {
-          const controller = new AbortController();
-
+    const controller = new AbortController();
     const payload = {
       staff_id: data.staff_id,
       linked_account: selectedAccount,
@@ -85,7 +83,7 @@ const EditTransactionTillDialog = ({
           response?.data?.messages || "Transaction Till updated successfully",
       });
       reset();
-      refetch();
+      refetch?.();
       onClose();
     } catch (error) {
       const errorMessage =
@@ -98,9 +96,16 @@ const EditTransactionTillDialog = ({
     }
   };
 
+  const accountError = isSubmitted && !selectedAccount;
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[400px]">
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <DialogContent className="sm:max-w-[420px]">
         <DialogHeader>
           <DialogTitle>Edit Transaction Till</DialogTitle>
           <DialogDescription>
@@ -110,8 +115,7 @@ const EditTransactionTillDialog = ({
             <button
               className="absolute right-4 top-4 rounded-sm opacity-70 
                 ring-offset-background transition-opacity hover:opacity-100 
-                focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 
-                disabled:pointer-events-none"
+                focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
               onClick={onClose}
             >
               <X className="h-4 w-4" />
@@ -120,74 +124,75 @@ const EditTransactionTillDialog = ({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {/* Staff Selection */}
-            <div>
-              <Label>Staff</Label>
-              <Controller
-                name="staff_id"
-                control={control}
-                rules={{ required: "Staff selection is required" }}
-                render={({ field }) => (
-                  <Select
-                    value={field.value || ""}
-                    onValueChange={(value) => field.onChange(value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Staff" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {staffList.length > 0 ? (
-                        staffList.map((staff) => (
-                          <SelectItem
-                            key={staff.user_id}
-                            value={String(staff.user_id)}
-                          >
-                            {staff.user_firstname} {staff.user_lastname} (
-                            {staff.user_identification_code})
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="">No Staff Available</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {errors.staff_id && (
-                <p className="text-red-500 text-sm">
-                  {errors.staff_id.message}
-                </p>
+          {/* Staff */}
+          <div>
+            <Label>Staff</Label>
+            <Controller
+              name="staff_id"
+              control={control}
+              rules={{ required: "Staff selection is required" }}
+              render={({ field }) => (
+                <Select
+                  value={field.value || ""}
+                  onValueChange={field.onChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Staff" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {staffList.length > 0 ? (
+                      staffList.map((s) => (
+                        <SelectItem key={s.user_id} value={String(s.user_id)}>
+                          {s.user_firstname} {s.user_lastname} (
+                          {s.user_identification_code})
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="px-2 py-1 text-sm text-muted-foreground">
+                        No Staff Available
+                      </div>
+                    )}
+                  </SelectContent>
+                </Select>
               )}
-            </div>
-
-            {/* Account Selection */}
-            <AccountCombobox
-              label="Linked Account"
-              selectedAccount={selectedAccount}
-              onAccountSelect={(value) => setSelectedAccount(parseInt(value))}
-              accountsData={accountsData}
-              isLoading={isLoadingAccounts}
-              isError={isErrorAccounts}
-              refetch={refetchAccounts}
-              isRefetching={isRefetchingAccounts}
             />
+            {errors.staff_id && (
+              <p className="text-red-500 text-xs">{errors.staff_id.message}</p>
+            )}
+          </div>
 
-            {/* Description */}
-            <div className="col-span-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                placeholder="Enter description"
-                {...register("description", {
-                  required: "Description is required",
-                })}
-              />
-              {errors.description && (
-                <p className="text-red-500 text-sm">
-                  {errors.description.message}
-                </p>
-              )}
-            </div>
+          {/* Linked Account */}
+          <AccountCombobox
+            label="Linked Account (control)"
+            selectedAccount={selectedAccount}
+            onAccountSelect={(value) => setSelectedAccount(parseInt(value))}
+            accountsData={accountsData}
+            isLoading={isLoadingAccounts}
+            isError={isErrorAccounts}
+            refetch={refetchAccounts}
+            isRefetching={isRefetchingAccounts}
+          />
+          {accountError && (
+            <p className="text-red-500 text-xs">Linked account is required</p>
+          )}
+
+          {/* Description */}
+          <div>
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              placeholder="Enter description"
+              {...register("description", {
+                required: "Description is required",
+              })}
+            />
+            {errors.description && (
+              <p className="text-red-500 text-xs">
+                {errors.description.message}
+              </p>
+            )}
+          </div>
+
           <DialogFooter>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Saving..." : "Save Changes"}
@@ -197,6 +202,4 @@ const EditTransactionTillDialog = ({
       </DialogContent>
     </Dialog>
   );
-};
-
-export default EditTransactionTillDialog;
+}

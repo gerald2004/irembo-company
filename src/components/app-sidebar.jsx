@@ -36,6 +36,8 @@ import {
   Accessibility,
   RadioReceiver,
   Mails,
+  DoorOpen,
+  CircleX,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -290,6 +292,25 @@ export function AppSidebar({ ...props }) {
           name: "Journal Entries",
           icon: Hash,
           url: "journal-entries",
+          permissionCodes: [100109],
+        },
+        {
+          name: "Opening A Business Day",
+          icon: DoorOpen,
+          url: "opening-a-business-day",
+          permissionCodes: [100109],
+        },
+        {
+          name: "Cash Transfers",
+          icon: Rotate3d,
+          url: "cash-transfers",
+          permissionCodes: [100109],
+        },
+
+        {
+          name: "Closing A Business Day",
+          icon: CircleX,
+          url: "closing-a-business-day",
           permissionCodes: [100109],
         },
         {

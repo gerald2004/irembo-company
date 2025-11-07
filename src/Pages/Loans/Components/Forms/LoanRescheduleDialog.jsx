@@ -102,7 +102,11 @@ const LoanRescheduleDialog = ({ isOpen, onClose, refetch }) => {
         </DialogHeader>
 
         {/* Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          noValidate
+          className="space-y-4"
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="new_due_date">Start Date</Label>
