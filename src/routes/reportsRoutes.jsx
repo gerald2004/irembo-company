@@ -45,6 +45,7 @@ import EmailReport from "@/Pages/Reports/Components/Blocks/Communications/EmailR
 
 import AuditTrialReport from "@/Pages/Reports/AuditTrialReport";
 import LoansMaturityReport from "@/Pages/Reports/Components/Blocks/Loans/LoansMaturityReport";
+import LoansDisbursementsReport from "@/Pages/Reports/Components/Blocks/Loans/LoansDisbursementsReport";
 
 const reportsRoutes = [
   { path: "/daily-reports", element: <DailyReport />, roles: [100126] },
@@ -126,6 +127,11 @@ const reportsRoutes = [
   {
     path: "/loans-reports/loan-maturity-report",
     element: <LoansMaturityReport />,
+    roles: [100128],
+  },
+  {
+    path: "/loans-reports/loan-disbursement-report",
+    element: <LoansDisbursementsReport />,
     roles: [100128],
   },
   {
