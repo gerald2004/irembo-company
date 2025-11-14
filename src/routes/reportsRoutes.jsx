@@ -44,6 +44,7 @@ import SMSReport from "@/Pages/Reports/Components/Blocks/Communications/SMSRepor
 import EmailReport from "@/Pages/Reports/Components/Blocks/Communications/EmailReport";
 
 import AuditTrialReport from "@/Pages/Reports/AuditTrialReport";
+import LoansMaturityReport from "@/Pages/Reports/Components/Blocks/Loans/LoansMaturityReport";
 
 const reportsRoutes = [
   { path: "/daily-reports", element: <DailyReport />, roles: [100126] },
@@ -120,6 +121,11 @@ const reportsRoutes = [
   {
     path: "/loans-reports/loan-applications",
     element: <LoanApplicationsReport />,
+    roles: [100128],
+  },
+  {
+    path: "/loans-reports/loan-maturity-report",
+    element: <LoansMaturityReport />,
     roles: [100128],
   },
   {
