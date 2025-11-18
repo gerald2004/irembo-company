@@ -26,7 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { DateField } from "@/components/DateField";
-import { X } from "lucide-react";
+import { X, Loader2 } from "lucide-react";
 
 /** Cash transfer directions (includes mobile money) */
 const TYPES = [
@@ -121,7 +121,6 @@ export default function CashTransferDialog({
   const [amount, setAmount] = React.useState("");
   const [channelId, setChannelId] = React.useState(""); // keep "" for unset
   const [narration, setNarration] = React.useState("");
-
   // reset on open
   React.useEffect(() => {
     if (isOpen) {
@@ -238,7 +237,7 @@ export default function CashTransferDialog({
   const amountNum = Number(amount || 0);
 
   // ── submit
-  const { mutate: submit, isLoading } = useMutation({
+  const { mutate: submit, isPending } = useMutation({
     mutationFn: async () => {
       if (!meta) throw new Error("Invalid transfer type");
       if (!amountNum || amountNum <= 0)
@@ -493,8 +492,10 @@ export default function CashTransferDialog({
 
         <DialogFooter>
           <Button
+            type="button"
             onClick={() => submit()}
             disabled={
+              isPending || // 🔐 prevent double submits
               !businessDate ||
               !type ||
               !fromRef ||
@@ -505,7 +506,8 @@ export default function CashTransferDialog({
               (isSaccoUser && !branchId)
             }
           >
-            {isLoading ? "Posting…" : "Post Transfer"}
+            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isPending ? "Posting…" : "Post Transfer"}
           </Button>
         </DialogFooter>
       </DialogContent>
