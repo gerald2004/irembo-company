@@ -3,6 +3,9 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
+
 import {
   Menubar,
   MenubarContent,
@@ -33,6 +36,7 @@ const AuthLayout = () => {
   const [notifications, setNotifications] = useState(0);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
+  const [notificationItems, setNotificationItems] = useState([]);
 
   const { setTheme } = useTheme();
   const { auth } = useAuth();
@@ -47,10 +51,70 @@ const AuthLayout = () => {
     await logout();
     navigate("/");
   };
+  const axiosPrivate = useAxiosPrivate();
+  const {
+    data: notificationsData,
+    isFetching: isFetchingNotifications,
+    refetch: refetchNotifications,
+  } = useQuery({
+    queryKey: ["system-notifications"],
+    queryFn: async () => {
+      const controller = new AbortController();
+      const res = await axiosPrivate.get(
+        "/notifications/system?status=unread&limit=5",
+        { signal: controller.signal }
+      );
+      return (
+        res?.data?.data ?? {
+          unread_count: 0,
+          notifications: [],
+        }
+      );
+    },
+    refetchInterval: 30000, // poll every 30s
+  });
 
   useEffect(() => {
+    if (notificationsData) {
+      setNotifications(notificationsData.unread_count || 0);
+      setNotificationItems(notificationsData.notifications || []);
+    }
+  }, [notificationsData]);
+const markNotificationRead = async (n) => {
+  try {
+    await axiosPrivate.post(
+      "/notifications/system",
+      new URLSearchParams({
+        action: "read_one",
+        id: String(n.id),
+      })
+    );
+
+    // optimistic update
+    setNotificationItems((prev) => prev.filter((x) => x.id !== n.id));
+    setNotifications((prev) => Math.max(0, prev - 1));
+
+    // optional deep link
+    if (n.entity_type === "loan") {
+      navigate(`/individual-loans/${n.entity_id}`);
+    }
+  } catch (err) {
+    console.error("Failed to mark notification read", err);
+  }
+};
+const markAllNotificationsRead = async () => {
+  try {
+    await axiosPrivate.post(
+      "/notifications/system",
+      new URLSearchParams({ action: "read_all" })
+    );
+
+    setNotificationItems([]);
     setNotifications(0);
-  }, []);
+  } catch (err) {
+    console.error("Failed to mark all notifications read", err);
+  }
+};
 
   return (
     <SidebarProvider>
@@ -206,14 +270,80 @@ const AuthLayout = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                <div className="relative">
-                  <Bell className="w-6 h-7 cursor-pointer" />
-                  {notifications > 0 && (
-                    <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold leading-none text-white bg-red-600 rounded-full">
-                      {notifications}
-                    </span>
-                  )}
-                </div>
+                <DropdownMenu
+                  onOpenChange={(open) => open && refetchNotifications()}
+                >
+                  <DropdownMenuTrigger asChild>
+                    <div className="relative cursor-pointer">
+                      <Bell className="w-6 h-7" />
+                      {notifications > 0 && (
+                        <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold text-white bg-red-600 rounded-full">
+                          {notifications}
+                        </span>
+                      )}
+                    </div>
+                  </DropdownMenuTrigger>
+
+                  <DropdownMenuContent align="end" className="w-80">
+                    <div className="px-3 py-2 text-sm font-semibold">
+                      Notifications
+                    </div>
+                    <Separator />
+
+                    {isFetchingNotifications && (
+                      <div className="px-3 py-3 text-sm text-muted-foreground">
+                        Loading…
+                      </div>
+                    )}
+
+                    {!isFetchingNotifications &&
+                      notificationItems.length === 0 && (
+                        <div className="px-3 py-3 text-sm text-muted-foreground">
+                          No new notifications
+                        </div>
+                      )}
+
+                    {notificationItems.map((n) => (
+                      <DropdownMenuItem
+                        key={n.id}
+                        className="flex flex-col items-start gap-1 cursor-pointer"
+                        onClick={() => markNotificationRead(n)}
+                      >
+                        <span
+                          className={`text-sm font-medium ${
+                            n.level === "critical"
+                              ? "text-red-600"
+                              : n.level === "warning"
+                              ? "text-orange-600"
+                              : n.level === "success"
+                              ? "text-green-600"
+                              : "text-blue-600"
+                          }`}
+                        >
+                          {n.title}
+                        </span>
+                        <span className="text-xs text-muted-foreground line-clamp-2">
+                          {n.message}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {n.created_at}
+                        </span>
+                      </DropdownMenuItem>
+                    ))}
+
+                    {notificationItems.length > 0 && (
+                      <>
+                        <Separator />
+                        <DropdownMenuItem
+                          onClick={markAllNotificationsRead}
+                          className="justify-center text-sm"
+                        >
+                          Mark all as read
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
                 <Menubar>
                   <MenubarMenu>

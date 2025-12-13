@@ -38,6 +38,7 @@ import {
   Mails,
   DoorOpen,
   CircleX,
+  MailCheck,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -335,6 +336,12 @@ export function AppSidebar({ ...props }) {
           name: "SMS Float Managament",
           icon: Mails,
           url: "sms-float-management",
+          permissionCodes: [100135],
+        },
+        {
+          name: "Email Float Managament",
+          icon: MailCheck,
+          url: "email-float-management",
           permissionCodes: [100135],
         },
         {
