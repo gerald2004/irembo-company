@@ -42,11 +42,11 @@ const placeholders = [
   },
   {
     key: "{saccoName}",
-    description: "The full name of the SACCO (e.g., 'Irembo SACCO').",
+    description: "The full name of the SACCO Or Business(e.g., 'BIS').",
   },
   {
     key: "{saccoShortName}",
-    description: "The short or acronym name of the SACCO (e.g., 'IREMBO').",
+    description: "The short or acronym name of the SACCO Or Business (e.g., 'BIS').",
   },
   {
     key: "{amountPaid}",
@@ -63,8 +63,7 @@ const placeholders = [
   },
   {
     key: "{savingProduct}",
-    description:
-      "The saving account product or current account product.",
+    description: "The saving account product or current account product.",
   },
 ];
 
