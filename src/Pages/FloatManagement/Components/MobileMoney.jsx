@@ -1,144 +1,97 @@
+/* eslint-disable react/prop-types */
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import MtnLogo from "@/Assets/img/mtn.png";
-import AirtelLogo from "@/Assets/img/airtel.png";
+
+const currency = (n) => Number(n || 0).toLocaleString();
+
+const ProviderCard = ({ title, data, onView }) => {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+
+      <CardContent className="space-y-2">
+        <div className="text-xl font-bold text-green-700">
+          UGX {currency(data?.available)}
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          Reserved: UGX {currency(data?.reserved)}
+        </p>
+
+        <p className="text-sm text-muted-foreground">
+          {data?.transactions ?? 0} Transactions
+        </p>
+
+        <Button size="sm" disabled={!data} onClick={onView}>
+          View details
+        </Button>
+      </CardContent>
+    </Card>
+  );
+};
 
 const MobileMoney = () => {
-  const handleDisburse = () => {
-    // Placeholder logic
-  };
+  const axiosPrivate = useAxiosPrivate();
+  const navigate = useNavigate();
 
-  const handleCollect = () => {
-    // Placeholder logic
-  };
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["mobile-money-balances"],
+    queryFn: async () => {
+      const res = await axiosPrivate.get("/float-management/mobile-banking");
+      return res.data.data;
+    },
+  });
 
-  const airtelDisbursementAmount = 0.00;
-  const mtnDisbursementAmount = 0.00;
-  const airtelCollectAmount = 0.00;
-  const mtnCollectAmount = 0.00;
+  /* ===============================
+   | Loading / Error
+   =============================== */
+  if (isLoading) {
+    return (
+      <div className="text-sm text-muted-foreground">
+        Loading mobile money balances…
+      </div>
+    );
+  }
 
-  const airtelDisburseCount = 0;
-  const mtnDisburseCount = 0;
-  const airtelCollectCount = 0;
-  const mtnCollectCount = 0;
+  if (isError) {
+    return (
+      <div className="text-sm text-red-600">
+        Failed to load mobile money balances
+      </div>
+    );
+  }
+
+  /* ===============================
+   | Normalize balances by channel_id
+   =============================== */
+  const balances = data?.balances || [];
+
+  if (balances.length === 0) {
+    return (
+      <div className="text-sm text-muted-foreground">
+        No mobile money channels configured yet.
+      </div>
+    );
+  }
 
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-      {/* Airtel Disbursement */}
-      <Card className="flex flex-col min-h-[180px]">
-        <CardHeader className="flex flex-row items-center justify-between pb-4">
-          <CardTitle className="text-lg font-semibold">
-            Airtel Disbursement Account
-          </CardTitle>
-          <div className="w-16 h-16 flex items-center justify-center">
-            <img
-              src={AirtelLogo}
-              className="w-full h-full object-contain"
-              alt="Airtel"
-            />
-          </div>
-        </CardHeader>
-        <CardContent className="flex flex-col justify-end flex-grow space-y-2">
-          <div className="text-xl font-bold">
-            UGX {airtelDisbursementAmount.toLocaleString()}
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {airtelDisburseCount} Transactions
-          </p>
-          <div className="flex justify-end">
-            <Button size="sm" onClick={() => handleDisburse("Airtel")}>
-              View
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* MTN Disbursement */}
-      <Card className="flex flex-col min-h-[180px]">
-        <CardHeader className="flex flex-row items-center justify-between pb-4">
-          <CardTitle className="text-lg font-semibold">
-            MTN Disbursement Account
-          </CardTitle>
-          <div className="w-16 h-16 flex items-center justify-center">
-            <img
-              src={MtnLogo}
-              className="w-full h-full object-contain"
-              alt="MTN"
-            />
-          </div>
-        </CardHeader>
-        <CardContent className="flex flex-col justify-end flex-grow space-y-2">
-          <div className="text-xl font-bold">
-            UGX {mtnDisbursementAmount.toLocaleString()}
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {mtnDisburseCount} Transactions
-          </p>
-          <div className="flex justify-end">
-            <Button size="sm" onClick={() => handleDisburse("MTN")}>
-              View
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Airtel Collect */}
-      <Card className="flex flex-col min-h-[180px]">
-        <CardHeader className="flex flex-row items-center justify-between pb-4">
-          <CardTitle className="text-lg font-semibold">
-            Airtel Collect Account
-          </CardTitle>
-          <div className="w-16 h-16 flex items-center justify-center">
-            <img
-              src={AirtelLogo}
-              className="w-full h-full object-contain"
-              alt="Airtel"
-            />
-          </div>
-        </CardHeader>
-        <CardContent className="flex flex-col justify-end flex-grow space-y-2">
-          <div className="text-xl font-bold">
-            UGX {airtelCollectAmount.toLocaleString()}
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {airtelCollectCount} Transactions
-          </p>
-          <div className="flex justify-end">
-            <Button size="sm" onClick={() => handleCollect("Airtel")}>
-              View
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* MTN Collect */}
-      <Card className="flex flex-col min-h-[180px]">
-        <CardHeader className="flex flex-row items-center justify-between pb-4">
-          <CardTitle className="text-lg font-semibold">
-            MTN Collect Account
-          </CardTitle>
-          <div className="w-16 h-16 flex items-center justify-center">
-            <img
-              src={MtnLogo}
-              className="w-full h-full object-contain"
-              alt="MTN"
-            />
-          </div>
-        </CardHeader>
-        <CardContent className="flex flex-col justify-end flex-grow space-y-2">
-          <div className="text-xl font-bold">
-            UGX {mtnCollectAmount.toLocaleString()}
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {mtnCollectCount} Transactions
-          </p>
-          <div className="flex justify-end">
-            <Button size="sm" onClick={() => handleCollect("MTN")}>
-              View
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="grid gap-6 md:grid-cols-3">
+      {balances.map((channel) => (
+        <ProviderCard
+          key={channel.channel_id}
+          title={`${channel.provider} Mobile Money`}
+          data={channel}
+          onView={() =>
+            navigate(`/float-management/mobile-banking/${channel.channel_id}`)
+          }
+        />
+      ))}
     </div>
   );
 };

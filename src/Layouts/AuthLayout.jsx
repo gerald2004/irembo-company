@@ -274,14 +274,18 @@ const markAllNotificationsRead = async () => {
                   onOpenChange={(open) => open && refetchNotifications()}
                 >
                   <DropdownMenuTrigger asChild>
-                    <div className="relative cursor-pointer">
+                    <Button
+                      className="relative cursor-pointer"
+                      variant="outline"
+                      size="icon"
+                    >
                       <Bell className="w-6 h-7" />
                       {notifications > 0 && (
                         <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold text-white bg-red-600 rounded-full">
                           {notifications}
                         </span>
                       )}
-                    </div>
+                    </Button>
                   </DropdownMenuTrigger>
 
                   <DropdownMenuContent align="end" className="w-80">

@@ -39,6 +39,7 @@ import {
   DoorOpen,
   CircleX,
   MailCheck,
+  BanknoteIcon,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -330,6 +331,12 @@ export function AppSidebar({ ...props }) {
           name: "Mobile Banking Float Managament",
           icon: TabletSmartphone,
           url: "mobile-banking-float-management",
+          permissionCodes: [100135],
+        },
+        {
+          name: "Bank Float Managament",
+          icon: BanknoteIcon,
+          url: "bank-float-management",
           permissionCodes: [100135],
         },
         {
