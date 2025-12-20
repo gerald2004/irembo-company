@@ -50,6 +50,8 @@
     "@tanstack/react-table": "^8.20.5",
     "@vitejs/plugin-react": "^4.3.2",
     "axios": "^1.7.7",
+    "baseline-browser-mapping": "^2.9.10",
+    "caniuse-lite": "^1.0.30001760",
     "chart.js": "^4.4.5",
     "chartjs-plugin-datalabels": "^2.2.0",
     "class-variance-authority": "^0.7.1",

@@ -10,42 +10,60 @@ import { Mail } from "lucide-react";
 
 const currency = (n) => Number(n || 0).toLocaleString();
 
-const SmsAccountCard = ({ acc, onView }) => {
-  const isPostpaid = acc.billing_type === "postpaid";
+const EmailAccountCard = ({ acc, onView }) => {
+  const isMonthly = acc.billing_type === "monthly";
 
   return (
     <Card className="flex flex-col">
       <CardHeader className="space-y-1">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-base">{acc.name}</CardTitle>
+
           <div className="flex items-center gap-2">
-            <Badge variant={isPostpaid ? "secondary" : "default"}>
-              {isPostpaid ? "Postpaid" : "Prepaid"}
+            <Badge variant={isMonthly ? "default" : "secondary"}>
+              {isMonthly ? "Monthly" : "Overage"}
             </Badge>
             <Mail className="h-4 w-4 text-muted-foreground" />
           </div>
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Charge/SMS:{" "}
-          <span className="font-medium">
-            UGX {currency(acc.charge_per_sms)}
-          </span>
+          {isMonthly ? (
+            <>
+              Allowance:{" "}
+              <span className="font-medium">
+                {acc.monthly_allowance ?? 250} / month
+              </span>
+            </>
+          ) : (
+            <>
+              Charge/Email:{" "}
+              <span className="font-medium">
+                UGX {currency(acc.charge_per_email)}
+              </span>
+            </>
+          )}
         </p>
       </CardHeader>
 
       <CardContent className="space-y-2">
-        <div className="text-xl font-bold">UGX {currency(acc.value)}</div>
+        <div className="text-xl font-bold">
+          {isMonthly ? (
+            <>{acc.email_units} Emails Remaining</>
+          ) : (
+            <>UGX {currency(acc.value)}</>
+          )}
+        </div>
 
         <p className="text-sm text-muted-foreground">
-          {acc.sms_units}{" "}
-          {isPostpaid ? "Messages Unpaid" : "Messages Available"}
+          {isMonthly
+            ? `Out of ${acc.monthly_allowance ?? 250}`
+            : `${acc.email_units} Unpaid Emails`}
         </p>
 
-        {!isPostpaid ? (
+        {!isMonthly ? (
           <p className="text-xs text-muted-foreground">
-            Reserved: {acc.reserved_sms} SMS (UGX {currency(acc.reserved_value)}
-            )
+            (UGX {currency(acc.charge_per_email)} × {acc.email_units})
           </p>
         ) : null}
 
@@ -61,14 +79,14 @@ const SmsAccountCard = ({ acc, onView }) => {
   );
 };
 
-const SmsFloat = ({ branchId }) => {
+const EmailFloat = ({ branchId }) => {
   const axiosPrivate = useAxiosPrivate();
   const navigate = useNavigate();
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["sms-float", branchId ?? "all"],
+    queryKey: ["email-float", branchId ?? "all"],
     queryFn: async () => {
-      const res = await axiosPrivate.get("/float-management/sms-float", {
+      const res = await axiosPrivate.get("/float-management/email-float", {
         params: branchId ? { branch_id: branchId } : undefined,
       });
       return res.data.data; // { accounts: [...] }
@@ -82,7 +100,7 @@ const SmsFloat = ({ branchId }) => {
 
   if (isLoading) {
     return (
-      <div className="text-sm text-muted-foreground">Loading SMS float…</div>
+      <div className="text-sm text-muted-foreground">Loading email float…</div>
     );
   }
 
@@ -91,13 +109,15 @@ const SmsFloat = ({ branchId }) => {
   if (status === 404) {
     return (
       <div className="text-sm text-muted-foreground">
-        No SMS accounts configured for your branch.
+        No email accounts configured for your branch.
       </div>
     );
   }
 
   if (isError) {
-    return <div className="text-sm text-red-600">Failed to load SMS float</div>;
+    return (
+      <div className="text-sm text-red-600">Failed to load email float</div>
+    );
   }
 
   const accounts = data?.accounts || [];
@@ -105,7 +125,7 @@ const SmsFloat = ({ branchId }) => {
   if (accounts.length === 0) {
     return (
       <div className="text-sm text-muted-foreground">
-        No SMS accounts configured yet.
+        No email accounts configured yet.
       </div>
     );
   }
@@ -113,14 +133,16 @@ const SmsFloat = ({ branchId }) => {
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
       {accounts.map((acc) => (
-        <SmsAccountCard
-          key={acc.sms_account_id}
+        <EmailAccountCard
+          key={acc.email_account_id}
           acc={acc}
-          onView={() => navigate(`/sms-float-management/${acc.sms_account_id}`)}
+          onView={() =>
+            navigate(`/email-float-management/${acc.email_account_id}`)
+          }
         />
       ))}
     </div>
   );
 };
 
-export default SmsFloat;
+export default EmailFloat;

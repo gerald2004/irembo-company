@@ -1,62 +1,107 @@
+/* eslint-disable react/prop-types */
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
+
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import AirtelLogo from "@/Assets/img/airtel.png";
-import MtnLogo from "@/Assets/img/mtn.png";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
-const UtilityFloat = () => {
-  const availableFloat = 0.00;
-  const transactionsAvailable = 0;
+const currency = (n) => Number(n || 0).toLocaleString();
 
-  const unpaidFloat = 0.00;
-  const pendingTransactions = 0;
+const UtilityCard = ({ acc, onView }) => {
+  const isPostpaid = acc.billing_type === "postpaid";
 
-  const CombinedLogo = () => (
-    <div className="flex items-center gap-2 w-24 h-24">
-      <img
-        src={AirtelLogo}
-        className="w-1/2 h-full object-contain"
-        alt="Airtel"
-      />
-      <img src={MtnLogo} className="w-1/2 h-full object-contain" alt="MTN" />
-    </div>
+  return (
+    <Card className="flex flex-col">
+      <CardHeader className="space-y-1">
+        <div className="flex items-start justify-between gap-2">
+          <CardTitle className="text-base">{acc.name}</CardTitle>
+          <Badge variant={isPostpaid ? "secondary" : "default"}>
+            {isPostpaid ? "Postpaid" : "Prepaid"}
+          </Badge>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          {acc.utility_type?.toUpperCase?.() || "UTILITY"} • Fee:{" "}
+          <span className="font-medium">{acc.fee_label}</span>
+        </p>
+      </CardHeader>
+
+      <CardContent className="space-y-2">
+        <div className="text-xl font-bold">UGX {currency(acc.available)}</div>
+
+        <p className="text-xs text-muted-foreground">
+          Reserved: UGX {currency(acc.reserved)}
+        </p>
+
+        <p className="text-xs text-muted-foreground">
+          {acc.transactions ?? 0} Transactions
+        </p>
+
+        <Button size="sm" onClick={onView}>
+          View transactions
+        </Button>
+      </CardContent>
+    </Card>
   );
+};
+
+const UtilitiesFloat = ({ branchId }) => {
+  const axiosPrivate = useAxiosPrivate();
+  const navigate = useNavigate();
+
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["utilities-float", branchId ?? "all"],
+    queryFn: async () => {
+      const res = await axiosPrivate.get("/float-management/utilities-float", {
+        params: branchId ? { branch_id: branchId } : undefined,
+      });
+      return res.data.data; // { accounts: [...] }
+    },
+    retry: (failureCount, err) => {
+      const status = err?.response?.status;
+      if (status === 404) return false;
+      return failureCount < 2;
+    },
+  });
+
+  if (isLoading)
+    return (
+      <div className="text-sm text-muted-foreground">
+        Loading utilities float…
+      </div>
+    );
+
+  const status = error?.response?.status;
+  if (status === 404) {
+    return (
+      <div className="text-sm text-muted-foreground">
+        No utility accounts configured for your branch.
+      </div>
+    );
+  }
+
+  if (isError)
+    return (
+      <div className="text-sm text-red-600">Failed to load utilities float</div>
+    );
+
+  const accounts = data?.accounts || [];
 
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-      {/* Available Float Card */}
-      <Card className="flex flex-col min-h-[180px]">
-        <CardHeader className="flex flex-row items-center justify-between pb-4">
-          <CardTitle className="text-lg font-semibold">
-            Available Float
-          </CardTitle>
-          <CombinedLogo />
-        </CardHeader>
-        <CardContent className="flex flex-col justify-end flex-grow space-y-2">
-          <div className="text-xl font-bold">
-            UGX {availableFloat.toLocaleString()}
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {transactionsAvailable} Utility Transactions
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Unpaid Float Card */}
-      <Card className="flex flex-col min-h-[180px]">
-        <CardHeader className="flex flex-row items-center justify-between pb-4">
-          <CardTitle className="text-lg font-semibold">Pending Float</CardTitle>
-          <CombinedLogo />
-        </CardHeader>
-        <CardContent className="flex flex-col justify-end flex-grow space-y-2">
-          <div className="text-xl font-bold">
-            UGX {unpaidFloat.toLocaleString()}
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {pendingTransactions} Transactions Pending
-          </p>
-        </CardContent>
-      </Card>
+      {accounts.map((acc) => (
+        <UtilityCard
+          key={acc.utility_account_id}
+          acc={acc}
+          onView={() =>
+            navigate(`/utilities-float-management/${acc.utility_account_id}`)
+          }
+        />
+      ))}
     </div>
   );
 };
 
-export default UtilityFloat;
+export default UtilitiesFloat;
