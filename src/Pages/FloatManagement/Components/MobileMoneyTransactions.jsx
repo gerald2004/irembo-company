@@ -89,7 +89,7 @@ const MobileMoneyTransactions = ({ channelId, onProviderResolved }) => {
                     {new Date(tx.created_at).toLocaleString()}
                   </TableCell>
                   <TableCell className="capitalize">{tx.action}</TableCell>
-                  <TableCell>UGX {currency(tx.amount)}</TableCell>
+                  <TableCell>{currency(tx.amount)}</TableCell>
                   <TableCell>{tx.reference}</TableCell>
                   <TableCell>{tx.notes || "—"}</TableCell>
                 </TableRow>

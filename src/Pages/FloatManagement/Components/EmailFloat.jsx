@@ -39,7 +39,7 @@ const EmailAccountCard = ({ acc, onView }) => {
             <>
               Charge/Email:{" "}
               <span className="font-medium">
-                UGX {currency(acc.charge_per_email)}
+                {currency(acc.charge_per_email)}
               </span>
             </>
           )}
@@ -51,7 +51,7 @@ const EmailAccountCard = ({ acc, onView }) => {
           {isMonthly ? (
             <>{acc.email_units} Emails Remaining</>
           ) : (
-            <>UGX {currency(acc.value)}</>
+            <>{currency(acc.value)}</>
           )}
         </div>
 
@@ -63,7 +63,7 @@ const EmailAccountCard = ({ acc, onView }) => {
 
         {!isMonthly ? (
           <p className="text-xs text-muted-foreground">
-            (UGX {currency(acc.charge_per_email)} × {acc.email_units})
+            ({currency(acc.charge_per_email)} × {acc.email_units})
           </p>
         ) : null}
 

@@ -32,9 +32,9 @@ export default function DailySummary() {
                 <th className="p-2">Client Name</th>
                 <th className="p-2">Loan No.</th>
                 <th className="p-2">Paid Installment</th>
-                <th className="p-2">Principal Paid (UGX)</th>
-                <th className="p-2">Interest Paid (UGX)</th>
-                <th className="p-2">Penalty Paid (UGX)</th>
+                <th className="p-2">Principal Paid ()</th>
+                <th className="p-2">Interest Paid ()</th>
+                <th className="p-2">Penalty Paid ()</th>
               </tr>
             </thead>
             <tbody>

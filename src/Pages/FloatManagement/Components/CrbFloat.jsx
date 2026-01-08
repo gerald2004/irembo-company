@@ -27,7 +27,7 @@ const ProductCard = ({ p, onView }) => {
         <div className="text-xl font-bold">
           {p.is_free && Number(p.unit_price) === 0
             ? "FREE"
-            : `UGX ${currency(p.unit_price)}`}
+            : `${currency(p.unit_price)}`}
         </div>
 
         <Button size="sm" onClick={onView}>
@@ -89,10 +89,10 @@ const CrbFloat = ({ branchId }) => {
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="text-2xl font-bold">
-              UGX {currency(acc.available)}
+              {currency(acc.available)}
             </div>
             <p className="text-xs text-muted-foreground">
-              Reserved: UGX {currency(acc.reserved)}
+              Reserved: {currency(acc.reserved)}
             </p>
             <p className="text-xs text-muted-foreground">
               {acc.transactions ?? 0} Transactions

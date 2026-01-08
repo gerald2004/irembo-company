@@ -134,9 +134,9 @@ const UtilitiesFloatTransactions = ({
                     </TableCell>
                     <TableCell className="capitalize">{tx.action}</TableCell>
                     <TableCell className="font-medium">
-                      UGX {currency(tx.amount)}
+                      {currency(tx.amount)}
                     </TableCell>
-                    <TableCell>UGX {currency(tx.fee_amount)}</TableCell>
+                    <TableCell>{currency(tx.fee_amount)}</TableCell>
                     <TableCell>{tx.reference || "—"}</TableCell>
                     <TableCell>{tx.notes || "—"}</TableCell>
                   </TableRow>

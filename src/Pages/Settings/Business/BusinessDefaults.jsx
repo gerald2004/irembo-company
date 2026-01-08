@@ -415,7 +415,7 @@ const BusinessDefaults = () => {
                             <Label htmlFor="currency">Currency</Label>
                             <Input
                               id="currency"
-                              placeholder="Enter currency (e.g., UGX)"
+                              placeholder="Enter currency (e.g., )"
                               className="mt-1"
                               {...register("currency", {
                                 required: "Currency is required",

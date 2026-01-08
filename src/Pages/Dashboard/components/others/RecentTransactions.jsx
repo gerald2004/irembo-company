@@ -36,7 +36,7 @@ export function RecentTransactions({ deposits, withdraws }) {
             </p>
           </div>
           <div className="ml-auto font-medium text-sm">
-            {transaction?.type === "deposit" ? "+" : "-"} UGX
+            {transaction?.type === "deposit" ? "+" : "-"} 
             {transaction?.amount?.toLocaleString()}
           </div>
         </div>

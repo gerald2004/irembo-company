@@ -29,10 +29,10 @@ const UtilityCard = ({ acc, onView }) => {
       </CardHeader>
 
       <CardContent className="space-y-2">
-        <div className="text-xl font-bold">UGX {currency(acc.available)}</div>
+        <div className="text-xl font-bold">{currency(acc.available)}</div>
 
         <p className="text-xs text-muted-foreground">
-          Reserved: UGX {currency(acc.reserved)}
+          Reserved: {currency(acc.reserved)}
         </p>
 
         <p className="text-xs text-muted-foreground">

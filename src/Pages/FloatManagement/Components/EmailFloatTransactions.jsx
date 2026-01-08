@@ -135,10 +135,10 @@ const EmailFloatTransactions = ({ emailAccountId, onAccountResolved }) => {
 
                     <TableCell>{tx.email_units ?? 0}</TableCell>
 
-                    <TableCell>UGX {currency(tx.charge_per_email)}</TableCell>
+                    <TableCell>{currency(tx.charge_per_email)}</TableCell>
 
                     <TableCell className="font-medium">
-                      UGX {currency(tx.amount)}
+                      {currency(tx.amount)}
                     </TableCell>
 
                     <TableCell>{tx.reference || "—"}</TableCell>

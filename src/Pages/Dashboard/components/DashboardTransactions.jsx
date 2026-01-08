@@ -54,7 +54,7 @@ const DashboardTransactions = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  UGX {transactions?.totalDeposits?.toLocaleString()}
+                  {transactions?.totalDeposits?.toLocaleString()}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {transactions?.transactionDepositCount} Savings Transactions
@@ -79,7 +79,7 @@ const DashboardTransactions = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  UGX {transactions?.totalWithdraws?.toLocaleString()}
+                  {transactions?.totalWithdraws?.toLocaleString()}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {transactions?.transactionWithdrawCount?.toLocaleString()}{" "}
@@ -105,7 +105,7 @@ const DashboardTransactions = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  UGX {transactions?.totalTransferAmount?.toLocaleString()}{" "}
+                  {transactions?.totalTransferAmount?.toLocaleString()}{" "}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {transactions?.transferCount} Transfer Transactions
@@ -131,7 +131,7 @@ const DashboardTransactions = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  UGX {transactions?.totalBillAmount?.toLocaleString()}
+                  {transactions?.totalBillAmount?.toLocaleString()}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {transactions?.billCount} Expense Transactions
@@ -199,7 +199,7 @@ const DashboardTransactions = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  UGX {transactions?.incomeTotal?.toLocaleString()}
+                  {transactions?.incomeTotal?.toLocaleString()}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {transactions?.income_transactions?.length} Income
@@ -228,7 +228,7 @@ const DashboardTransactions = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  UGX {transactions?.bankBalance?.toLocaleString()}
+                  {transactions?.bankBalance?.toLocaleString()}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {/* {transactions?.accountChargesCount?.toLocaleString()} Bank */}
@@ -263,7 +263,7 @@ const DashboardTransactions = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  UGX {transactions?.cashBalance?.toLocaleString()}{" "}
+                  {transactions?.cashBalance?.toLocaleString()}{" "}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {/* {transactions?.reversed_transaction?.ussd?.coun} USSD
@@ -292,8 +292,8 @@ const DashboardTransactions = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-xs font-bold">
-                  UGX {transactions?.totalDebit?.toLocaleString()}
-                  <br /> UGX {transactions?.totalCredit?.toLocaleString()}
+                  {transactions?.totalDebit?.toLocaleString()}
+                  <br /> {transactions?.totalCredit?.toLocaleString()}
                 </div>
 
                 <p className="text-xs text-muted-foreground"></p>

@@ -141,9 +141,9 @@ const CrbFloatTransactions = ({
                     <TableCell className="capitalize">{tx.action}</TableCell>
                     <TableCell>{tx.product || "—"}</TableCell>
                     <TableCell>{tx.quantity ?? 1}</TableCell>
-                    <TableCell>UGX {currency(tx.unit_price)}</TableCell>
+                    <TableCell>{currency(tx.unit_price)}</TableCell>
                     <TableCell className="font-medium">
-                      UGX {currency(tx.amount)}
+                      {currency(tx.amount)}
                     </TableCell>
                     <TableCell>{tx.reference || "—"}</TableCell>
                     <TableCell>{tx.notes || "—"}</TableCell>

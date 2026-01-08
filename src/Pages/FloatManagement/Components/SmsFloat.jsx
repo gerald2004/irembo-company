@@ -29,13 +29,13 @@ const SmsAccountCard = ({ acc, onView }) => {
         <p className="text-xs text-muted-foreground">
           Charge/SMS:{" "}
           <span className="font-medium">
-            UGX {currency(acc.charge_per_sms)}
+            {currency(acc.charge_per_sms)}
           </span>
         </p>
       </CardHeader>
 
       <CardContent className="space-y-2">
-        <div className="text-xl font-bold">UGX {currency(acc.value)}</div>
+        <div className="text-xl font-bold">{currency(acc.value)}</div>
 
         <p className="text-sm text-muted-foreground">
           {acc.sms_units}{" "}
@@ -44,7 +44,7 @@ const SmsAccountCard = ({ acc, onView }) => {
 
         {!isPostpaid ? (
           <p className="text-xs text-muted-foreground">
-            Reserved: {acc.reserved_sms} SMS (UGX {currency(acc.reserved_value)}
+            Reserved: {acc.reserved_sms} SMS ({currency(acc.reserved_value)}
             )
           </p>
         ) : null}

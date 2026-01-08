@@ -58,7 +58,7 @@ const EmailFloatTransactionsData = () => {
                 </span>
               ) : account?.charge_per_email != null ? (
                 <span className="text-sm text-muted-foreground font-normal ml-2">
-                  • Charge/Email: UGX{" "}
+                  • Charge/Email: {" "}
                   {Number(account.charge_per_email || 0).toLocaleString()}
                 </span>
               ) : null}

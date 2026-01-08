@@ -37,7 +37,7 @@ const ViewAsset = ({ isOpen, onClose, asset }) => {
             <strong>Identification No:</strong> {asset?.identification_no}
           </div>
           <div>
-            <strong>Purchase Cost:</strong> UGX{" "}
+            <strong>Purchase Cost:</strong> {" "}
             {parseFloat(asset?.purchase_cost).toLocaleString()}
           </div>
           <div>
@@ -62,7 +62,7 @@ const ViewAsset = ({ isOpen, onClose, asset }) => {
             <strong>Branch:</strong> {asset?.branch}
           </div>
           <div>
-            <strong>Book Value:</strong> UGX{" "}
+            <strong>Book Value:</strong> {" "}
             {parseFloat(asset?.book_value).toLocaleString()}
           </div>
           <div>
@@ -72,7 +72,7 @@ const ViewAsset = ({ isOpen, onClose, asset }) => {
                 : "Depreciated Amount"}
               :
             </strong>{" "}
-            UGX {parseFloat(asset?.accumulated).toLocaleString()}
+            {parseFloat(asset?.accumulated).toLocaleString()}
           </div>
         </div>
 

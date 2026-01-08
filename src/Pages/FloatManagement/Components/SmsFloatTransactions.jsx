@@ -142,10 +142,10 @@ const SmsFloatTransactions = ({ smsAccountId, onAccountResolved }) => {
 
                     <TableCell>{tx.sms_units ?? 0}</TableCell>
 
-                    <TableCell>UGX {currency(tx.charge_per_sms)}</TableCell>
+                    <TableCell>{currency(tx.charge_per_sms)}</TableCell>
 
                     <TableCell className="font-medium">
-                      UGX {currency(tx.amount)}
+                      {currency(tx.amount)}
                     </TableCell>
 
                     <TableCell>{tx.reference || "—"}</TableCell>

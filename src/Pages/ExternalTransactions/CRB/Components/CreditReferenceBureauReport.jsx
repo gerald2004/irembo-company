@@ -8,22 +8,22 @@ const CreditReferenceBureauReport = () => {
   const [selectedReportTitle, setSelectedReportTitle] = useState("");
 
   const reports = [
-    { title: "Individual Customer Credit Report Check", price: "12,000 UGX" },
+    { title: "Individual Customer Credit Report Check", price: "12,000 " },
     {
       title: "Business Credit Report (Company and Partnerships)",
-      price: "12,000 UGX",
+      price: "12,000 ",
     },
-    { title: "No Credit Data Report", price: "6,000 UGX" },
-    { title: "Mobile Credit Score & CRB Score", price: "3,000 UGX" },
+    { title: "No Credit Data Report", price: "6,000 " },
+    { title: "Mobile Credit Score & CRB Score", price: "3,000 " },
     {
       title: "Identification Validation (NIRA, NIN Validation)",
-      price: "1,000 UGX",
+      price: "1,000 ",
     },
     {
       title: "Contact Validation for both Airtel and MTN numbers",
-      price: "600 UGX",
+      price: "600 ",
     },
-    { title: "KYC Validation and Report", price: "1,000 UGX" },
+    { title: "KYC Validation and Report", price: "1,000 " },
     { title: "FCS Validation", price: "FREE" },
     { title: "Letter of Affirmation", price: "60,000" },
   ];

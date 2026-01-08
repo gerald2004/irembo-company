@@ -56,7 +56,7 @@ const DashboardOverview = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  UGX{" "}
+                  {" "}
                   {parseFloat(transactions?.totalDeposits)?.toLocaleString()}
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -84,7 +84,7 @@ const DashboardOverview = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  UGX{" "}
+                  {" "}
                   {parseFloat(transactions?.totalWithdraws)?.toLocaleString()}
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -113,7 +113,7 @@ const DashboardOverview = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  UGX{" "}
+                  {" "}
                   {parseFloat(
                     transactions?.totalTransferAmount
                   )?.toLocaleString()}{" "}
@@ -144,7 +144,7 @@ const DashboardOverview = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  UGX{" "}
+                  {" "}
                   {parseFloat(transactions?.totalBillAmount)?.toLocaleString()}
                 </div>
                 <p className="text-xs text-muted-foreground">

@@ -46,7 +46,7 @@ const dummyClientAccounts = [
     account_name: "Primary Savings",
     account_number: "SAV00123456",
     balance: 1500000,
-    currency: "UGX",
+    currency: "",
     account_type: "Savings",
     status: "Active",
   },
@@ -55,7 +55,7 @@ const dummyClientAccounts = [
     account_name: "Business Account",
     account_number: "BUS00567890",
     balance: 3500000,
-    currency: "UGX",
+    currency: "",
     account_type: "Current",
     status: "Active",
   },
@@ -64,7 +64,7 @@ const dummyClientAccounts = [
     account_name: "Emergency Fund",
     account_number: "SAV00987654",
     balance: 500000,
-    currency: "UGX",
+    currency: "",
     account_type: "Savings",
     status: "Active",
   },
@@ -212,7 +212,7 @@ const SchoolPaymentDialog = ({ isOpen, onClose }) => {
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Amount Paid:</span>
-                <span className="text-sm font-medium">{transactionDetails.amount} UGX</span>
+                <span className="text-sm font-medium">{transactionDetails.amount} </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Term:</span>
@@ -324,7 +324,7 @@ const SchoolPaymentDialog = ({ isOpen, onClose }) => {
                                 key={account.id}
                                 value={account.id.toString()}
                               >
-                                {account.account_name} - {account.account_number} (Balance: {account.balance.toLocaleString()} UGX)
+                                {account.account_name} - {account.account_number} (Balance: {account.balance.toLocaleString()} )
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -446,7 +446,7 @@ const SchoolPaymentDialog = ({ isOpen, onClose }) => {
                   </div>
 
                   <div>
-                    <Label htmlFor="amount">Amount (UGX)</Label>
+                    <Label htmlFor="amount">Amount ()</Label>
                     <Input
                       id="amount"
                       type="number"
@@ -457,7 +457,7 @@ const SchoolPaymentDialog = ({ isOpen, onClose }) => {
                         required: "Amount is required",
                         min: {
                           value: 1000,
-                          message: "Minimum amount is 1,000 UGX",
+                          message: "Minimum amount is 1,000 ",
                         },
                         validate: (value) => {
                           const selectedAccountData = dummyClientAccounts?.find(
@@ -511,7 +511,7 @@ const SchoolPaymentDialog = ({ isOpen, onClose }) => {
                       Term: {watch("term")}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Amount: {watch("amount")} UGX
+                      Amount: {watch("amount")} 
                     </p>
                     {watch("purpose") && (
                       <p className="text-sm text-muted-foreground">

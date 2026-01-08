@@ -55,7 +55,7 @@ const SmsFloatTransactionsData = () => {
                 : "SMS Transactions"}
               {account?.charge_per_sms != null ? (
                 <span className="text-sm text-muted-foreground font-normal ml-2">
-                  • Charge/SMS: UGX{" "}
+                  • Charge/SMS: {" "}
                   {Number(account.charge_per_sms || 0).toLocaleString()}
                 </span>
               ) : null}

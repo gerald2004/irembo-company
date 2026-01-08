@@ -38,7 +38,7 @@ const dummyClientAccounts = [
     account_name: "Primary Savings",
     account_number: "SAV00123456",
     balance: 1500000,
-    currency: "UGX",
+    currency: "",
     account_type: "Savings",
     status: "Active",
   },
@@ -47,7 +47,7 @@ const dummyClientAccounts = [
     account_name: "Business Account",
     account_number: "BUS00567890",
     balance: 3500000,
-    currency: "UGX",
+    currency: "",
     account_type: "Current",
     status: "Active",
   },
@@ -56,7 +56,7 @@ const dummyClientAccounts = [
     account_name: "Emergency Fund",
     account_number: "SAV00987654",
     balance: 500000,
-    currency: "UGX",
+    currency: "",
     account_type: "Savings",
     status: "Active",
   },
@@ -260,7 +260,7 @@ const CreditReferenceBureauView = ({ isOpen, onClose, reportTitle }) => {
                           value={account.id.toString()}
                         >
                           {account.account_name} - {account.account_number}{" "}
-                          (Balance: {account.balance.toLocaleString()} UGX)
+                          (Balance: {account.balance.toLocaleString()} )
                         </SelectItem>
                       ))}
                     </SelectContent>

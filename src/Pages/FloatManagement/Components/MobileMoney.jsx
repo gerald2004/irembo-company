@@ -17,11 +17,11 @@ const ProviderCard = ({ title, data, onView }) => {
 
       <CardContent className="space-y-2">
         <div className="text-xl font-bold text-green-700">
-          UGX {currency(data?.available)}
+          {currency(data?.available)}
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Reserved: UGX {currency(data?.reserved)}
+          Reserved: {currency(data?.reserved)}
         </p>
 
         <p className="text-sm text-muted-foreground">

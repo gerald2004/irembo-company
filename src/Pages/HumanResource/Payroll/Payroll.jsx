@@ -176,7 +176,7 @@ const PayrollManagement = () => {
                           <TableHead>Department</TableHead>
                           <TableHead>Branch</TableHead>
                           <TableHead className="text-right">
-                            Salary (UGX)
+                            Salary ()
                           </TableHead>
                         </TableRow>
                       </TableHeader>

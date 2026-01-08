@@ -47,7 +47,7 @@ const dummyClientAccounts = [
     account_name: "Primary Savings",
     account_number: "SAV00123456",
     balance: 1500000,
-    currency: "UGX",
+    currency: "",
     account_type: "Savings",
     status: "Active",
   },
@@ -56,7 +56,7 @@ const dummyClientAccounts = [
     account_name: "Business Account",
     account_number: "BUS00567890",
     balance: 3500000,
-    currency: "UGX",
+    currency: "",
     account_type: "Current",
     status: "Active",
   },
@@ -65,7 +65,7 @@ const dummyClientAccounts = [
     account_name: "Emergency Fund",
     account_number: "SAV00987654",
     balance: 500000,
-    currency: "UGX",
+    currency: "",
     account_type: "Savings",
     status: "Active",
   },
@@ -318,7 +318,7 @@ const AirtimeBundleDialog = ({ isOpen, onClose }) => {
                   Amount:
                 </span>
                 <span className="text-sm font-medium">
-                  {transactionDetails?.amount} UGX
+                  {transactionDetails?.amount} 
                 </span>
               </div>
             </div>
@@ -433,7 +433,7 @@ const AirtimeBundleDialog = ({ isOpen, onClose }) => {
                               >
                                 {account.account_name} -{" "}
                                 {account.account_number} (Balance:{" "}
-                                {account.balance.toLocaleString()} UGX)
+                                {account.balance.toLocaleString()} )
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -561,7 +561,7 @@ const AirtimeBundleDialog = ({ isOpen, onClose }) => {
                                     key={bundle.id}
                                     value={bundle.id}
                                   >
-                                    {bundle.name} - {bundle.data} ({bundle.validity}) - {bundle.price.toLocaleString()} UGX
+                                    {bundle.name} - {bundle.data} ({bundle.validity}) - {bundle.price.toLocaleString()} 
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -577,7 +577,7 @@ const AirtimeBundleDialog = ({ isOpen, onClose }) => {
 
                       {bundleId === "custom" && (
                         <div>
-                          <Label htmlFor="amount">Amount (UGX)</Label>
+                          <Label htmlFor="amount">Amount ()</Label>
                           <Input
                             id="amount"
                             type="number"
@@ -586,7 +586,7 @@ const AirtimeBundleDialog = ({ isOpen, onClose }) => {
                               required: bundleId === "custom" ? "Amount is required" : false,
                               min: {
                                 value: 500,
-                                message: "Minimum amount is 500 UGX",
+                                message: "Minimum amount is 500 ",
                               },
                               validate: (value) => {
                                 const selectedAccountData = dummyClientAccounts?.find(
@@ -612,7 +612,7 @@ const AirtimeBundleDialog = ({ isOpen, onClose }) => {
                     </>
                   ) : (
                     <div>
-                      <Label htmlFor="amount">Airtime Amount (UGX)</Label>
+                      <Label htmlFor="amount">Airtime Amount ()</Label>
                       <Input
                         id="amount"
                         type="number"
@@ -621,11 +621,11 @@ const AirtimeBundleDialog = ({ isOpen, onClose }) => {
                           required: "Amount is required",
                           min: {
                             value: 500,
-                            message: "Minimum amount is 500 UGX",
+                            message: "Minimum amount is 500 ",
                           },
                           max: {
                             value: 1000000,
-                            message: "Maximum amount is 1,000,000 UGX",
+                            message: "Maximum amount is 1,000,000 ",
                           },
                           validate: (value) => {
                             const selectedAccountData = dummyClientAccounts?.find(
@@ -657,7 +657,7 @@ const AirtimeBundleDialog = ({ isOpen, onClose }) => {
                   <div className="text-center">
                     <p className="font-medium">Confirm {transactionType === "airtime" ? "Airtime" : "Data Bundle"} Purchase</p>
                     <p className="text-sm text-muted-foreground">
-                      Amount: {watch("amount")} UGX
+                      Amount: {watch("amount")} 
                     </p>
                     <p className="text-sm text-muted-foreground">
                       Phone: {watch("phone_number")}({getPhoneNumberOwner(watch("phone_number"))}

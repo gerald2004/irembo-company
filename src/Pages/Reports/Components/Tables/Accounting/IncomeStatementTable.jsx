@@ -22,7 +22,7 @@ const IncomeStatementTable = ({ data }) => {
           <TableRow>
             <TableHead>Account</TableHead>
             <TableHead>Code</TableHead>
-            <TableHead className="text-right">Amount (UGX)</TableHead>
+            <TableHead className="text-right">Amount ()</TableHead>
           </TableRow>
         </TableHeader>
 

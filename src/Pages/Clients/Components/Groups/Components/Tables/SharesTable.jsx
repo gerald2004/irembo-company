@@ -141,7 +141,7 @@ export function SharesTable() {
           </CardHeader>
           <CardContent>
             <div className="text-1xl font-bold">
-              UGX{" "}
+              {" "}
               {data?.shares_information?.total_shares_value?.toLocaleString()}
             </div>
           </CardContent>

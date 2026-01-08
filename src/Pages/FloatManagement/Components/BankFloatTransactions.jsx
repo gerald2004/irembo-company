@@ -137,7 +137,7 @@ const BankFloatTransactions = ({ bankAccountId, onBankResolved }) => {
 
                     <TableCell className="capitalize">{tx.action}</TableCell>
 
-                    <TableCell>UGX {currency(tx.amount)}</TableCell>
+                    <TableCell>{currency(tx.amount)}</TableCell>
 
                     <TableCell>{tx.reference || "—"}</TableCell>
 

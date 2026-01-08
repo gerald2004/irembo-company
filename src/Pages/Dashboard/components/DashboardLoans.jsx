@@ -58,7 +58,7 @@ const DashboardLoans = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  UGX{" "}
+                  {" "}
                   {loans?.loan_status?.pending?.totalAmount?.toLocaleString()}
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -87,7 +87,7 @@ const DashboardLoans = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  UGX{" "}
+                  {" "}
                   {loans?.loan_status?.disbursed?.totalAmount?.toLocaleString()}
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -118,7 +118,7 @@ const DashboardLoans = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  UGX{" "}
+                  {" "}
                   {loans?.loan_status?.overdue?.totalAmount?.toLocaleString()}
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -147,7 +147,7 @@ const DashboardLoans = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  UGX{" "}
+                  {" "}
                   {loans?.loan_status?.settled?.totalAmount?.toLocaleString()}
                 </div>
                 <p className="text-xs text-muted-foreground">

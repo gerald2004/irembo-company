@@ -81,7 +81,7 @@ const LoansPortfolioReportSummary = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      UGX {data?.total_outstanding_principal?.toLocaleString()}
+                      {data?.total_outstanding_principal?.toLocaleString()}
                     </div>
                   </CardContent>
                 </Card>
@@ -94,7 +94,7 @@ const LoansPortfolioReportSummary = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      UGX {data?.overdue_principal?.toLocaleString()}
+                      {data?.overdue_principal?.toLocaleString()}
                     </div>
                   </CardContent>
                 </Card>

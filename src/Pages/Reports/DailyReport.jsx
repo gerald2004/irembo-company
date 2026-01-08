@@ -87,7 +87,7 @@ const DailyReport = () => {
                   Transactions: {report?.savings?.count}
                 </p>
                 <p className="text-xl font-bold text-green-600">
-                  UGX {report?.savings?.amount?.toLocaleString()}
+                  {report?.savings?.amount?.toLocaleString()}
                 </p>
               </CardContent>
             </Card>
@@ -102,7 +102,7 @@ const DailyReport = () => {
                   Transactions: {report?.withdrawals?.count}
                 </p>
                 <p className="text-xl font-bold text-red-600">
-                  UGX {report?.withdrawals?.amount?.toLocaleString()}
+                  {report?.withdrawals?.amount?.toLocaleString()}
                 </p>
               </CardContent>
             </Card>
@@ -116,7 +116,7 @@ const DailyReport = () => {
                   Transactions: {report?.incomes?.count}
                 </p>
                 <p className="text-xl font-bold">
-                  UGX {report?.incomes?.amount?.toLocaleString()}
+                  {report?.incomes?.amount?.toLocaleString()}
                 </p>
               </CardContent>
             </Card>
@@ -129,7 +129,7 @@ const DailyReport = () => {
                   Transactions: {report?.expenses?.count}
                 </p>
                 <p className="text-xl font-bold">
-                  UGX {report?.expenses?.amount?.toLocaleString()}
+                  {report?.expenses?.amount?.toLocaleString()}
                 </p>
               </CardContent>
             </Card>
@@ -142,7 +142,7 @@ const DailyReport = () => {
                   Transactions: {report?.transfers?.count}
                 </p>
                 <p className="text-xl font-bold">
-                  UGX {report?.transfers?.amount?.toLocaleString()}
+                  {report?.transfers?.amount?.toLocaleString()}
                 </p>
               </CardContent>
             </Card>
@@ -157,7 +157,7 @@ const DailyReport = () => {
                   Count: {report?.loans_disbursed?.count}
                 </p>
                 <p className="text-xl font-bold text-blue-600">
-                  UGX {report?.loans_disbursed?.amount?.toLocaleString()}
+                  {report?.loans_disbursed?.amount?.toLocaleString()}
                 </p>
               </CardContent>
             </Card>
@@ -169,15 +169,15 @@ const DailyReport = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-foreground text-sm">
-                  Principal: UGX{" "}
+                  Principal: {" "}
                   {report?.loan_repayments?.principal?.toLocaleString()}
                 </p>
                 <p className="text-foreground text-sm">
-                  Interest: UGX{" "}
+                  Interest: {" "}
                   {report?.loan_repayments?.interest?.toLocaleString()}
                 </p>
                 <p className="text-foreground text-sm">
-                  Penalty: UGX{" "}
+                  Penalty: {" "}
                   {report?.loan_repayments?.penalty?.toLocaleString()}
                 </p>
               </CardContent>
@@ -193,7 +193,7 @@ const DailyReport = () => {
                   Count: {report?.loans_overdue_today?.count}
                 </p>
                 <p className="text-xl font-bold text-yellow-600">
-                  UGX {report?.loans_overdue_today?.amount?.toLocaleString()}
+                  {report?.loans_overdue_today?.amount?.toLocaleString()}
                 </p>
               </CardContent>
             </Card>
@@ -205,11 +205,11 @@ const DailyReport = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-foreground text-sm">
-                  Inflow: UGX{" "}
+                  Inflow: {" "}
                   {report?.journal_summary?.inflow?.toLocaleString()}
                 </p>
                 <p className="text-foreground text-sm">
-                  Outflow: UGX{" "}
+                  Outflow: {" "}
                   {report?.journal_summary?.outflow?.toLocaleString()}
                 </p>
               </CardContent>

@@ -46,7 +46,7 @@ const dummyClientAccounts = [
     account_name: "Primary Savings",
     account_number: "SAV00123456",
     balance: 1500000,
-    currency: "UGX",
+    currency: "",
     account_type: "Savings",
     status: "Active",
   },
@@ -55,7 +55,7 @@ const dummyClientAccounts = [
     account_name: "Business Account",
     account_number: "BUS00567890",
     balance: 3500000,
-    currency: "UGX",
+    currency: "",
     account_type: "Current",
     status: "Active",
   },
@@ -64,7 +64,7 @@ const dummyClientAccounts = [
     account_name: "Emergency Fund",
     account_number: "SAV00987654",
     balance: 500000,
-    currency: "UGX",
+    currency: "",
     account_type: "Savings",
     status: "Active",
   },
@@ -225,7 +225,7 @@ const NWSCPaymentDialog = ({ isOpen, onClose }) => {
                   Amount Paid:
                 </span>
                 <span className="text-sm font-medium">
-                  {transactionDetails.amount} UGX
+                  {transactionDetails.amount} 
                 </span>
               </div>
               <div className="flex justify-between">
@@ -348,7 +348,7 @@ const NWSCPaymentDialog = ({ isOpen, onClose }) => {
                               >
                                 {account.account_name} -{" "}
                                 {account.account_number} (Balance:{" "}
-                                {account.balance.toLocaleString()} UGX)
+                                {account.balance.toLocaleString()} )
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -398,7 +398,7 @@ const NWSCPaymentDialog = ({ isOpen, onClose }) => {
               {step === 4 && (
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="amount">Amount (UGX)</Label>
+                    <Label htmlFor="amount">Amount ()</Label>
                     <Input
                       id="amount"
                       type="number"
@@ -409,7 +409,7 @@ const NWSCPaymentDialog = ({ isOpen, onClose }) => {
                         required: "Amount is required",
                         min: {
                           value: 1000,
-                          message: "Minimum amount is 1,000 UGX",
+                          message: "Minimum amount is 1,000 ",
                         },
                         validate: (value) => {
                           const selectedAccountData = dummyClientAccounts?.find(
@@ -470,7 +470,7 @@ const NWSCPaymentDialog = ({ isOpen, onClose }) => {
                   <div className="text-center">
                     <p className="font-medium">Confirm NWSC Payment</p>
                     <p className="text-sm text-muted-foreground">
-                      Amount: {watch("amount")} UGX
+                      Amount: {watch("amount")} 
                     </p>
                     <p className="text-sm text-muted-foreground">
                       Meter: {watch("meter_number")}

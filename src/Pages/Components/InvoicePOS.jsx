@@ -153,7 +153,7 @@ export default function InvoicePOS({ data, onClose, isOpen }) {
               <p className="flex justify-center">
                 <span>Amount: </span>
                 <span className="font-semibold">
-                  UGX {transaction?.amount.toLocaleString()}
+                  {transaction?.amount.toLocaleString()}
                 </span>
               </p>
               <p className="capitalize">
