@@ -14,17 +14,20 @@ import DatatableReport from "@/Pages/Components/DatatableReport";
 import { formatDateTimestamp } from "@/lib/utils";
 import { useRef, useState } from "react";
 import GeneralReportQuery from "../Queries/GeneralReportQuery";
+
 const ExpenseDetails = () => {
   const axiosPrivate = useAxiosPrivate();
   const navigate = useNavigate();
   const tableRef = useRef(null);
+
   const [filters, setFilters] = useState({
     startDate: "",
     endDate: "",
     branch_id: "",
   });
+
   const {
-    data = [],
+    data = {},
     isLoading,
     refetch,
     isRefetching,
@@ -32,8 +35,8 @@ const ExpenseDetails = () => {
   } = useQuery({
     queryKey: ["expenses-detailed", filters],
     queryFn: async () => {
-      const controller = new AbortController();
       const fetchURL = `reports/accounting/expenses-detailed`;
+
       try {
         const response = await axiosPrivate.get(fetchURL, {
           params: {
@@ -41,9 +44,9 @@ const ExpenseDetails = () => {
             endDate: filters.endDate,
             branch_id: filters.branch_id,
           },
-          signal: controller.signal,
         });
-        return response?.data?.data ?? [];
+
+        return response?.data?.data ?? {};
       } catch (error) {
         if (error?.response?.status === 401) {
           navigate("/", { state: { from: location }, replace: true });
@@ -53,6 +56,10 @@ const ExpenseDetails = () => {
     },
     keepPreviousData: true,
   });
+
+  // ----------------------------
+  // Table Columns
+  // ----------------------------
   const columns = [
     {
       id: "select",
@@ -75,38 +82,52 @@ const ExpenseDetails = () => {
       ),
     },
     {
-      accessorKey: "account",
-      header: "Account Title",
-      cell: ({ row }) => <p>{row.original.account}</p>,
-    },
-    {
       accessorKey: "date",
       header: "Date",
       cell: ({ row }) => <p>{formatDateTimestamp(row.original.date)}</p>,
     },
     {
-      accessorKey: "description",
-      header: "Description",
+      accessorKey: "branch",
+      header: "Branch",
       cell: ({ row }) => (
-        <p className="capitalize text-xs">{row.original.description}</p>
+        <p className="text-xs font-medium">{row.original.branch || "—"}</p>
+      ),
+    },
+    {
+      accessorKey: "account",
+      header: "Account",
+      cell: ({ row }) => <p className="text-xs">{row.original.account}</p>,
+    },
+    {
+      accessorKey: "description",
+      header: "Vendor / Description",
+      cell: ({ row }) => (
+        <p className="capitalize text-xs max-w-md truncate">
+          {row.original.description}
+        </p>
       ),
     },
     {
       accessorKey: "amount",
       header: "Amount",
       cell: ({ row }) => (
-        <p className="capitalize text-xs">
-          {row.original.amount !== ""
+        <p className="text-xs font-semibold text-right">
+          {row.original.amount
             ? parseFloat(row.original.amount).toLocaleString()
-            : 0}
+            : "0"}
         </p>
       ),
     },
   ];
+
+  // ----------------------------
+  // Filter Handler
+  // ----------------------------
   const handleFilterChange = (data) => {
     setFilters(data);
     refetch();
   };
+
   return (
     <>
       <Breadcrumb>
@@ -126,6 +147,7 @@ const ExpenseDetails = () => {
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
+
       <div className="flex-col md:flex">
         <div className="border-b" />
         <div className="flex-1 space-y-4 p-0 pt-2">
@@ -134,31 +156,33 @@ const ExpenseDetails = () => {
               Expense Details Report
             </h5>
           </div>
+
           <GeneralReportQuery
             onFilterChange={handleFilterChange}
             isRefetching={isRefetching}
             refetch={refetch}
-            data={data?.expense ?? []}
+            data={data?.expenses ?? []}
             tableRef={tableRef}
             filters={filters}
-            colSpan={3}
+            colSpan={4}
             mode={{
               format: "A4-L",
               orientation: "L",
             }}
-            totals={{ debit: data?.total }}
+            totals={{ debit: data?.total ?? 0 }}
             title={"Expense Report Detailed"}
           />
+
           <DatatableReport
             ref={tableRef}
             columns={columns}
-            data={data?.expense ?? []}
+            data={data?.expenses ?? []}
             fetchData={refetch}
             isLoading={isLoading}
             isRefetching={isRefetching}
             isError={isError}
             colSpan={1}
-            totalDebit={data?.total}
+            totalDebit={data?.total ?? 0}
           />
         </div>
       </div>
