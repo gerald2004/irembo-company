@@ -20,12 +20,18 @@ const ExpenseDetails = () => {
   const navigate = useNavigate();
   const tableRef = useRef(null);
 
+  // -----------------------------
+  // Filters
+  // -----------------------------
   const [filters, setFilters] = useState({
     startDate: "",
     endDate: "",
     branch_id: "",
   });
 
+  // -----------------------------
+  // Fetch Data
+  // -----------------------------
   const {
     data = {},
     isLoading,
@@ -57,9 +63,9 @@ const ExpenseDetails = () => {
     keepPreviousData: true,
   });
 
-  // ----------------------------
+  // -----------------------------
   // Table Columns
-  // ----------------------------
+  // -----------------------------
   const columns = [
     {
       id: "select",
@@ -108,6 +114,13 @@ const ExpenseDetails = () => {
       ),
     },
     {
+      accessorKey: "recorded_by",
+      header: "Recorded By",
+      cell: ({ row }) => (
+        <p className="text-xs font-medium">{row.original.recorded_by || "—"}</p>
+      ),
+    },
+    {
       accessorKey: "amount",
       header: "Amount",
       cell: ({ row }) => (
@@ -120,9 +133,9 @@ const ExpenseDetails = () => {
     },
   ];
 
-  // ----------------------------
+  // -----------------------------
   // Filter Handler
-  // ----------------------------
+  // -----------------------------
   const handleFilterChange = (data) => {
     setFilters(data);
     refetch();
@@ -130,6 +143,7 @@ const ExpenseDetails = () => {
 
   return (
     <>
+      {/* Breadcrumb */}
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -148,6 +162,7 @@ const ExpenseDetails = () => {
         </BreadcrumbList>
       </Breadcrumb>
 
+      {/* Content */}
       <div className="flex-col md:flex">
         <div className="border-b" />
         <div className="flex-1 space-y-4 p-0 pt-2">
@@ -157,6 +172,7 @@ const ExpenseDetails = () => {
             </h5>
           </div>
 
+          {/* Filters + Export */}
           <GeneralReportQuery
             onFilterChange={handleFilterChange}
             isRefetching={isRefetching}
@@ -164,7 +180,7 @@ const ExpenseDetails = () => {
             data={data?.expenses ?? []}
             tableRef={tableRef}
             filters={filters}
-            colSpan={4}
+            colSpan={5}
             mode={{
               format: "A4-L",
               orientation: "L",
@@ -173,6 +189,7 @@ const ExpenseDetails = () => {
             title={"Expense Report Detailed"}
           />
 
+          {/* Table */}
           <DatatableReport
             ref={tableRef}
             columns={columns}
