@@ -232,7 +232,7 @@ export function ExecutiveTable() {
         fetchData={refetch}
         isLoading={isLoading}
         isRefetching={isRefetching}
-        buttonTitle={hasPermission(roles, 100017) ? "+ Executive" : ""}
+        buttonTitle={hasPermission(roles, 100017) ? "+ Member" : ""}
         buttonMethod={hasPermission(roles, 100017) ? handleOpenModal : ""}
         isError={isError}
       />

@@ -41,7 +41,7 @@ const AccountSummary = ({
               value="executives"
               className="lg:w-full py-3 text-left rounded-md hover:bg-black hover:text-white focus:bg-gray-200 focus:text-white transition"
             >
-              {isMobile ? <Users className="w-5 h-5 mx-auto" /> : "Executives"}
+              {isMobile ? <Users className="w-5 h-5 mx-auto" /> : "Members"}
             </TabsTrigger>
           )}
           {hasPermission(roles, 100025) && (

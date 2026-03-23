@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { useQuery } from "@tanstack/react-query";
@@ -46,6 +47,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
 const AddExpenseDialog = ({
   isOpen,
   onClose,
@@ -65,16 +67,32 @@ const AddExpenseDialog = ({
     trigger,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm();
+  } = useForm({
+    defaultValues: {
+      vendor_bill_amount: "",
+      vendor_bill_date: "",
+      vendor_bill_due_date: "",
+      vendor_id: "",
+      vendor_bill_notes: "",
+      user_pincode: "",
+    },
+    mode: "onTouched",
+  });
 
-  // ✅ Fetch Account Products from API
-  const { data: vendors = [], isLoading } = useQuery({
+  // ✅ format date as YYYY-MM-DD (LOCAL) to avoid timezone “day-before” issue
+  const formatYMD = (date) => {
+    if (!date) return "";
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  };
+
+  // ✅ Fetch vendors
+  const { data: vendors = [], isLoading: isLoadingVendors } = useQuery({
     queryKey: ["vendors"],
     queryFn: async () => {
-      const controller = new AbortController();
-      const response = await axiosPrivate.get(`/accounting/vendors/account`, {
-        signal: controller.signal,
-      }); // ✅ Change API endpoint as needed
+      const response = await axiosPrivate.get(`/accounting/vendors/account`);
       return response.data?.data?.vendors || [];
     },
   });
@@ -82,39 +100,56 @@ const AddExpenseDialog = ({
   const [selectedAccounts, setSelectedAccounts] = useState({
     expense_account_id: null,
   });
+
   const [step, setStep] = useState(1);
 
   const validateStep = async () => {
-    const valid = await trigger();
-    if (valid && step < 2) {
-      setStep((prev) => prev + 1);
+    // validate only step-1 fields
+    const valid = await trigger([
+      "vendor_bill_amount",
+      "vendor_bill_date",
+      "vendor_bill_due_date",
+      "vendor_id",
+      "vendor_bill_notes",
+    ]);
+
+    // also ensure expense account is selected
+    if (!selectedAccounts.expense_account_id) {
+      toast({
+        title: "Missing expense account",
+        variant: "destructive",
+        description: "Please select an expense account.",
+      });
+      return;
     }
+
+    if (valid && step < 2) setStep((prev) => prev + 1);
   };
 
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
 
   const onSubmit = async (data) => {
-    const controller = new AbortController();
-
     try {
       const payload = {
         ...data,
         ...selectedAccounts,
       };
 
-      // console.log(payload);
       const response = await axiosPrivate.post(
         "accounting/vendors/bills",
         payload,
-        { signal: controller.signal }
       );
+
       toast({
         title: "Success",
         description: response.data.messages,
       });
+
       reset();
-      refetch();
-      onClose();
+      setSelectedAccounts({ expense_account_id: null });
+      setStep(1);
+      refetch?.();
+      onClose?.();
     } catch (error) {
       const errorMessage =
         error?.response?.data?.messages || "No server response";
@@ -139,16 +174,23 @@ const AddExpenseDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[650px]">
         <DialogHeader>
           <DialogTitle>Expense Transaction</DialogTitle>
           <DialogDescription>
             Follow the steps to complete transaction.
           </DialogDescription>
+
           <DialogClose asChild>
             <button
               className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              onClick={onClose}
+              onClick={() => {
+                reset();
+                setSelectedAccounts({ expense_account_id: null });
+                setStep(1);
+                onClose?.();
+              }}
+              type="button"
             >
               <X className="h-4 w-4" />
             </button>
@@ -157,29 +199,29 @@ const AddExpenseDialog = ({
 
         {/* Step Progress Indicator */}
         <div className="flex items-center space-x-4 my-1">
-          {stepIcons.map((stepIcon, index) => (
+          {stepIcons.map((s, index) => (
             <div
               key={index}
               className={`flex items-center ${
                 step > index + 1 ? "opacity-100" : "opacity-50"
               } transition-opacity`}
             >
-              {stepIcon.icon}
-              <span className="ml-2 text-sm font-medium">{stepIcon.label}</span>
+              {s.icon}
+              <span className="ml-2 text-sm font-medium">{s.label}</span>
               {index < stepIcons.length - 1 && (
-                <div className="h-[2px] w-8 bg-gray-300 mx-2"></div>
+                <div className="h-[2px] w-8 bg-gray-300 mx-2" />
               )}
             </div>
           ))}
         </div>
+
         <Progress value={(step / 2) * 100} className="my-1" />
 
-        {/* Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Step 1: withdraw Details */}
+          {/* Step 1 */}
           {step === 1 && (
             <fieldset className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Expense Amount */}
+              {/* Amount */}
               <div>
                 <Label htmlFor="vendor_bill_amount">Expense Amount</Label>
                 <Input
@@ -189,6 +231,8 @@ const AddExpenseDialog = ({
                   placeholder="Enter expense amount"
                   {...register("vendor_bill_amount", {
                     required: "Expense amount is required",
+                    validate: (v) =>
+                      Number(v) > 0 || "Amount must be greater than 0",
                   })}
                 />
                 {errors.vendor_bill_amount && (
@@ -206,27 +250,28 @@ const AddExpenseDialog = ({
                   control={control}
                   rules={{ required: "Date is required" }}
                   render={({ field }) => {
-                    const parsedDate = field.value
-                      ? new Date(field.value)
+                    const selected = field.value
+                      ? new Date(field.value + "T00:00:00")
                       : null;
+
                     return (
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
+                            type="button"
                             variant={"outline"}
                             className="w-full pl-3 text-left font-normal"
                           >
-                            {parsedDate
-                              ? parsedDate.toLocaleDateString()
-                              : "Pick a date"}
+                            {field.value ? field.value : "Pick a date"}
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                           </Button>
                         </PopoverTrigger>
+
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
-                            selected={parsedDate}
-                            onSelect={field.onChange}
+                            selected={selected}
+                            onSelect={(date) => field.onChange(formatYMD(date))}
                             disabled={(date) => date < new Date("2000-01-01")}
                             initialFocus
                           />
@@ -235,41 +280,60 @@ const AddExpenseDialog = ({
                     );
                   }}
                 />
-
                 {errors.vendor_bill_date && (
                   <p className="text-red-500 text-sm">
                     {errors.vendor_bill_date.message}
                   </p>
                 )}
               </div>
+
+              {/* Due Date */}
               <div>
-                <Label htmlFor="vendor_bill_date">Expense Due Date</Label>
+                <Label htmlFor="vendor_bill_due_date">Expense Due Date</Label>
                 <Controller
                   name="vendor_bill_due_date"
                   control={control}
-                  rules={{ required: "Date is required" }}
+                  rules={{
+                    required: "Due date is required",
+                    validate: (v) => {
+                      const d1 = new Date(
+                        (v || "").trim() + "T00:00:00",
+                      ).getTime();
+                      const d0 = new Date(
+                        (control._formValues.vendor_bill_date || "").trim() +
+                          "T00:00:00",
+                      ).getTime();
+
+                      if (!control._formValues.vendor_bill_date)
+                        return "Select expense date first";
+                      return (
+                        d1 >= d0 || "Due date cannot be before expense date"
+                      );
+                    },
+                  }}
                   render={({ field }) => {
-                    const parsedDate = field.value
-                      ? new Date(field.value)
+                    const selected = field.value
+                      ? new Date(field.value + "T00:00:00")
                       : null;
+
                     return (
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
+                            type="button"
                             variant={"outline"}
                             className="w-full pl-3 text-left font-normal"
                           >
-                            {parsedDate
-                              ? parsedDate.toLocaleDateString()
-                              : "Pick a date"}
+                            {field.value ? field.value : "Pick a date"}
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                           </Button>
                         </PopoverTrigger>
+
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
-                            selected={parsedDate}
-                            onSelect={field.onChange}
+                            selected={selected}
+                            onSelect={(date) => field.onChange(formatYMD(date))}
                             disabled={(date) => date < new Date("2000-01-01")}
                             initialFocus
                           />
@@ -278,7 +342,6 @@ const AddExpenseDialog = ({
                     );
                   }}
                 />
-
                 {errors.vendor_bill_due_date && (
                   <p className="text-red-500 text-sm">
                     {errors.vendor_bill_due_date.message}
@@ -293,7 +356,7 @@ const AddExpenseDialog = ({
                 onAccountSelect={(value) =>
                   setSelectedAccounts((prev) => ({
                     ...prev,
-                    expense_account_id: parseInt(value),
+                    expense_account_id: parseInt(value, 10),
                   }))
                 }
                 accountsData={accountsData}
@@ -302,21 +365,23 @@ const AddExpenseDialog = ({
                 refetch={refetchAccounts}
                 isRefetching={isRefetchingAccounts}
               />
+
+              {/* Vendor */}
               <div>
                 <Label htmlFor="vendor_id">Vendor</Label>
                 <Controller
                   name="vendor_id"
                   control={control}
-                  rules={{ required: "vendor is required" }}
+                  rules={{ required: "Vendor is required" }}
                   render={({ field }) => (
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value || ""}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue
                           placeholder={
-                            isLoading ? "Loading..." : "Select vendor"
+                            isLoadingVendors ? "Loading..." : "Select vendor"
                           }
                         />
                       </SelectTrigger>
@@ -339,19 +404,32 @@ const AddExpenseDialog = ({
                   </p>
                 )}
               </div>
-              {/* Income Notes (optional) */}
+
+              {/* Notes (required) */}
               <div>
-                <Label htmlFor="vendor_bill_notes">Notes (Optional)</Label>
-                <Input
+                <Label htmlFor="vendor_bill_notes">Notes</Label>
+                <Textarea
                   id="vendor_bill_notes"
-                  placeholder="Add any remarks or notes"
-                  {...register("vendor_bill_notes")}
+                  placeholder="Add remarks / reason for expense..."
+                  className="min-h-[5px]"
+                  {...register("vendor_bill_notes", {
+                    required: "Notes are required",
+                    minLength: {
+                      value: 3,
+                      message: "Notes must be at least 3 characters",
+                    },
+                  })}
                 />
+                {errors.vendor_bill_notes && (
+                  <p className="text-red-500 text-sm">
+                    {errors.vendor_bill_notes.message}
+                  </p>
+                )}
               </div>
             </fieldset>
           )}
 
-          {/* Step 2: PIN Entry */}
+          {/* Step 2 */}
           {step === 2 && (
             <div className="flex flex-col items-center">
               <Controller
@@ -399,7 +477,7 @@ const AddExpenseDialog = ({
             </div>
           )}
 
-          {/* Footer Navigation */}
+          {/* Footer */}
           <DialogFooter>
             <div className="flex justify-end w-full">
               {step > 1 && (
@@ -412,13 +490,13 @@ const AddExpenseDialog = ({
                   <ArrowLeft className="mr-2" /> Back
                 </Button>
               )}
+
               {step === 1 ? (
                 <Button type="button" onClick={validateStep}>
                   Next <ArrowRight className="ml-2" />
                 </Button>
-              ) : (
-                ""
-              )}
+              ) : null}
+
               {step === 2 && (
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? (

@@ -65,9 +65,9 @@ const AddExecutive = ({ isOpen, onClose, refetch }) => {
     <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Add Executive</DialogTitle>
+          <DialogTitle>Add Members</DialogTitle>
           <DialogDescription>
-            Fill in the details to add Executive.
+            Fill in the details to add Member.
           </DialogDescription>
           <DialogClose asChild>
             <button
@@ -148,17 +148,33 @@ const AddExecutive = ({ isOpen, onClose, refetch }) => {
                 </p>
               )}
             </div>
-
             {/* Role */}
             <div>
               <Label htmlFor="role">Role</Label>
-              <Input
-                id="role"
-                placeholder="Enter role"
-                {...register("role", {
-                  required: "Role is required",
-                })}
+
+              <Controller
+                name="role"
+                control={control}
+                rules={{ required: "Role is required" }}
+                render={({ field }) => (
+                  <Select
+                    value={field.value ?? ""} // ✅ bind value
+                    onValueChange={field.onChange} // ✅ bind onChange
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+
+                    <SelectContent>
+                      <SelectItem value="chairperson">Chairperson</SelectItem>
+                      <SelectItem value="secretary">Secretary</SelectItem>
+                      <SelectItem value="treasurer">Treasurer</SelectItem>
+                      <SelectItem value="member">Member</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
               />
+
               {errors.role && (
                 <p className="text-red-500 text-sm">{errors.role.message}</p>
               )}
@@ -212,7 +228,7 @@ const AddExecutive = ({ isOpen, onClose, refetch }) => {
 
           <DialogFooter>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : "Add Executives"}
+              {isSubmitting ? "Saving..." : "Add Members"}
             </Button>
           </DialogFooter>
         </form>

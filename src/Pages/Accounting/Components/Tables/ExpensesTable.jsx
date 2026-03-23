@@ -133,6 +133,7 @@ export function ExpensesTable() {
     queryFn: async () => {
       const controller = new AbortController();
       const response = await axiosPrivate.get("/settings/accounts/account", {
+        params: { account_types: "Expenses" },
         signal: controller.signal,
       });
       return response.data.data.accounts;

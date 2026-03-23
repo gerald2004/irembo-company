@@ -122,6 +122,7 @@ export function IncomesTable() {
     queryFn: async () => {
       const controller = new AbortController();
       const response = await axiosPrivate.get("/settings/accounts/account", {
+        params: { account_types: "Income" },
         signal: controller.signal,
       });
       return response.data.data.accounts;

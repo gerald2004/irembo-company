@@ -215,7 +215,7 @@ const GroupRegistrationForm = () => {
     },
     {
       icon: <IdCard className="w-6 h-6 text-orange-500" />,
-      label: "Executive Information",
+      label: "Member Information",
     },
     {
       icon: <Image className="w-6 h-6 text-green-500" />,
@@ -369,7 +369,7 @@ const GroupRegistrationForm = () => {
                     onCheckedChange={(checked) =>
                       setValue(
                         "client_mobile_banking_status",
-                        checked ? "yes" : "no"
+                        checked ? "yes" : "no",
                       )
                     }
                   />
@@ -426,7 +426,7 @@ const GroupRegistrationForm = () => {
                     onCheckedChange={(checked) =>
                       setValue(
                         "client_can_login_portal_app",
-                        checked ? "yes" : "no"
+                        checked ? "yes" : "no",
                       )
                     }
                   />
@@ -516,7 +516,7 @@ const GroupRegistrationForm = () => {
                           `executives.${index}.executive_identification`,
                           {
                             required: "Identification is required",
-                          }
+                          },
                         )}
                         maxLength={14}
                       />
@@ -533,20 +533,43 @@ const GroupRegistrationForm = () => {
                     {/* Role */}
                     <div>
                       <Label htmlFor={`executives.${index}.role`}>Role</Label>
-                      <Input
-                        id={`executives.${index}.role`}
-                        type="text"
-                        placeholder="Enter role in the group"
-                        {...register(`executives.${index}.role`, {
-                          required: "Role is required",
-                        })}
+
+                      <Controller
+                        name={`executives.${index}.role`}
+                        control={control}
+                        rules={{ required: "Role is required" }}
+                        render={({ field }) => (
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select role in the group" />
+                            </SelectTrigger>
+
+                            <SelectContent>
+                              <SelectItem value="chairperson">
+                                Chairperson
+                              </SelectItem>
+                              <SelectItem value="secretary">
+                                Secretary
+                              </SelectItem>
+                              <SelectItem value="treasurer">
+                                Treasurer
+                              </SelectItem>
+                              <SelectItem value="member">Member</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
                       />
+
                       {errors.executives?.[index]?.role && (
                         <p className="text-red-500 text-sm">
                           {errors.executives[index].role.message}
                         </p>
                       )}
                     </div>
+
                     {/* Address */}
                     <div>
                       <Label htmlFor={`executives.${index}.address`}>
@@ -555,7 +578,7 @@ const GroupRegistrationForm = () => {
                       <Input
                         id={`executives.${index}.address`}
                         type="text"
-                        placeholder="Enter address in the executive"
+                        placeholder="Enter address in the Member"
                         {...register(`executives.${index}.address`, {
                           required: "Address is required",
                         })}
@@ -654,7 +677,7 @@ const GroupRegistrationForm = () => {
                   className="mt-2 flex items-center space-x-2"
                 >
                   <PlusCircle className="w-5 h-5" />
-                  Executive
+                  Member
                 </Button>
               </fieldset>
             )}
