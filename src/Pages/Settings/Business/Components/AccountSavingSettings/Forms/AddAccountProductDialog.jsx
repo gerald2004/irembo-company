@@ -1,5 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useForm } from "react-hook-form";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -15,8 +16,9 @@ import { Label } from "@/components/ui/label";
 import { X } from "lucide-react";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { toast } from "@/hooks/use-toast";
-const AddAccountProductDialog = ({ isOpen, onClose, refetch }) => {
+const AddAccountProductDialog = ({ isOpen, onClose }) => {
   const axiosPrivate = useAxiosPrivate();
+  const queryClient = useQueryClient();
   const {
     register,
     handleSubmit,
@@ -25,7 +27,7 @@ const AddAccountProductDialog = ({ isOpen, onClose, refetch }) => {
   } = useForm();
 
   const onSubmit = async (data) => {
-          const controller = new AbortController();
+    const controller = new AbortController();
 
     try {
       const response = await axiosPrivate.post(
@@ -36,11 +38,11 @@ const AddAccountProductDialog = ({ isOpen, onClose, refetch }) => {
       toast({
         title: "Success",
         description:
-          response?.data?.messages || "Auto Charge added successfully",
+          response?.data?.messages || "Account product added successfully",
       });
       reset();
-      refetch?.();
       onClose();
+      queryClient.invalidateQueries({ queryKey: ["accounts-settings-data"] });
     } catch (error) {
       const errorMessage =
         error?.response?.data?.messages || "No server response";

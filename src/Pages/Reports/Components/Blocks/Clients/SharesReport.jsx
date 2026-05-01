@@ -52,7 +52,7 @@ const SharesReport = () => {
         throw error;
       }
     },
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   });
 
   const columns = [
@@ -121,6 +121,19 @@ const SharesReport = () => {
     setFilters(data);
     refetch();
   };
+
+  const fmt = (n) => new Intl.NumberFormat("en-UG", { maximumFractionDigits: 0 }).format(n ?? 0);
+  const KPI = ({ label, value, sub, accent = "bg-blue-500" }) => (
+    <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+      <div className={`h-1 ${accent}`} />
+      <div className="p-4">
+        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
+        <p className="text-xl font-bold mt-1">{value}</p>
+        {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
+      </div>
+    </div>
+  );
+
   return (
     <>
       <Breadcrumb>
@@ -144,20 +157,23 @@ const SharesReport = () => {
           <div className="flex items-center justify-between space-y-2">
             <h5 className="text-2xl font-bold tracking-tight">Shares Report</h5>
           </div>
-          <LoanGeneralReportQuery
+          <LoanGeneralReportQuery show={{ officer: false }}
             onFilterChange={handleFilterChange}
             isRefetching={isRefetching}
-            refetch={refetch}
             data={data}
             tableRef={tableRef}
             filters={filters}
             colSpan={3}
-            mode={{
-              format: "A4-P",
-              orientation: "P",
-            }}
-            title={"Shares Report"}
+            mode={{ format: "A4-P", orientation: "P" }}
+            title="Shares Report"
           />
+          {/* KPI Strip */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <KPI label="Total Members"  value={data?.length ?? 0} sub="With share records" accent="bg-violet-500" />
+            <KPI label="Total Units"    value={fmt(data?.reduce((s,r)=>s+(r.shares??0),0))} sub="Shares held" accent="bg-blue-500" />
+            <KPI label="Share Capital"  value={`UGX ${fmt(data?.reduce((s,r)=>s+(r.share_balance??0),0))}`} sub="Total value" accent="bg-emerald-500" />
+            <KPI label="Avg per Member" value={fmt(data?.length ? data.reduce((s,r)=>s+(r.shares??0),0)/data.length : 0)} sub="Avg share units" accent="bg-amber-500" />
+          </div>
           <DatatableReport
             ref={tableRef}
             columns={columns}

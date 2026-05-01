@@ -1,15 +1,13 @@
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
+  Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList,
+  BreadcrumbPage, BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import AccountSummary from "./Components/AccountSummary";
 import Accounts from "./Components/Accounts";
 import Communication from "./Components/Communication";
@@ -17,33 +15,25 @@ import { SharesTable } from "./Components/Tables/SharesTable";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
 import { hasPermission } from "@/lib/utils";
 import ClientAccountIntelligence from "./Components/Blocks/ClientAccountIntelligence";
+import { User, CreditCard, MessageSquare, PieChart, Brain } from "lucide-react";
+
+const TAB_CLASS =
+  "rounded-none border-b-2 border-transparent px-4 py-2 text-sm font-medium text-muted-foreground " +
+  "data-[state=active]:border-primary data-[state=active]:text-foreground";
 
 const SingleIndividualClient = () => {
   const navigate = useNavigate();
   const axiosPrivate = useAxiosPrivate();
   const params = useParams();
   const { auth } = useAuth();
-
   const roles = auth?.roles;
-  const {
-    data = [],
-    isLoading,
-    refetch,
-    isRefetching,
-    isError,
-  } = useQuery({
+
+  const { data = [], isLoading, refetch, isRefetching, isError } = useQuery({
     queryKey: ["individuals-data", params.id],
     queryFn: async () => {
-      const controller = new AbortController();
-
-      const fetchURL = `/clients/individual/${params.id}`;
       try {
-        const response = await axiosPrivate.get(fetchURL, {
-          signal: controller.signal,
-        });
-        if (!response.data.data) {
-          throw new Error(response?.data?.message);
-        }
+        const response = await axiosPrivate.get(`/clients/individual/${params.id}`);
+        if (!response.data.data) throw new Error(response?.data?.message);
         return response.data.data;
       } catch (error) {
         if (error?.response?.status === 401) {
@@ -53,6 +43,11 @@ const SingleIndividualClient = () => {
       }
     },
   });
+
+  const client = data?.client;
+  const fullName = [client?.client_firstname, client?.client_middlename, client?.client_lastname]
+    .filter(Boolean).join(" ");
+
   return (
     <>
       <Breadcrumb>
@@ -62,72 +57,93 @@ const SingleIndividualClient = () => {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink
-              to={hasPermission(roles, [100015, 100011]) ? "/clients" : ""}
-            >
+            <BreadcrumbLink to={hasPermission(roles, [100015, 100011]) ? "/clients" : ""}>
               Clients
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbPage>
-              <p className="capitalize hover:uppercase">
-                {`${data?.client?.client_firstname} ${data?.client?.client_middlename} ${data?.client?.client_lastname} (${data?.client?.client_account_number})`}
-              </p>
+              {isLoading ? "Loading…" : fullName}
             </BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
-      <div className="flex-col md:flex">
-        <div className="border-b" />
-        <div className="flex-1 space-y-4 pt-2">
-          <Tabs defaultValue="summary" className="space-y-4">
-            <div className="flex justify-end">
-              <TabsList className="overflow-x-auto scroll-smooth snap-x snap-start scrollbar-hide">
-                {hasPermission(roles, 100008) && (
-                  <TabsTrigger value="summary">Summary</TabsTrigger>
-                )}
-                {hasPermission(roles, 100033) && (
-                  <TabsTrigger value="accounts">Accounts</TabsTrigger>
-                )}
-                {hasPermission(roles, 100060) && (
-                  <TabsTrigger value="communication">Communication</TabsTrigger>
-                )}
-                {hasPermission(roles, 100064) && (
-                  <TabsTrigger value="shares">Shares</TabsTrigger>
-                )}
-                {hasPermission(roles, 100064) && (
-                  <TabsTrigger value="client-intelligence">
-                    Client Intelligence
-                  </TabsTrigger>
-                )}
-              </TabsList>
-            </div>
-            <TabsContent value="summary" className="space-y-4">
-              {hasPermission(roles, 100008) && (
-                <AccountSummary
-                  data={data?.client}
-                  isLoading={isLoading}
-                  refetch={refetch}
-                  isRefetching={isRefetching}
-                  isError={isError}
-                />
-              )}
-            </TabsContent>
-            <TabsContent value="accounts" className="space-y-4">
-              {hasPermission(roles, 100033) && <Accounts />}
-            </TabsContent>
-            <TabsContent value="communication" className="space-y-4">
-              {hasPermission(roles, 100060) && <Communication />}
-            </TabsContent>
-            <TabsContent value="shares" className="space-y-4">
-              {hasPermission(roles, 100064) && <SharesTable />}
-            </TabsContent>
-            <TabsContent value="client-intelligence" className="space-y-4">
-              {hasPermission(roles, 100064) && <ClientAccountIntelligence clientId={params.id} />}
-            </TabsContent>
-          </Tabs>
+
+      {/* Client header */}
+      <div className="flex items-center gap-4 py-3 border-b">
+        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+          <User className="w-5 h-5 text-primary" />
         </div>
+        <div className="flex-1 min-w-0">
+          {isLoading ? (
+            <Skeleton className="h-5 w-48" />
+          ) : (
+            <>
+              <p className="font-semibold capitalize">{fullName || "—"}</p>
+              <p className="text-xs text-muted-foreground font-mono">{client?.client_account_number}</p>
+            </>
+          )}
+        </div>
+        {!isLoading && client?.client_status && (
+          <Badge variant={client.client_status === "active" ? "success" : "destructive"} className="capitalize">
+            {client.client_status}
+          </Badge>
+        )}
+      </div>
+
+      <div className="flex-1 pt-2">
+        <Tabs defaultValue="summary" className="space-y-4">
+          <TabsList className="border-b w-full justify-start rounded-none bg-transparent p-0 h-auto gap-1">
+            {hasPermission(roles, 100008) && (
+              <TabsTrigger value="summary" className={TAB_CLASS}>Summary</TabsTrigger>
+            )}
+            {hasPermission(roles, 100033) && (
+              <TabsTrigger value="accounts" className={TAB_CLASS}>
+                <CreditCard className="w-3.5 h-3.5 mr-1.5" />Accounts
+              </TabsTrigger>
+            )}
+            {hasPermission(roles, 100060) && (
+              <TabsTrigger value="communication" className={TAB_CLASS}>
+                <MessageSquare className="w-3.5 h-3.5 mr-1.5" />Communication
+              </TabsTrigger>
+            )}
+            {hasPermission(roles, 100064) && (
+              <TabsTrigger value="shares" className={TAB_CLASS}>
+                <PieChart className="w-3.5 h-3.5 mr-1.5" />Shares
+              </TabsTrigger>
+            )}
+            {hasPermission(roles, 100064) && (
+              <TabsTrigger value="client-intelligence" className={TAB_CLASS}>
+                <Brain className="w-3.5 h-3.5 mr-1.5" />Intelligence
+              </TabsTrigger>
+            )}
+          </TabsList>
+
+          <TabsContent value="summary">
+            {hasPermission(roles, 100008) && (
+              <AccountSummary
+                data={client}
+                isLoading={isLoading}
+                refetch={refetch}
+                isRefetching={isRefetching}
+                isError={isError}
+              />
+            )}
+          </TabsContent>
+          <TabsContent value="accounts">
+            {hasPermission(roles, 100033) && <Accounts />}
+          </TabsContent>
+          <TabsContent value="communication">
+            {hasPermission(roles, 100060) && <Communication />}
+          </TabsContent>
+          <TabsContent value="shares">
+            {hasPermission(roles, 100064) && <SharesTable />}
+          </TabsContent>
+          <TabsContent value="client-intelligence">
+            {hasPermission(roles, 100064) && <ClientAccountIntelligence clientId={params.id} />}
+          </TabsContent>
+        </Tabs>
       </div>
     </>
   );

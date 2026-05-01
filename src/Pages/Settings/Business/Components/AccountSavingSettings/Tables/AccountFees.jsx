@@ -68,7 +68,6 @@ export function AccountFees() {
         throw error;
       }
     },
-    keepPreviousData: true,
   });
   const handleOpenDeleteDialog = (id) => {
     setSelectedId(id);
@@ -216,7 +215,6 @@ export function AccountFees() {
       <AddAccountProductFeeDialog
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        refetch={refetch}
         accountsData={accountsData}
         isLoadingAccounts={isLoadingAccounts}
         isErrorAccounts={isErrorAccounts}
@@ -226,7 +224,6 @@ export function AccountFees() {
       <EditAccountProductFeeDialog
         isOpen={isModalOpenEdit}
         onClose={handleCloseModalEdit}
-        refetch={refetch}
         defaultValues={defaultData}
         accountsData={accountsData}
         isLoadingAccounts={isLoadingAccounts}

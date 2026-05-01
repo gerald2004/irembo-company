@@ -46,7 +46,7 @@ const DailyReport = () => {
       }
     },
     // enabled: !!filters.date && !!filters.branch_id,
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   });
   const handleFilterChange = (data) => {
     setFilters(data);

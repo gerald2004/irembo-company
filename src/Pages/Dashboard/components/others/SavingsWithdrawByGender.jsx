@@ -1,112 +1,55 @@
 /* eslint-disable react/prop-types */
+import { Pie, PieChart, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
-import { Pie, PieChart, Tooltip } from "recharts";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
-import { Separator } from "@/components/ui/separator";
-
-// Chart configuration for genders and transaction types
-const chartConfig = {
-  deposits: {
-    label: "Deposits",
-    color: "hsl(var(--chart-1))",
-  },
-  withdraws: {
-    label: "Withdraws",
-    color: "hsl(var(--chart-2))",
-  },
-  male: {
-    label: "Male",
-    color: "hsl(var(--chart-3))",
-  },
-  female: {
-    label: "Female",
-    color: "hsl(var(--chart-4))",
-  },
+const COLORS = {
+  deposits: "hsl(var(--chart-1))",
+  withdrawals: "hsl(var(--chart-2))",
 };
 
-// Helper function to aggregate data by gender
-function aggregateByGender(transactions, transactionType) {
-  return transactions.reduce((acc, transaction) => {
-    const gender = transaction.client_gender;
+export function SavingsWithdrawByGender({ timeSeries = [] }) {
+  const totals = timeSeries.reduce(
+    (acc, row) => {
+      acc.deposits += Number(row.deposits ?? 0);
+      acc.withdrawals += Number(row.withdrawals ?? 0);
+      return acc;
+    },
+    { deposits: 0, withdrawals: 0 }
+  );
 
-    // Find existing entry for gender
-    const genderEntry = acc.find((entry) => entry.gender === gender);
-    if (genderEntry) {
-      // Increment the appropriate amount
-      genderEntry[transactionType] += transaction.amount;
-    } else {
-      // Add new entry for gender with the respective color from chartConfig
-      acc.push({
-        gender,
-        [transactionType]: transaction.amount,
-        fill: chartConfig[gender?.toLowerCase()]?.color,
-      });
-    }
+  const chartData = [
+    { name: "Deposits", value: totals.deposits, fill: COLORS.deposits },
+    { name: "Withdrawals", value: totals.withdrawals, fill: COLORS.withdrawals },
+  ].filter((d) => d.value > 0);
 
-    return acc;
-  }, []);
-}
-
-export function SavingsWithdrawByGender({ deposits = [], withdraws = [] }) {
-  
-  // Aggregate deposits and withdrawals by gender
-  const depositsByGender = aggregateByGender(deposits, "deposits");
-  const withdrawsByGender = aggregateByGender(withdraws, "withdraws");
+  if (chartData.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-[260px] text-sm text-muted-foreground">
+        No transaction data available.
+      </div>
+    );
+  }
 
   return (
-    <Card className="flex flex-col max-w-[500px] mx-auto">
-      <CardHeader className="items-center pb-0">
-        <CardTitle>Deposits & Withdrawals by Gender</CardTitle>
-        <Separator />
-        <CardDescription>Aggregated view by gender</CardDescription>
-      </CardHeader>
-      <CardContent className="flex-1 pb-0">
-        <ChartContainer
-          config={chartConfig}
-          className="mx-auto aspect-square max-h-[350px] max-w-[350px]"
-        >
-          <PieChart width={450} height={450}>
-            <Tooltip
-              content={
-                <ChartTooltipContent
-                  labelKey="gender"
-                  indicator="line"
-                  labelFormatter={(label) =>
-                    chartConfig[label?.toLowerCase()]?.label
-                  }
-                />
-              }
-            />
-            <Pie
-              data={depositsByGender}
-              dataKey="deposits"
-              nameKey="gender"
-              outerRadius={120} // Increase the radius for a larger chart
-              innerRadius={80} // Increase for a larger inner circle
-            />
-            <Pie
-              data={withdrawsByGender}
-              dataKey="withdraws"
-              nameKey="gender"
-              innerRadius={130}
-              outerRadius={160}
-            />
-          </PieChart>
-        </ChartContainer>
-      </CardContent>
-      <CardFooter className="flex-col gap-2 text-sm">
-        <div className="leading-none text-muted-foreground">
-          Showing total deposits and withdrawals by gender
-        </div>
-      </CardFooter>
-    </Card>
+    <div style={{ width: "100%", height: 260 }}>
+      <ResponsiveContainer>
+        <PieChart>
+          <Pie
+            data={chartData}
+            dataKey="value"
+            nameKey="name"
+            cx="50%"
+            cy="50%"
+            innerRadius={65}
+            outerRadius={100}
+          >
+            {chartData.map((entry, i) => (
+              <Cell key={i} fill={entry.fill} />
+            ))}
+          </Pie>
+          <Tooltip formatter={(v) => v.toLocaleString()} />
+          <Legend />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
   );
 }

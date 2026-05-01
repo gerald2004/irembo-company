@@ -46,7 +46,7 @@ const TillSheet = () => {
       );
       return response?.data?.data ?? [];
     },
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   });
 
   const columns = [

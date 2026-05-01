@@ -55,7 +55,7 @@ const WithdrawsReport = () => {
         throw error;
       }
     },
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   });
 
   const columns = [
@@ -144,10 +144,27 @@ const WithdrawsReport = () => {
       ),
     },
   ];
-  const handleFilterChange = (data) => {
-    setFilters(data);
+  const handleFilterChange = (filterData) => {
+    setFilters(filterData);
     refetch();
   };
+
+  const fmt = (n) => new Intl.NumberFormat("en-UG", { maximumFractionDigits: 0 }).format(n ?? 0);
+  const rows = data?.data ?? [];
+  const meta = data?.meta ?? {};
+  const avgWithdrawal = rows.length ? (meta.total_withdrawn ?? 0) / rows.length : 0;
+
+  const KPI = ({ label, value, sub, accent = "bg-blue-500" }) => (
+    <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+      <div className={`h-1 ${accent}`} />
+      <div className="p-4">
+        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
+        <p className="text-xl font-bold mt-1">{value}</p>
+        {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
+      </div>
+    </div>
+  );
+
   return (
     <>
       <Breadcrumb>
@@ -157,51 +174,48 @@ const WithdrawsReport = () => {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink to="/savings-reports">
-              Withdraw Reports
-            </BreadcrumbLink>
+            <BreadcrumbLink to="/savings-reports">Savings Reports</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Withdraw Reports</BreadcrumbPage>
+            <BreadcrumbPage>Withdrawals</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
-      <div className="flex-col md:flex">
-        <div className="border-b" />
-        <div className="flex-1 space-y-4 p-0 pt-2">
-          <div className="flex items-center justify-between space-y-2">
-            <h5 className="text-2xl font-bold tracking-tight">
-              Withdraws Report
-            </h5>
-          </div>
-          <LoanGeneralReportQuery
-            onFilterChange={handleFilterChange}
-            isRefetching={isRefetching}
-            refetch={refetch}
-            data={data?.data}
-            tableRef={tableRef}
-            filters={filters}
-            colSpan={3}
-            mode={{
-              format: "A4-L",
-              orientation: "L",
-            }}
-            totals={{
-              totalDebit: data?.meta?.total_withdrawn,
-            }}
-            title={"Withdraws Report"}
-          />
+      <div className="space-y-4 pt-2">
+        <h5 className="text-2xl font-bold tracking-tight">Withdrawals Report</h5>
+
+        <LoanGeneralReportQuery show={{ method: true }}
+          onFilterChange={handleFilterChange}
+          isRefetching={isRefetching}
+          data={rows}
+          tableRef={tableRef}
+          filters={filters}
+          colSpan={3}
+          mode={{ format: "A4-L", orientation: "L" }}
+          totals={{ totalDebit: meta.total_withdrawn }}
+          title="Withdrawals Report"
+        />
+
+        {/* KPI Strip */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <KPI label="Total Withdrawn"   value={`UGX ${fmt(meta.total_withdrawn)}`}  sub={`${meta.count ?? rows.length} transactions`} accent="bg-amber-500" />
+          <KPI label="Charges Collected" value={`UGX ${fmt(meta.total_charges)}`}    sub="Processing fees"                             accent="bg-red-500" />
+          <KPI label="Avg Withdrawal"    value={`UGX ${fmt(avgWithdrawal)}`}          sub="Per transaction"                             accent="bg-blue-500" />
+          <KPI label="Net Outflow"       value={`UGX ${fmt((meta.total_withdrawn ?? 0) + (meta.total_charges ?? 0))}`} sub="Withdrawn + charges" accent="bg-rose-500" />
+        </div>
+
+        <div className="overflow-x-auto">
           <DatatableReport
             ref={tableRef}
             columns={columns}
-            data={data?.data ?? []}
+            data={rows}
             fetchData={refetch}
             isLoading={isLoading}
             isRefetching={isRefetching}
             isError={isError}
             colSpan={6}
-            totalDebit={data?.meta?.total_withdrawn}
+            totalDebit={meta.total_withdrawn}
           />
         </div>
       </div>

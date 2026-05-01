@@ -32,14 +32,39 @@ import {
 
 import jsPDF from "jspdf";
 import "jspdf-autotable";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, MoreHorizontal } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import AlertModal from "@/components/AlertModal";
 import { Badge } from "@/components/ui/badge";
 import { formatDateTimestamp, hasPermission } from "@/lib/utils";
 import { useDebounce } from "@/lib/utils";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
-export function IndividualLoansApplicationsTable() {
+
+const loanStatusBadge = (status) => {
+  const s = (status || "").toLowerCase();
+  const cls = {
+    pending:     "bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-100",
+    processed:   "bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-100",
+    approved:    "bg-green-100 text-green-800 border-green-300 hover:bg-green-100",
+    disbursed:   "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-100",
+    overdue:     "bg-red-100 text-red-700 border-red-300 hover:bg-red-100",
+    rejected:    "bg-red-100 text-red-700 border-red-300 hover:bg-red-100",
+    paid_off:    "bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-100",
+    settled:     "bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-100",
+    writternoff: "bg-gray-800 text-gray-100 border-gray-700 hover:bg-gray-800",
+    writtenoff:  "bg-gray-800 text-gray-100 border-gray-700 hover:bg-gray-800",
+    refinanced:  "bg-purple-100 text-purple-800 border-purple-300 hover:bg-purple-100",
+    active:      "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-100",
+  }[s] || "";
+  return <Badge variant="outline" className={`capitalize text-xs font-medium ${cls}`}>{status}</Badge>;
+};
+
+export function IndividualLoansApplicationsTable({
+  clientType = "individual",
+  queryKeyPrefix = "individual",
+  clientRoute = "/clients/individual",
+  extraFilters = {},
+}) {
   const navigate = useNavigate();
   const [sorting, setSorting] = useState([]);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -56,11 +81,12 @@ export function IndividualLoansApplicationsTable() {
     isError,
   } = useQuery({
     queryKey: [
-      "individuals-loans-data",
+      `${queryKeyPrefix}-loans-applications-data`,
       pagination.pageIndex,
       pagination.pageSize,
       debouncedGlobalFilter,
       sorting,
+      extraFilters,
     ],
     queryFn: async () => {
       const controller = new AbortController();
@@ -73,6 +99,8 @@ export function IndividualLoansApplicationsTable() {
             size: pagination.pageSize,
             globalFilter: debouncedGlobalFilter,
             sorting: JSON.stringify(sorting || []),
+            type: clientType,
+            ...extraFilters,
           },
           signal: controller.signal,
         });
@@ -84,7 +112,7 @@ export function IndividualLoansApplicationsTable() {
         return error;
       }
     },
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   });
 
   const columns = [
@@ -143,7 +171,7 @@ export function IndividualLoansApplicationsTable() {
       header: "Account Number",
       cell: ({ row }) => (
         <Link
-          to={`/clients/individual/${row.original.client_id}`}
+          to={`${clientRoute}/${row.original.client_id}`}
           className="capitalize hover:uppercase"
         >
           {row.original.client_account_number}
@@ -153,14 +181,18 @@ export function IndividualLoansApplicationsTable() {
     {
       id: "name",
       header: "Client Name",
-      cell: ({ row }) => (
-        <Link
-          to={`/clients/individual/${row.original.client_id}`}
-          className="capitalize hover:uppercase"
-        >
-          {row.original.client_lastname} {row.original.client_firstname}
-        </Link>
-      ),
+      cell: ({ row }) => {
+        const name = row.original.client_group_name ||
+          `${row.original.client_lastname || ""} ${row.original.client_firstname || ""}`.trim();
+        return (
+          <Link
+            to={`${clientRoute}/${row.original.client_id}`}
+            className="capitalize hover:uppercase"
+          >
+            {name}
+          </Link>
+        );
+      },
     },
     {
       id: "loan_application_date",
@@ -174,12 +206,17 @@ export function IndividualLoansApplicationsTable() {
     },
     {
       id: "loan_application_status",
-      cell: ({ row }) => (
-        <Badge className="capitalize">
-          {row.original.loan_application_status}
-        </Badge>
-      ),
+      cell: ({ row }) => loanStatusBadge(row.original.loan_application_status),
       header: "Application Status",
+    },
+    {
+      id: "guarantors_list",
+      header: "Guarantors",
+      cell: ({ row }) => (
+        <p className="text-sm text-muted-foreground">
+          {row.original.guarantors_list || "—"}
+        </p>
+      ),
     },
     {
       id: "actions",
@@ -189,7 +226,7 @@ export function IndividualLoansApplicationsTable() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-8 w-8 p-0">
               <span className="sr-only">Open menu</span>
-              ...
+              <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">

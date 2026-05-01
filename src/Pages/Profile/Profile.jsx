@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import TotpSettings from "./TotpSettings";
 import { useForm } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -257,6 +258,15 @@ useEffect(() => {
               </form>
             </CardContent>
           </Card>
+
+          {/* ── Security: Two-Factor Authentication ── */}
+          <div className="max-w-5xl mx-auto space-y-3">
+            <div>
+              <h6 className="text-base font-semibold">Security</h6>
+              <p className="text-sm text-muted-foreground">Manage two-factor authentication for your account.</p>
+            </div>
+            <TotpSettings />
+          </div>
         </div>
       </div>
     </>

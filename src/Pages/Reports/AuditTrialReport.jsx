@@ -53,12 +53,14 @@ const AuditTrialReport = () => {
         throw error;
       }
     },
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   });
-  const processedData = data?.map((audit) => ({
+  const processedData = (Array.isArray(data) ? data : []).map((audit) => ({
     ...audit,
-    name: `${audit.user.user_firstname} ${audit.user.user_lastname}`,
-    branch_name: audit.branch.branch_name,
+    name: audit.user
+      ? `${audit.user.user_firstname ?? ""} ${audit.user.user_lastname ?? ""}`.trim()
+      : "System",
+    branch_name: audit.branch?.branch_name ?? "—",
   }));
   const columns = [
     {

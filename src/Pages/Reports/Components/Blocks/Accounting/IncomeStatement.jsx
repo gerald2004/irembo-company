@@ -1,115 +1,70 @@
+import { useState } from "react";
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
+  Breadcrumb, BreadcrumbItem, BreadcrumbLink,
+  BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import IncomeStatementTable from "../../Tables/Accounting/IncomeStatementTable";
-import CustomReportQuery from "../Queries/CustomReportQuery";
-import { useState } from "react";
+import ReportFilterBar from "../Queries/ReportFilterBar";
+
 const IncomeStatement = () => {
   const axiosPrivate = useAxiosPrivate();
   const navigate = useNavigate();
+
   const [filters, setFilters] = useState({
-      startDate: "",
-      endDate: "",
-      branch_id: "",
-    });
-  const {
-    data = [],
-    isLoading,
-    refetch,
-    isRefetching,
-    isError,
-  } = useQuery({
-    queryKey: ["income-statement", filters],
-    queryFn: async () => {
-      const controller = new AbortController();
-      const fetchURL = `reports/accounting/income-statement`;
-      try {
-        const response = await axiosPrivate.get(fetchURL, {
-          params: {
-            startDate: filters.startDate,
-            endDate: filters.endDate,
-            branch_id: filters.branch_id,
-          },
-          signal: controller.signal,
-        });
-        console.log(response.data.data);
-        
-        return response?.data?.data ?? [];
-      } catch (error) {
-        if (error?.response?.status === 401) {
-          navigate("/", { state: { from: location }, replace: true });
-        }
-        throw error;
-      }
-    },
-    keepPreviousData: true,
+    startDate: "", endDate: "", branch_id: "", status: "all",
   });
 
-  const handleFilterChange = (data) => {
-    setFilters(data);
-    refetch();
-  };
+  const { data = {}, isLoading, isRefetching, isError } = useQuery({
+    queryKey: ["income-statement", filters],
+    queryFn: async ({ signal }) => {
+      try {
+        const res = await axiosPrivate.get("reports/accounting/income-statement", {
+          params: { startDate: filters.startDate, endDate: filters.endDate, branch_id: filters.branch_id },
+          signal,
+        });
+        return res?.data?.data ?? {};
+      } catch (err) {
+        if (err?.response?.status === 401) navigate("/", { replace: true });
+        throw err;
+      }
+    },
+    placeholderData: (prev) => prev,
+  });
+
   return (
     <>
       <Breadcrumb>
         <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink to="/dashboard">Home</BreadcrumbLink>
-          </BreadcrumbItem>
+          <BreadcrumbItem><BreadcrumbLink to="/dashboard">Home</BreadcrumbLink></BreadcrumbItem>
           <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink to="/accounting-reports">
-              Accounting Reports
-            </BreadcrumbLink>
-          </BreadcrumbItem>
+          <BreadcrumbItem><BreadcrumbLink to="/accounting-reports">Accounting Reports</BreadcrumbLink></BreadcrumbItem>
           <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Income Statement</BreadcrumbPage>
-          </BreadcrumbItem>
+          <BreadcrumbItem><BreadcrumbPage>Income Statement</BreadcrumbPage></BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
-      <div className="flex-col md:flex">
-        <div className="border-b" />
-        <div className="flex-1 space-y-4 p-0 pt-2">
-          <div className="flex items-center justify-between space-y-2">
-            <h5 className="text-2xl font-bold tracking-tight">
-              Income Statament
-            </h5>
-          </div>
-          <CustomReportQuery
-            isRefetching={isRefetching}
-            refetch={refetch}
-            onFilterChange={handleFilterChange}
-            data={data}
-            filters={filters}
-            colSpan={0}
-            url={{
-              
-              pdf: "export/income-statement/pdf",
-              excel: "export/income-statement/excel",
-            }}
-            mode={{
-              format: "A4-P",
-              orientation: "P",
-            }}
-            title={"Income Statement"}
-          />
-          <IncomeStatementTable
-            data={data}
-            isLoading={isLoading}
-            refetch={refetch}
-            isRefetching={isRefetching}
-            isError={isError}
-          />
-        </div>
+
+      <div className="flex-1 space-y-4 pt-2">
+        <h5 className="text-2xl font-bold tracking-tight">Income Statement</h5>
+
+        <ReportFilterBar
+          onApply={setFilters}
+          isLoading={isRefetching}
+          showStatus={false}
+          exportDisabled
+        />
+
+        {isError && (
+          <p className="text-sm text-destructive">Failed to load report. Please try again.</p>
+        )}
+
+        {isLoading && !data?.income_statement && (
+          <p className="text-sm text-muted-foreground animate-pulse">Loading income statement…</p>
+        )}
+
+        <IncomeStatementTable data={data} />
       </div>
     </>
   );

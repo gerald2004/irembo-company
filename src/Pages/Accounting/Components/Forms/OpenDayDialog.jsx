@@ -130,7 +130,7 @@ export default function OpenDayDialog({
 
   const scope = watch("scope");
 
-  const { mutate, isLoading } = useMutation({
+  const { mutate, isPending } = useMutation({
     mutationFn: async (payload) => {
       const controller = new AbortController();
       const res = await axiosPrivate.post(
@@ -284,8 +284,8 @@ export default function OpenDayDialog({
           </div>
 
           <DialogFooter>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Opening..." : "Open Day"}
+            <Button type="submit" disabled={isPending}>
+              {isPending ? "Opening..." : "Open Day"}
             </Button>
           </DialogFooter>
         </form>

@@ -28,6 +28,20 @@ import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { toast } from "@/hooks/use-toast";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
 
+const scheduleStatusBadge = (status) => {
+  const s = (status || "").toLowerCase();
+  const cls = {
+    paid:     "bg-green-100 text-green-800 border-green-300 hover:bg-green-100",
+    partial:  "bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-100",
+    overdue:  "bg-red-100 text-red-700 border-red-300 hover:bg-red-100",
+    unpaid:   "bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-100",
+    future:   "bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-50",
+    active:   "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-100",
+    inactive: "bg-gray-100 text-gray-500 border-gray-300 hover:bg-gray-100",
+  }[s] || "";
+  return <Badge variant="outline" className={`capitalize text-xs font-medium ${cls}`}>{status}</Badge>;
+};
+
 export function LoanScheduleTable({
   data,
   refetch,
@@ -186,20 +200,12 @@ export function LoanScheduleTable({
     {
       accessorKey: "loan_schedule_payment_status",
       header: "Payment Status",
-      cell: ({ row }) => (
-        <Badge className="capitalize text-xs">
-          {row.original.loan_schedule_payment_status}
-        </Badge>
-      ),
+      cell: ({ row }) => scheduleStatusBadge(row.original.loan_schedule_payment_status),
     },
     {
       accessorKey: "loan_schedule_activity_status",
       header: "Activity Status",
-      cell: ({ row }) => (
-        <Badge className="capitalize text-xs">
-          {row.original.loan_schedule_activity_status}
-        </Badge>
-      ),
+      cell: ({ row }) => scheduleStatusBadge(row.original.loan_schedule_activity_status),
     },
     {
       id: "amount_paid",
@@ -211,7 +217,11 @@ export function LoanScheduleTable({
     {
       id: "balance",
       header: "Balance",
-      cell: ({ row }) => <p className="text-xs">{fmt(row.original.balance)}</p>,
+      cell: ({ row }) => (
+        <p className={`text-xs tabular-nums font-medium ${row.original.balance > 0 ? "text-red-600" : "text-green-700"}`}>
+          {fmt(row.original.balance)}
+        </p>
+      ),
     },
     {
       id: "actions",

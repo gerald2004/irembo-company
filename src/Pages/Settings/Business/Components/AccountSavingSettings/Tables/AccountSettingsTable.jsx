@@ -68,7 +68,6 @@ export function AccountSettingsTable() {
         throw error;
       }
     },
-    keepPreviousData: true,
   });
   const handleOpenDeleteDialog = (id) => {
     setSelectedId(id);
@@ -197,7 +196,6 @@ export function AccountSettingsTable() {
       <AddAccountProductDialog
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        refetch={refetch}
       />
       <EditAccountProductDialog
         isOpen={isModalOpenEdit}

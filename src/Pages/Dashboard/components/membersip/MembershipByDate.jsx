@@ -9,104 +9,62 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 
-import {
-  ChartContainer,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
+const chartConfig = {
+  cumulative: { label: "Total Members", color: "hsl(var(--chart-1))" },
+  new_members: { label: "New Members", color: "hsl(var(--chart-2))" },
+};
 
+// Accepts chartData: [{ month, new_members, cumulative }]
 export function MembershipByDate({ chartData = [] }) {
-  // Validate data format
-  const validatedData = Array.isArray(chartData) ? chartData : [];
-
-  const chartConfig = {
-    members: {
-      label: "Total Members",
-      color: "hsl(var(--chart-1))",
-    },
-  };
+  const valid = Array.isArray(chartData) ? chartData : [];
 
   return (
-    <div className="membership-by-date-chart px-4 w-full h-full">
-      <ChartContainer
-        config={chartConfig}
-        title="Membership Growth"
-        description="Monthly membership changes"
-        className="aspect-w-16 aspect-h-9 w-full"
-      >
+    <div className="px-2 w-full" style={{ height: 300 }}>
+      <ChartContainer config={chartConfig} className="w-full h-full">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={validatedData}
-            margin={{
-              top: 20,
-              left: 12,
-              right: 12,
-            }}
-          >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="hsl(var(--border))"
-              vertical={false}
-            />
+          <LineChart data={valid} margin={{ top: 20, left: 12, right: 12 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis
               dataKey="month"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
+              tick={{ fontSize: 11 }}
               tickFormatter={(value) => {
                 if (!value) return "";
-                const date = new Date(`${value}-01`);
-                return date.toLocaleString("default", { month: "short" });
+                const d = new Date(`${value}-01`);
+                return d.toLocaleString("default", { month: "short", year: "2-digit" });
               }}
-              tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }}
             />
             <Tooltip
               content={({ payload, label }) => {
-                if (!payload || !payload.length) return null;
-                const date = new Date(`${label}-01`);
+                if (!payload?.length) return null;
+                const d = new Date(`${label}-01`);
                 return (
                   <ChartTooltipContent
                     labelFormatter={() =>
-                      date.toLocaleString("default", {
-                        month: "long",
-                        year: "numeric",
-                      })
+                      d.toLocaleString("default", { month: "long", year: "numeric" })
                     }
-                    valueFormatter={(value) => value.toLocaleString()}
+                    valueFormatter={(v) => v.toLocaleString()}
                     indicator="dot"
                   />
                 );
               }}
             />
             <Line
-              dataKey="members"
+              dataKey="cumulative"
               type="monotone"
-              stroke="hsl(var(--chart-1))"
+              stroke={chartConfig.cumulative.color}
               strokeWidth={2}
-              dot={{
-                fill: "hsl(var(--chart-1))",
-                r: 4,
-              }}
-              activeDot={{
-                r: 6,
-              }}
+              dot={{ fill: chartConfig.cumulative.color, r: 4 }}
+              activeDot={{ r: 6 }}
               name="Total Members"
             >
-              <LabelList
-                dataKey="members"
-                position="top"
-                offset={12}
-                className="fill-foreground"
-                fontSize={12}
-              />
+              <LabelList dataKey="cumulative" position="top" offset={12} className="fill-foreground" fontSize={11} />
             </Line>
-            <Legend
-              content={() => (
-                <div className="text-sm text-muted-foreground">
-                  Total Members
-                </div>
-              )}
-            />
+            <Legend />
           </LineChart>
         </ResponsiveContainer>
       </ChartContainer>

@@ -53,7 +53,7 @@ const WritternOffLoansReport = () => {
         throw error;
       }
     },
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   });
 
   const totalAmountDisbursed = data?.reduce(

@@ -54,7 +54,7 @@ const RejectedLoansReport = () => {
         throw error;
       }
     },
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   });
 
   const totalAmountApplied = data?.reduce(

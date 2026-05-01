@@ -264,13 +264,18 @@ export function Groups() {
 
   return (
     <div className="w-full">
-      <div className="flex items-center py-4 space-x-4">
+      <div className="flex items-center py-4 space-x-4 flex-wrap gap-y-2">
         <Input
           placeholder="Search clients..."
           value={globalFilter}
           onChange={(event) => setGlobalFilter(event.target.value)}
           className="max-w-sm"
         />
+        {hasPermission(roles, 100012) && (
+          <Button asChild size="sm">
+            <Link to="/clients/group/new">+ New Group</Link>
+          </Button>
+        )}
 
         <Button
           variant="outline"

@@ -24,6 +24,8 @@ import { LoanFeesTable } from "./Components/Tables/LoanFeesTable";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
 import { hasPermission } from "@/lib/utils";
 import LoanIntelligenceDashboard from "./Components/Blocks/LoanIntelligenceDashboard";
+import GroupLoanAllocations from "./Components/Tables/GroupLoanAllocations";
+
 const SingleLoan = () => {
   const navigate = useNavigate();
   const axiosPrivate = useAxiosPrivate();
@@ -184,6 +186,11 @@ const SingleLoan = () => {
                   hasPermission(roles, 100166) && (
                     <TabsTrigger value="loan-fees">Loan Fees</TabsTrigger>
                   )}
+                {data?.loan_application?.client?.client_type === "group" && (
+                  <TabsTrigger value="group-allocations">
+                    Member Allocations
+                  </TabsTrigger>
+                )}
               </TabsList>
             </div>
             <TabsContent value="summary" className="space-y-4">
@@ -268,6 +275,11 @@ const SingleLoan = () => {
             </TabsContent>
             <TabsContent value="loan-fees" className="space-y-4">
               {hasPermission(roles, 100166) && <LoanFeesTable />}
+            </TabsContent>
+            <TabsContent value="group-allocations" className="space-y-4">
+              {data?.loan_application?.client?.client_type === "group" && (
+                <GroupLoanAllocations />
+              )}
             </TabsContent>
           </Tabs>
         </div>

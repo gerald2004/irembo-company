@@ -70,7 +70,7 @@ const LoansMaturityReport = () => {
         throw error;
       }
     },
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
     staleTime: 60_000,
   });
 

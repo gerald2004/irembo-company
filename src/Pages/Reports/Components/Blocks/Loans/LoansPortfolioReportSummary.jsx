@@ -35,7 +35,7 @@ const LoansPortfolioReportSummary = () => {
         throw error;
       }
     },
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   });
 
   return (

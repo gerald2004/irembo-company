@@ -54,7 +54,7 @@ const LoanApplicationsReport = () => {
         throw error;
       }
     },
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   });
 
   const totalSum = data?.reduce((sum, loan) => sum + loan.amount, 0);
@@ -147,6 +147,20 @@ const LoanApplicationsReport = () => {
     setFilters(data);
     refetch();
   };
+
+  const fmt = (n) => new Intl.NumberFormat("en-UG", { maximumFractionDigits: 0 }).format(n ?? 0);
+
+  const KPI = ({ label, value, sub, accent = "bg-blue-500" }) => (
+    <div className={`rounded-xl border bg-card shadow-sm overflow-hidden`}>
+      <div className={`h-1 ${accent}`} />
+      <div className="p-4">
+        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
+        <p className="text-xl font-bold mt-1">{value}</p>
+        {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
+      </div>
+    </div>
+  );
+
   return (
     <>
       <Breadcrumb>
@@ -172,7 +186,7 @@ const LoanApplicationsReport = () => {
               Loan Applications Report
             </h5>
           </div>
-          <LoanGeneralReportQuery
+          <LoanGeneralReportQuery show={{ product: true, status: true }}
             onFilterChange={handleFilterChange}
             isRefetching={isRefetching}
             refetch={refetch}
@@ -187,7 +201,14 @@ const LoanApplicationsReport = () => {
             totals={{ debit: totalSum }}
             title={"Loan Application Report"}
           />
-          <div className="max-w-[1200px]">
+          {/* KPI Strip */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <KPI label="Total Applications" value={data?.length ?? 0} sub={`UGX ${fmt(data?.reduce((s,l)=>s+(l.amount??0),0))}`} accent="bg-blue-500" />
+            <KPI label="Pending" value={data?.filter(l=>l.status==='pending').length ?? 0} sub="Awaiting decision" accent="bg-amber-500" />
+            <KPI label="Approved" value={data?.filter(l=>['approved','processed'].includes(l.status)).length ?? 0} sub="Ready to disburse" accent="bg-emerald-500" />
+            <KPI label="Rejected" value={data?.filter(l=>l.status==='rejected').length ?? 0} sub="Declined applications" accent="bg-red-500" />
+          </div>
+          <div className="overflow-x-auto max-w-[1200px]">
             <DatatableReport
               ref={tableRef}
               columns={columns}

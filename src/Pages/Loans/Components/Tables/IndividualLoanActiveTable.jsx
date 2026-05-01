@@ -32,14 +32,41 @@ import {
 
 import jsPDF from "jspdf";
 import "jspdf-autotable";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, MoreHorizontal } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import AlertModal from "@/components/AlertModal";
 import { Badge } from "@/components/ui/badge";
 import { formatDateTimestamp, hasPermission } from "@/lib/utils";
 import { useDebounce } from "@/lib/utils";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
-export function IndividualLoanActiveTable() {
+
+const loanStatusBadge = (status) => {
+  const s = (status || "").toLowerCase();
+  const cls = {
+    pending:     "bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-100",
+    processed:   "bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-100",
+    approved:    "bg-green-100 text-green-800 border-green-300 hover:bg-green-100",
+    disbursed:   "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-100",
+    overdue:     "bg-red-100 text-red-700 border-red-300 hover:bg-red-100",
+    rejected:    "bg-red-100 text-red-700 border-red-300 hover:bg-red-100",
+    paid_off:    "bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-100",
+    settled:     "bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-100",
+    writternoff: "bg-gray-800 text-gray-100 border-gray-700 hover:bg-gray-800",
+    writtenoff:  "bg-gray-800 text-gray-100 border-gray-700 hover:bg-gray-800",
+    refinanced:  "bg-purple-100 text-purple-800 border-purple-300 hover:bg-purple-100",
+    active:      "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-100",
+    due_today:   "bg-orange-100 text-orange-800 border-orange-300 hover:bg-orange-100",
+  }[s] || "";
+  return <Badge variant="outline" className={`capitalize text-xs font-medium ${cls}`}>{status}</Badge>;
+};
+
+export function IndividualLoanActiveTable({
+  clientType = "individual",
+  queryKeyPrefix = "individual",
+  clientRoute = "/clients/individual",
+  dueToday = false,
+  extraFilters = {},
+}) {
   const navigate = useNavigate();
   const [sorting, setSorting] = useState([]);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -57,11 +84,12 @@ export function IndividualLoanActiveTable() {
     isError,
   } = useQuery({
     queryKey: [
-      "individuals-active-loans-data",
+      `${queryKeyPrefix}-active-loans-data${dueToday ? "-due-today" : ""}`,
       pagination.pageIndex,
       pagination.pageSize,
       debouncedGlobalFilter,
       sorting,
+      extraFilters,
     ],
     queryFn: async () => {
       const controller = new AbortController();
@@ -74,6 +102,9 @@ export function IndividualLoanActiveTable() {
             size: pagination.pageSize,
             globalFilter: debouncedGlobalFilter,
             sorting: JSON.stringify(sorting || []),
+            type: clientType,
+            ...extraFilters,
+            ...(dueToday ? { due_today: 1 } : {}),
           },
           signal: controller.signal,
         });
@@ -85,7 +116,7 @@ export function IndividualLoanActiveTable() {
         return error;
       }
     },
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   });
 
   const columns = [
@@ -123,24 +154,22 @@ export function IndividualLoanActiveTable() {
       ),
     },
     {
-      id: "loan_applied_settings_disurbment_amount",
+      id: "loan_applied_settings_disbursement_amount",
       header: "Disbursed Amount",
       cell: ({ row }) => (
         <p className="capitalize hover:uppercase">
           {parseFloat(
-            row.original.loan_applied_settings_disurbment_amount
+            row.original.loan_applied_settings_disbursement_amount
           ).toLocaleString()}
         </p>
       ),
     },
     {
-      id: "loan_applied_settings_disurbment_interest",
-      header: "Interest (%)",
+      id: "loan_applied_settings_disbursement_interest",
+      header: "Interest Rate",
       cell: ({ row }) => (
-        <p className="capitalize hover:uppercase">
-          {parseFloat(
-            row.original.loan_applied_settings_disurbment_interest
-          ).toLocaleString()}
+        <p className="tabular-nums text-xs">
+          {parseFloat(row.original.loan_applied_settings_disbursement_interest || 0).toLocaleString()}%
         </p>
       ),
     },
@@ -158,7 +187,7 @@ export function IndividualLoanActiveTable() {
       header: "Account Number",
       cell: ({ row }) => (
         <Link
-          to={`/clients/individual/${row.original.client_id}`}
+          to={`${clientRoute}/${row.original.client_id}`}
           className="capitalize hover:uppercase"
         >
           {row.original.client_account_number}
@@ -168,33 +197,42 @@ export function IndividualLoanActiveTable() {
     {
       id: "name",
       header: "Client Name",
-      cell: ({ row }) => (
-        <Link
-          to={`/clients/individual/${row.original.client_id}`}
-          className="capitalize hover:uppercase"
-        >
-          {row.original.client_lastname} {row.original.client_firstname}
-        </Link>
-      ),
+      cell: ({ row }) => {
+        const name = row.original.client_group_name ||
+          `${row.original.client_lastname || ""} ${row.original.client_firstname || ""}`.trim();
+        return (
+          <Link
+            to={`${clientRoute}/${row.original.client_id}`}
+            className="capitalize hover:uppercase"
+          >
+            {name}
+          </Link>
+        );
+      },
     },
     {
-      id: "loan_applied_settings_disurbment_date",
+      id: "loan_applied_settings_disbursement_date",
       header: "Disbursed Date",
       cell: ({ row }) =>
-        formatDateTimestamp(row.original.loan_applied_settings_disurbment_date),
+        formatDateTimestamp(row.original.loan_applied_settings_disbursement_date),
     },
     {
-      accessorKey: "loan_applied_settings_disurbment_tenure_period",
+      accessorKey: "loan_applied_settings_disbursement_tenure_period",
       header: "Tenure Period",
     },
     {
-      id: "loan_application_status",
-      cell: ({ row }) => (
-        <Badge className="capitalize">
-          {row.original.loan_application_status}
-        </Badge>
-      ),
+      id: "loan_applied_settings_disbursement_status",
+      cell: ({ row }) => loanStatusBadge(row.original.loan_applied_settings_disbursement_status || row.original.loan_application_status),
       header: "Loan Status",
+    },
+    {
+      id: "guarantors_list",
+      header: "Guarantors",
+      cell: ({ row }) => (
+        <p className="text-sm text-muted-foreground">
+          {row.original.guarantors_list || "—"}
+        </p>
+      ),
     },
     {
       id: "actions",
@@ -204,7 +242,7 @@ export function IndividualLoanActiveTable() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-8 w-8 p-0">
               <span className="sr-only">Open menu</span>
-              ...
+              <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -442,18 +480,18 @@ export function IndividualLoanActiveTable() {
                 </TableCell>
               </TableRow>
             ) : data?.data?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+              table.getRowModel().rows.map((row) => {
+                const isOverdue = (row.original.loan_applied_settings_disbursement_status || "").toLowerCase() === "overdue";
+                return (
+                  <TableRow key={row.id} className={isOverdue ? "bg-red-50/70 dark:bg-red-900/15 border-l-2 border-l-red-400" : ""}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                );
+              })
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="text-center">

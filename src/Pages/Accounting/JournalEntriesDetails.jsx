@@ -75,7 +75,7 @@ const JournalEntriesDetails = () => {
           <h5 className="mt-5 pt-5">Journal Summary</h5>
           <TransactionTable transaction={data?.journal_entry} />
           <h5 className="mt-5 pt-5">Journal Details</h5>
-          <JournalEntryDetailsTable data={data?.journal_entry_details} />
+          <JournalEntryDetailsTable data={data?.lines} />
         </div>
       </div>
     </>
@@ -141,38 +141,32 @@ const JournalEntryDetailsTable = ({ data }) => {
             <TableHead>Account Title</TableHead>
             <TableHead className="text-right">Debit</TableHead>
             <TableHead className="text-right">Credit</TableHead>
-            <TableHead>Date</TableHead>
+            <TableHead>Memo</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data?.map((entry) => (
-            <TableRow key={entry.entry_detail_id}>
+          {data?.map((entry, i) => (
+            <TableRow key={entry.entry_detail_id ?? i}>
               <TableCell>
                 <Link to={`/ledgers/accounts/${entry?.account_id}`}>
-                  {entry.account?.account_code}
+                  {entry.account_code}
                 </Link>
               </TableCell>
-              <TableCell>{entry.account?.account_title}</TableCell>
+              <TableCell>{entry.account_title}</TableCell>
               <TableCell className="text-right">
                 {parseFloat(entry?.debit_amount)?.toLocaleString()}
               </TableCell>
               <TableCell className="text-right">
                 {parseFloat(entry?.credit_amount)?.toLocaleString()}
               </TableCell>
-              <TableCell>{formatDateTimestamp(entry.created_at)}</TableCell>
+              <TableCell className="text-xs text-muted-foreground">{entry.memo || "—"}</TableCell>
             </TableRow>
           ))}
           <TableRow className="font-semibold bg-muted">
-            <TableCell colSpan={2} className="text-end">
-              Total:
-            </TableCell>
-            <TableCell className="text-right">
-              {totalDebit?.toLocaleString()}
-            </TableCell>
-            <TableCell className="text-right">
-              {totalCredit?.toLocaleString()}
-            </TableCell>
-            <TableCell></TableCell>
+            <TableCell colSpan={2} className="text-end">Total:</TableCell>
+            <TableCell className="text-right">{totalDebit?.toLocaleString()}</TableCell>
+            <TableCell className="text-right">{totalCredit?.toLocaleString()}</TableCell>
+            <TableCell />
           </TableRow>
         </TableBody>
       </Table>

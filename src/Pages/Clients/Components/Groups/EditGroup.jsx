@@ -56,6 +56,10 @@ const EditGroup = () => {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
+            <BreadcrumbLink to={`/clients/group/${id}`}>Group</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
             <BreadcrumbPage>Edit Group</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>

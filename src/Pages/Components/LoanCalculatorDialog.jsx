@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import {
   Select,
@@ -30,17 +31,26 @@ import {
 } from "@/components/ui/popover";
 import { useState } from "react";
 import LoanCalculator from "./LoanCalculator";
+
+const intervalLabel = {
+  daily: "days",
+  weekly: "weeks",
+  monthly: "months",
+  yearly: "years",
+};
+
 const LoanCalculatorDialog = ({ isOpen, onClose }) => {
   const axiosPrivate = useAxiosPrivate();
+
   const {
     register,
     handleSubmit,
     control,
+    watch,
     reset,
     formState: { errors, isSubmitting },
   } = useForm();
 
-  // Fetch loan products using React Query
   const { data: loanProducts = [] } = useQuery({
     queryKey: ["loanProducts"],
     queryFn: async () => {
@@ -55,6 +65,12 @@ const LoanCalculatorDialog = ({ isOpen, onClose }) => {
   const [showCalculatorDailog, setShowCalculatorDailog] = useState(false);
   const [data, setData] = useState([]);
 
+  const watchedProductId = watch("loan_product");
+  const selectedProduct = loanProducts.find(
+    (p) => String(p.id) === String(watchedProductId)
+  );
+  const tenureUnit = intervalLabel[selectedProduct?.product_interval] ?? "periods";
+
   const handleOpenLoanCalculator = (loanCalculator, loanCharges) => {
     setData({ loanCalculator, loanCharges });
     setShowCalculatorDailog(true);
@@ -67,7 +83,6 @@ const LoanCalculatorDialog = ({ isOpen, onClose }) => {
 
   const onSubmit = async (data) => {
     const controller = new AbortController();
-
     try {
       const loanCharges = await axiosPrivate.get(
         `settings/loans/autocharges/${data.loan_product}/product`,
@@ -77,7 +92,6 @@ const LoanCalculatorDialog = ({ isOpen, onClose }) => {
         signal: controller.signal,
       });
       reset();
-      // onClose();
       handleOpenLoanCalculator(
         response.data.data ?? [],
         loanCharges.data.data.auto_charges ?? []
@@ -94,7 +108,7 @@ const LoanCalculatorDialog = ({ isOpen, onClose }) => {
           <DialogHeader>
             <DialogTitle>Loan Calculator</DialogTitle>
             <DialogDescription>
-              Enter loan details to calculate your monthly payments.
+              Enter loan details to calculate your repayment schedule.
             </DialogDescription>
             <DialogClose asChild>
               <button
@@ -108,23 +122,8 @@ const LoanCalculatorDialog = ({ isOpen, onClose }) => {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="amount">Loan Amount</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  step="0.01"
-                  placeholder="Enter loan amount"
-                  {...register("amount", { required: "Amount is required" })}
-                />
-                {errors.amount && (
-                  <p className="text-red-500 text-sm">
-                    {errors.amount.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
+              {/* Product selector first — drives period label */}
+              <div className="md:col-span-2">
                 <Label htmlFor="loan_product">Loan Product</Label>
                 <Controller
                   name="loan_product"
@@ -133,7 +132,7 @@ const LoanCalculatorDialog = ({ isOpen, onClose }) => {
                   render={({ field }) => (
                     <Select
                       value={field.value}
-                      onValueChange={(value) => field.onChange(value)}
+                      onValueChange={field.onChange}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select a product">
@@ -153,30 +152,60 @@ const LoanCalculatorDialog = ({ isOpen, onClose }) => {
                   )}
                 />
                 {errors.loan_product && (
-                  <p className="text-red-500 text-sm">
-                    {errors.loan_product.message}
-                  </p>
+                  <p className="text-red-500 text-sm">{errors.loan_product.message}</p>
+                )}
+              </div>
+
+              {/* Product info strip */}
+              {selectedProduct && (
+                <div className="md:col-span-2 flex flex-wrap gap-2 bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-800/50 rounded-md px-3 py-2">
+                  <Badge variant="outline" className="text-xs capitalize">
+                    {selectedProduct.type?.replace("_", " ")}
+                  </Badge>
+                  <Badge variant="outline" className="text-xs capitalize">
+                    {selectedProduct.product_interval} repayments
+                  </Badge>
+                  <Badge variant="outline" className="text-xs text-blue-700">
+                    {selectedProduct.interest_rate}% interest
+                  </Badge>
+                  <span className="text-xs text-muted-foreground self-center ml-auto">
+                    Period in <strong>{tenureUnit}</strong>
+                  </span>
+                </div>
+              )}
+
+              <div>
+                <Label htmlFor="amount">Loan Amount</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  step="0.01"
+                  placeholder="Enter loan amount"
+                  {...register("amount", { required: "Amount is required" })}
+                />
+                {errors.amount && (
+                  <p className="text-red-500 text-sm">{errors.amount.message}</p>
                 )}
               </div>
 
               <div>
-                <Label htmlFor="period">Loan Period</Label>
+                <Label htmlFor="period">Loan Period ({tenureUnit})</Label>
                 <Input
                   id="period"
                   type="number"
-                  placeholder="Enter period in months or days or weeks"
+                  min="1"
+                  placeholder={`Enter number of ${tenureUnit}`}
                   {...register("period", {
                     required: "Loan period is required",
+                    min: { value: 1, message: "Must be at least 1" },
                   })}
                 />
                 {errors.period && (
-                  <p className="text-red-500 text-sm">
-                    {errors.period.message}
-                  </p>
+                  <p className="text-red-500 text-sm">{errors.period.message}</p>
                 )}
               </div>
 
-              <div>
+              <div className="md:col-span-2">
                 <Label htmlFor="date">Start Date</Label>
                 <Controller
                   name="date"
@@ -190,7 +219,7 @@ const LoanCalculatorDialog = ({ isOpen, onClose }) => {
                           className="w-full pl-3 text-left font-normal"
                         >
                           {field.value ? (
-                            new Date(field.value).toLocaleDateString() // ✅ Ensure value is a Date object
+                            new Date(field.value).toLocaleDateString()
                           ) : (
                             <span>Pick a date</span>
                           )}
@@ -200,12 +229,8 @@ const LoanCalculatorDialog = ({ isOpen, onClose }) => {
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          selected={
-                            field.value ? new Date(field.value) : undefined
-                          } // ✅ Ensure value is a Date
-                          onSelect={(date) =>
-                            field.onChange(date?.toISOString())
-                          } // ✅ Store as ISO string
+                          selected={field.value ? new Date(field.value) : undefined}
+                          onSelect={(date) => field.onChange(date?.toISOString())}
                           disabled={(date) => date < new Date("1920-01-01")}
                         />
                       </PopoverContent>
@@ -220,12 +245,13 @@ const LoanCalculatorDialog = ({ isOpen, onClose }) => {
 
             <DialogFooter>
               <Button type="submit" disabled={isSubmitting}>
-                Calculate <CalculatorIcon />
+                Calculate <CalculatorIcon className="ml-2" />
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
+
       {showCalculatorDailog && (
         <LoanCalculator
           isOpen={showCalculatorDailog}

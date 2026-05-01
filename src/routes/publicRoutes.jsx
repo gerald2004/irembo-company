@@ -8,11 +8,7 @@ const publicRoutes = [
   { path: "/", element: <Login /> },
   { path: "/forgot-password", element: <ForgotPassword /> },
   { path: "/unauthorized", element: <Unauthorized /> },
-  {
-    path: "/verify",
-    element: <TwoFactorAuthentication />,
-    roles: [100001],
-  },
+  { path: "/verify", element: <TwoFactorAuthentication /> },
 ];
 
 export default publicRoutes;

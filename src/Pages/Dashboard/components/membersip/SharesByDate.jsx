@@ -1,53 +1,37 @@
 /* eslint-disable react/prop-types */
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  XAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, Tooltip, ResponsiveContainer } from "recharts";
 
-export function SharesByDate({ chartData }) {
+// Accepts chartData: shares_trend array from backend (may be empty)
+export function SharesByDate({ chartData = [] }) {
+  const valid = Array.isArray(chartData) && chartData.length > 0 ? chartData : [];
+
+  if (valid.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-[260px] text-sm text-muted-foreground">
+        No shares data available for this period.
+      </div>
+    );
+  }
+
   return (
-    <div style={{ width: "100%", height: 350 }}>
+    <div style={{ width: "100%", height: 280 }}>
       <ResponsiveContainer>
-        <BarChart
-          data={chartData}
-          margin={{
-            top: 20,
-            left: 12,
-            right: 12,
-          }}
-        >
+        <BarChart data={valid} margin={{ top: 8, left: 12, right: 12 }}>
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
           <XAxis
             dataKey="month"
             tickLine={false}
             axisLine={false}
             tickMargin={10}
+            tick={{ fontSize: 11 }}
             tickFormatter={(value) => {
-              const date = new Date(value + "-01");
-              return date.toLocaleString("default", { month: "short" });
+              const d = new Date(`${value}-01`);
+              return d.toLocaleString("default", { month: "short" });
             }}
-            tick={{ fontSize: 11, fill: "gray" }}
-
           />
           <Tooltip />
-          <Bar
-            dataKey="inShares"
-            fill="hsl(var(--chart-1, #8884d8))"
-            name="In Shares"
-            stackId="a"
-            radius={[4, 4, 0, 0]}
-          />
-          <Bar
-            dataKey="outShares"
-            fill="hsl(var(--chart-2, #82ca9d))"
-            name="Out Shares"
-            stackId="a"
-            radius={[0, 0, 4, 4]}
-          />
+          <Bar dataKey="in_shares" fill="hsl(var(--chart-1))" name="In Shares" stackId="a" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="out_shares" fill="hsl(var(--chart-2))" name="Out Shares" stackId="a" radius={[0, 0, 4, 4]} />
         </BarChart>
       </ResponsiveContainer>
     </div>

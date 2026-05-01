@@ -1,65 +1,70 @@
 /* eslint-disable react/prop-types */
-import { TrendingUp } from "lucide-react";
-import { Pie, PieChart } from "recharts";
-
+import { Pie, PieChart, Cell, Legend, Tooltip } from "recharts";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 
-export function LoansByGenderPieChart({ loans_gender }) {
+const COLORS = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+];
+
+// Accepts gender_breakdown: { male: { count, amount }, female: { count, amount }, group: { count, amount } }
+export function LoansByGenderPieChart({ gender_breakdown }) {
   const chartData = [
     {
-      category: "Male",
-      totalCount: loans_gender?.individual?.male?.totalCount || 0,
-      totalAmount: loans_gender?.individual?.male?.totalAmount || 0,
-      fill: "hsl(var(--chart-1))",
+      name: "Male",
+      value: gender_breakdown?.male?.count || 0,
+      amount: gender_breakdown?.male?.amount || 0,
     },
     {
-      category: "Female",
-      totalCount: loans_gender?.individual?.female?.totalCount || 0,
-      totalAmount: loans_gender?.individual?.female?.totalAmount || 0,
-      fill: "hsl(var(--chart-2))",
+      name: "Female",
+      value: gender_breakdown?.female?.count || 0,
+      amount: gender_breakdown?.female?.amount || 0,
     },
     {
-      category: "Group",
-      totalCount: loans_gender?.group?.totalCount || 0,
-      totalAmount: loans_gender?.group?.totalAmount || 0,
-      fill: "hsl(var(--chart-3))",
+      name: "Group",
+      value: gender_breakdown?.group?.count || 0,
+      amount: gender_breakdown?.group?.amount || 0,
     },
-  ];
+  ].filter((d) => d.value > 0);
 
   return (
-    <Card className="flex flex-col">
-      <CardHeader className="items-center pb-0">
-        <CardTitle>Loans by Gender</CardTitle>
-        <CardDescription>Individual and Group Loans</CardDescription>
+    <Card className="flex flex-col h-full">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base font-semibold">Loans by Gender</CardTitle>
+        <CardDescription className="text-xs">Individual and group borrowers</CardDescription>
       </CardHeader>
-      <CardContent className="flex-1 pb-0">
-        <div className="mx-auto aspect-square max-h-[350px] max-w-[350px]">
-          <PieChart width={350} height={350}>
-            <Pie
-              data={chartData}
-              dataKey="totalAmount"
-              label={(entry) => `${entry.category}`}
-              fill={(entry) => entry.fill}
-              nameKey="category"
-            />
-          </PieChart>
-        </div>
+      <CardContent className="flex-1 flex items-center justify-center pb-4">
+        <PieChart width={280} height={280}>
+          <Pie
+            data={chartData}
+            dataKey="value"
+            nameKey="name"
+            cx="50%"
+            cy="50%"
+            outerRadius={100}
+            label={({ name, value }) => `${name}: ${value}`}
+            labelLine={true}
+          >
+            {chartData.map((_, i) => (
+              <Cell key={i} fill={COLORS[i % COLORS.length]} />
+            ))}
+          </Pie>
+          <Tooltip
+            formatter={(value, name, props) => [
+              `${value} loans · ${props.payload.amount?.toLocaleString()}`,
+              name,
+            ]}
+          />
+          <Legend />
+        </PieChart>
       </CardContent>
-      <CardFooter className="flex-col gap-2 text-sm">
-        <div className="flex items-center gap-2 font-medium leading-none">
-          Trending up by 0% this month <TrendingUp className="h-4 w-4" />
-        </div>
-        <div className="leading-none text-muted-foreground">
-          Showing loan disbursements categorized by gender and type
-        </div>
-      </CardFooter>
     </Card>
   );
 }

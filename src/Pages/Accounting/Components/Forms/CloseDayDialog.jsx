@@ -2,6 +2,7 @@
 import { useForm, Controller } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
+import useAuth from "@/MiddleWares/Hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 
 import {
@@ -24,7 +25,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { X } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query"; // branches query
 
 export default function CloseDayDialog({
   isOpen,
@@ -35,20 +36,14 @@ export default function CloseDayDialog({
   onSuccess,
 }) {
   const axiosPrivate = useAxiosPrivate();
+  const { auth } = useAuth();
 
   // who am I? (to lock branch users)
-  const { data: me } = useQuery({
-    queryKey: ["me"],
-    queryFn: async () => {
-      const ctrl = new AbortController();
-      const r = await axiosPrivate.get("/auth/me", { signal: ctrl.signal });
-      return r?.data?.data ?? r?.data ?? {};
-    },
-  });
+  const user = auth?.user ?? {};
   const dataPrivilege = String(
-    me?.data_privilege || me?.user?.data_privilege || "sacco"
+    user?.data_privilege ?? auth?.data_privilege ?? "sacco"
   ).toLowerCase();
-  const myBranchId = me?.branch_id ?? me?.user?.branch_id ?? null;
+  const myBranchId = auth?.current_branch_id ?? user?.branch_id ?? null;
   const isBranchUser = dataPrivilege === "branch";
 
   const { data: branches = [] } = useQuery({
@@ -84,7 +79,7 @@ export default function CloseDayDialog({
     setValue("branch_id", String(myBranchId));
   }
 
-  const { mutate, isLoading } = useMutation({
+  const { mutate, isPending } = useMutation({
     mutationFn: async (payload) => {
       const controller = new AbortController();
       const res = await axiosPrivate.post(
@@ -230,8 +225,8 @@ export default function CloseDayDialog({
           </div>
 
           <DialogFooter>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Closing..." : "Confirm Close Day"}
+            <Button type="submit" disabled={isPending}>
+              {isPending ? "Closing..." : "Confirm Close Day"}
             </Button>
           </DialogFooter>
         </form>

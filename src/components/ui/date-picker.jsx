@@ -27,27 +27,21 @@ export function DatePicker(props) {
     onChange,
   } = props;
 
+  // Whether the user has made an explicit selection (or a value was pre-provided)
+  const [selected, setSelected] = useState(!!selectedDate);
+  // Internal calendar navigation state — starts at selectedDate or today
   const [date, setDate] = useState(selectedDate || new Date());
 
   useEffect(() => {
     if (selectedDate) {
       setDate(selectedDate);
+      setSelected(true);
     }
   }, [selectedDate]);
 
   const months = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
   ];
 
   const years = Array.from(
@@ -55,22 +49,22 @@ export function DatePicker(props) {
     (_, i) => startYear + i
   );
 
+  // Month/year dropdowns are navigation only — update the calendar view but do NOT
+  // commit a value to the parent form until the user clicks an actual day.
   const handleMonthChange = (month) => {
-    const newDate = setMonth(date, months.indexOf(month));
-    setDate(newDate);
-    if (onChange) onChange(newDate);
+    setDate((prev) => setMonth(prev, months.indexOf(month)));
   };
 
   const handleYearChange = (year) => {
-    const newDate = setYear(date, parseInt(year));
-    setDate(newDate);
-    if (onChange) onChange(newDate);
+    setDate((prev) => setYear(prev, parseInt(year)));
   };
 
-  const handleSelect = (selectedDate) => {
-    if (selectedDate) {
-      setDate(selectedDate);
-      if (onChange) onChange(selectedDate);
+  // Day click — this is the real selection event.
+  const handleSelect = (day) => {
+    if (day) {
+      setDate(day);
+      setSelected(true);
+      if (onChange) onChange(day);
     }
   };
 
@@ -81,11 +75,11 @@ export function DatePicker(props) {
           variant="outline"
           className={cn(
             "w-full pl-3 justify-start text-left font-normal",
-            !date && "text-muted-foreground"
+            !selected && "text-muted-foreground"
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {date ? format(date, "PPP") : <span>Pick a date</span>}
+          {selected ? format(date, "PPP") : <span>Pick a date</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0">
@@ -124,7 +118,7 @@ export function DatePicker(props) {
 
         <Calendar
           mode="single"
-          selected={date}
+          selected={selected ? date : undefined}
           onSelect={handleSelect}
           initialFocus
           month={date}

@@ -65,7 +65,7 @@ const AccountsSummaryGroup = () => {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink to={`/clients/individual/${params.id}`}>
+            <BreadcrumbLink to={`/clients/group/${params.id}`}>
               {`${data?.client?.fullname}  (${data?.client?.account_number})`}
             </BreadcrumbLink>
           </BreadcrumbItem>

@@ -144,7 +144,7 @@ export function AccountsTable() {
           className="hover:uppercase"
           to={
             hasPermission(roles, 100155)
-              ? `/clients/individuals/${params.id}/accounts/${row.original.client_account_id}`
+              ? `/clients/group/${params.id}/accounts/${row.original.client_account_id}`
               : ""
           }
         >
@@ -224,7 +224,7 @@ export function AccountsTable() {
             {hasPermission(roles, 100155) && (
               <DropdownMenuItem>
                 <Link
-                  to={`/clients/individuals/${params.id}/accounts/${row.original.client_account_id}`}
+                  to={`/clients/group/${params.id}/accounts/${row.original.client_account_id}`}
                 >
                   View
                 </Link>

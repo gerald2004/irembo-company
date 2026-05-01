@@ -1,168 +1,113 @@
+import { useRef, useState } from "react";
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
+  Breadcrumb, BreadcrumbItem, BreadcrumbLink,
+  BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { Checkbox } from "@/components/ui/checkbox";
 import DatatableReport from "@/Pages/Components/DatatableReport";
+import ReportFilterBar from "../Queries/ReportFilterBar";
 import { formatDateTimestamp } from "@/lib/utils";
-import { useState, useRef } from "react";
-import GeneralReportQuery from "../Queries/GeneralReportQuery";
+
 const IncomeDetails = () => {
   const axiosPrivate = useAxiosPrivate();
   const navigate = useNavigate();
   const tableRef = useRef(null);
+
   const [filters, setFilters] = useState({
-    startDate: "",
-    endDate: "",
-    branch_id: "",
+    startDate: "", endDate: "", branch_id: "", status: "completed",
   });
-  const {
-    data = [],
-    isLoading,
-    refetch,
-    isRefetching,
-    isError,
-  } = useQuery({
+
+  const { data = {}, isLoading, refetch, isRefetching, isError } = useQuery({
     queryKey: ["incomes-detailed", filters],
-    queryFn: async () => {
-      const controller = new AbortController();
-      const fetchURL = `reports/accounting/incomes-detailed`;
+    queryFn: async ({ signal }) => {
       try {
-        const response = await axiosPrivate.get(fetchURL, {
-          params: {
-            startDate: filters.startDate,
-            endDate: filters.endDate,
-            branch_id: filters.branch_id,
-          },
-          signal: controller.signal,
+        const res = await axiosPrivate.get("reports/accounting/incomes-detailed", {
+          params: { startDate: filters.startDate, endDate: filters.endDate, branch_id: filters.branch_id, status: filters.status },
+          signal,
         });
-        return response?.data?.data ?? [];
-      } catch (error) {
-        if (error?.response?.status === 401) {
-          navigate("/", { state: { from: location }, replace: true });
-        }
-        throw error;
+        return res?.data?.data ?? {};
+      } catch (err) {
+        if (err?.response?.status === 401) navigate("/", { replace: true });
+        throw err;
       }
     },
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   });
+
+  const rows = Array.isArray(data?.income) ? data.income : [];
+  const total = data?.total ?? 0;
 
   const columns = [
     {
-      id: "select",
-      header: ({ table }) => (
-        <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      ),
-    },
-    {
       accessorKey: "account",
-      header: "Account Title",
-      cell: ({ row }) => <p>{row.original.account}</p>,
+      header: "Account",
+      cell: ({ row }) => <p className="text-xs font-medium">{row.original.account}</p>,
     },
     {
       accessorKey: "date",
       header: "Date",
-      cell: ({ row }) => <p>{formatDateTimestamp(row.original.date)}</p>,
+      cell: ({ row }) => <p className="text-xs">{formatDateTimestamp(row.original.date)}</p>,
     },
     {
       accessorKey: "description",
       header: "Description",
-      cell: ({ row }) => (
-        <p className="capitalize text-xs">{row.original.description}</p>
-      ),
+      cell: ({ row }) => <p className="text-xs">{row.original.description}</p>,
     },
     {
       accessorKey: "amount",
       header: "Amount",
       cell: ({ row }) => (
-        <p className="capitalize text-xs">
-          {row.original.amount !== ""
-            ? parseFloat(row.original.amount).toLocaleString()
-            : 0}
+        <p className="text-xs tabular-nums text-green-700 font-semibold">
+          {row.original.amount ? parseFloat(row.original.amount).toLocaleString() : "0"}
         </p>
       ),
     },
   ];
 
-  const handleFilterChange = (data) => {
-    setFilters(data);
-    refetch();
-  };
+  const exportHeaders = ["Account", "Date", "Description", "Amount"];
+  const exportRows = rows.map((r) => [
+    r.account, r.date, r.description, parseFloat(r.amount || 0).toFixed(2),
+  ]);
+
   return (
     <>
       <Breadcrumb>
         <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink to="/dashboard">Home</BreadcrumbLink>
-          </BreadcrumbItem>
+          <BreadcrumbItem><BreadcrumbLink to="/dashboard">Home</BreadcrumbLink></BreadcrumbItem>
           <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink to="/accounting-reports">
-              Accounting Reports
-            </BreadcrumbLink>
-          </BreadcrumbItem>
+          <BreadcrumbItem><BreadcrumbLink to="/accounting-reports">Accounting Reports</BreadcrumbLink></BreadcrumbItem>
           <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Income Details Report</BreadcrumbPage>
-          </BreadcrumbItem>
+          <BreadcrumbItem><BreadcrumbPage>Income Detailed</BreadcrumbPage></BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
-      <div className="flex-col md:flex">
-        <div className="border-b" />
-        <div className="flex-1 space-y-4 p-0 pt-2">
-          <div className="flex items-center justify-between space-y-2">
-            <h5 className="text-2xl font-bold tracking-tight">
-              Income Details Report
-            </h5>
-          </div>
-          <GeneralReportQuery
-            onFilterChange={handleFilterChange}
-            isRefetching={isRefetching}
-            refetch={refetch}
-            data={data?.income ?? []}
-            tableRef={tableRef}
-            filters={filters}
-            colSpan={3}
-            mode={{
-              format: "A4-L",
-              orientation: "L",
-            }}
-            totals={{ debit: data?.total }}
-            title={"Income Report Detailed"}
-          />
-          <DatatableReport
-            columns={columns}
-            data={data?.income ?? []}
-            fetchData={refetch}
-            isLoading={isLoading}
-            isRefetching={isRefetching}
-            isError={isError}
-            colSpan={1}
-            totalDebit={data?.total}
-            ref={tableRef}
-          />
-        </div>
+
+      <div className="flex-1 space-y-4 pt-2">
+        <h5 className="text-2xl font-bold tracking-tight">Income Detailed Report</h5>
+
+        <ReportFilterBar
+          onApply={setFilters}
+          isLoading={isRefetching}
+          showStatus
+          exportTitle="Income Detailed Report"
+          exportFilename="income-detailed"
+          exportHeaders={exportHeaders}
+          exportRows={exportRows}
+          exportDisabled={!rows.length}
+        />
+
+        <DatatableReport
+          ref={tableRef}
+          columns={columns}
+          data={rows}
+          fetchData={refetch}
+          isLoading={isLoading}
+          isRefetching={isRefetching}
+          isError={isError}
+          colSpan={3}
+          totalDebit={total}
+        />
       </div>
     </>
   );

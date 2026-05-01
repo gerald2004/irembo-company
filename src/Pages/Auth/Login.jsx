@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import axios from "@/Config/Axios";
 import { Button } from "@/components/ui/button";
@@ -21,12 +21,10 @@ import {
 
 const Login = ({ className, ...props }) => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { setAuth } = useAuth();
   const [disabled, setDisabled] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const from = location.state?.from?.pathname || "/verify";
   const {
     register,
     handleSubmit,
@@ -38,33 +36,40 @@ const Login = ({ className, ...props }) => {
   const onLoginAction = async (data) => {
     try {
       setDisabled(true);
-      data.otp_status = !location.state?.from?.pathname ? "yes" : "no";
+      data.otp_status = "yes";
 
       const response = await axios.post("/auth/advanced/sessions", data, {
         headers: { "Content-Type": "application/json" },
         withCredentials: true,
       });
 
-      const {
-        accessToken,
-        sessionId,
-        roles,
-        user,
-        fiscal_year,
-        current_branch_id,
-        allowed_branches,
-        
-      } = response.data.data;
+      const d = response.data.data;
+
+      // No 2FA — direct login with full token
+      if (d.accessToken) {
+        setAuth({
+          sessionid:         d.sessionId,
+          accessToken:       d.accessToken,
+          roles:             d.roles,
+          user:              d.user,
+          fiscalYear:        d.fiscal_year,
+          current_branch_id: d.current_branch_id,
+          allowed_branches:  d.allowed_branches,
+          otpVerified:       true,
+        });
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+
+      // 2FA required
       setAuth({
-        sessionid: sessionId,
-        accessToken,
-        roles,
-        user,
-        fiscalYear: fiscal_year,
-        current_branch_id: current_branch_id,
-        allowed_branches: allowed_branches,
+        sessionid:         d.session_id,
+        otpVerified:       false,
+        twoFactorMethod:   d.method   ?? "sms",
+        twoFactorSetup:    d.setup    ?? null,   // null = already verified, non-null = first-time TOTP setup
+        requiresTotpSetup: d.requires_2fa_setup === true,
       });
-      navigate(from, { replace: true });
+      navigate("/verify", { replace: true });
     } catch (error) {
       setDisabled(false);
       toast({

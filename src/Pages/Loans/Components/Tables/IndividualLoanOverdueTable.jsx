@@ -32,12 +32,24 @@ import {
 
 import jsPDF from "jspdf";
 import "jspdf-autotable";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, MoreHorizontal } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import AlertModal from "@/components/AlertModal";
 import { Badge } from "@/components/ui/badge";
 import { useDebounce } from "@/lib/utils";
-export function IndividualLoanOverdueTable() {
+
+const overdueBadge = (status) => (
+  <Badge variant="outline" className="bg-red-100 text-red-700 border-red-300 hover:bg-red-100 capitalize text-xs font-medium">
+    {status || "overdue"}
+  </Badge>
+);
+
+export function IndividualLoanOverdueTable({
+  clientType = "individual",
+  queryKeyPrefix = "individual",
+  clientRoute = "/clients/individual",
+  extraFilters = {},
+}) {
   const navigate = useNavigate();
   const [sorting, setSorting] = useState([]);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -54,11 +66,12 @@ export function IndividualLoanOverdueTable() {
     isError,
   } = useQuery({
     queryKey: [
-      "individuals-overdue-loans-data",
+      `${queryKeyPrefix}-overdue-loans-data`,
       pagination.pageIndex,
       pagination.pageSize,
       debouncedGlobalFilter,
       sorting,
+      extraFilters,
     ],
     queryFn: async () => {
       const controller = new AbortController();
@@ -71,6 +84,8 @@ export function IndividualLoanOverdueTable() {
             size: pagination.pageSize,
             globalFilter: debouncedGlobalFilter,
             sorting: JSON.stringify(sorting || []),
+            type: clientType,
+            ...extraFilters,
           },
           signal: controller.signal,
         });
@@ -82,7 +97,7 @@ export function IndividualLoanOverdueTable() {
         return error;
       }
     },
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   });
 
   const columns = [
@@ -116,23 +131,23 @@ export function IndividualLoanOverdueTable() {
       ),
     },
     {
-      id: "loan_applied_settings_disurbment_amount",
+      id: "loan_applied_settings_disbursement_amount",
       header: "Disbursed Amount",
       cell: ({ row }) => (
         <p className="capitalize hover:uppercase">
           {parseFloat(
-            row.original.loan_applied_settings_disurbment_amount
+            row.original.loan_applied_settings_disbursement_amount
           ).toLocaleString()}
         </p>
       ),
     },
     {
-      id: "loan_applied_settings_disurbment_interest",
+      id: "loan_applied_settings_disbursement_interest",
       header: "Interest (%)",
       cell: ({ row }) => (
         <p className="capitalize hover:uppercase">
           {parseFloat(
-            row.original.loan_applied_settings_disurbment_interest
+            row.original.loan_applied_settings_disbursement_interest
           ).toLocaleString()}
         </p>
       ),
@@ -151,7 +166,7 @@ export function IndividualLoanOverdueTable() {
       header: "Account Number",
       cell: ({ row }) => (
         <Link
-          to={`/clients/individual/${row.original.client_id}`}
+          to={`${clientRoute}/${row.original.client_id}`}
           className="capitalize hover:uppercase"
         >
           {row.original.client_account_number}
@@ -161,28 +176,37 @@ export function IndividualLoanOverdueTable() {
     {
       id: "name",
       header: "Client Name",
-      cell: ({ row }) => (
-        <Link
-          to={`/clients/individual/${row.original.client_id}`}
-          className="capitalize hover:uppercase"
-        >
-          {row.original.client_lastname} {row.original.client_firstname}
-        </Link>
-      ),
+      cell: ({ row }) => {
+        const name = row.original.client_group_name ||
+          `${row.original.client_lastname || ""} ${row.original.client_firstname || ""}`.trim();
+        return (
+          <Link
+            to={`${clientRoute}/${row.original.client_id}`}
+            className="capitalize hover:uppercase"
+          >
+            {name}
+          </Link>
+        );
+      },
     },
 
     {
-      accessorKey: "loan_applied_settings_disurbment_tenure_period",
+      accessorKey: "loan_applied_settings_disbursement_tenure_period",
       header: "Tenure Period",
     },
     {
-      id: "loan_applied_settings_disurbment_status",
-      cell: ({ row }) => (
-        <Badge className="capitalize">
-          {row.original.loan_applied_settings_disurbment_status}
-        </Badge>
-      ),
+      id: "loan_applied_settings_disbursement_status",
+      cell: ({ row }) => overdueBadge(row.original.loan_applied_settings_disbursement_status),
       header: "Loan Status",
+    },
+    {
+      id: "guarantors_list",
+      header: "Guarantors",
+      cell: ({ row }) => (
+        <p className="text-sm text-muted-foreground">
+          {row.original.guarantors_list || "—"}
+        </p>
+      ),
     },
     {
       id: "actions",
@@ -192,7 +216,7 @@ export function IndividualLoanOverdueTable() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-8 w-8 p-0">
               <span className="sr-only">Open menu</span>
-              ...
+              <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -210,10 +234,7 @@ export function IndividualLoanOverdueTable() {
   ];
 
   const table = useReactTable({
-    data:
-      data?.data?.filter(
-        (status) => status.loan_applied_settings_disurbment_status === "overdue"
-      ) || [],
+    data: data?.data || [],
     rowCount: data?.meta?.totalRowCount,
     columns,
     manualPagination: true,
@@ -432,13 +453,10 @@ export function IndividualLoanOverdueTable() {
               </TableRow>
             ) : data?.data?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow key={row.id} className="bg-red-50/60 dark:bg-red-900/15 border-l-2 border-l-red-400 hover:bg-red-50 dark:hover:bg-red-900/25">
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>

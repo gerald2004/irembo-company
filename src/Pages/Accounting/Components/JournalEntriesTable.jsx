@@ -148,6 +148,24 @@ export function JournalEntriesTable() {
       header: "Description",
     },
     {
+      id: "lines",
+      header: "Entries",
+      cell: ({ row }) => {
+        const lines = row.original.lines ?? [];
+        return (
+          <div className="space-y-0.5 text-xs min-w-[200px]">
+            {lines.map((l, i) => (
+              <div key={i} className="flex gap-2 items-baseline">
+                <span className="text-muted-foreground truncate max-w-[120px]">{l.account_title}</span>
+                {l.debit_amount  > 0 && <span className="text-blue-600 font-mono ml-auto">Dr {Number(l.debit_amount).toLocaleString()}</span>}
+                {l.credit_amount > 0 && <span className="text-green-600 font-mono ml-auto">Cr {Number(l.credit_amount).toLocaleString()}</span>}
+              </div>
+            ))}
+          </div>
+        );
+      },
+    },
+    {
       id: "status",
       cell: ({ row }) => (
         <Badge className="capitalize">{row.original.status}</Badge>
@@ -157,7 +175,7 @@ export function JournalEntriesTable() {
     {
       id: "actions",
       header: "Actions",
-      cell: () => (
+      cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -168,6 +186,13 @@ export function JournalEntriesTable() {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
+            {hasPermission(roles, 100169) && (
+              <DropdownMenuItem
+                onClick={() => window.open(`/journal-entries/${row.original.journal_entry_id}`, "_blank")}
+              >
+                View Details
+              </DropdownMenuItem>
+            )}
             {hasPermission(roles, 100172) && (
               <DropdownMenuItem>Reverse</DropdownMenuItem>
             )}

@@ -7,6 +7,7 @@ import Assets from "@/Pages/Accounting/Assets";
 import OpeningDay from "@/Pages/Accounting/OpeningDay";
 import ClosingDay from "@/Pages/Accounting/ClosingDay";
 import CashTransfers from "@/Pages/Accounting/CashTransfers";
+import InterBranchTransfers from "@/Pages/Accounting/InterBranchTransfers";
 
 const accountingRoutes = [
   {
@@ -53,6 +54,11 @@ const accountingRoutes = [
     path: "/cash-transfers",
     element: <CashTransfers />,
     roles: [100111],
+  },
+  {
+    path: "/inter-branch-transfers",
+    element: <InterBranchTransfers />,
+    roles: [100211],
   },
 ];
 

@@ -40,6 +40,12 @@ import {
   CircleX,
   MailCheck,
   BanknoteIcon,
+  ArrowLeftRight,
+  CalendarDays,
+  CalendarOff,
+  ClipboardList,
+  Shield,
+  ShieldCheck,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -163,6 +169,11 @@ export function AppSidebar({ ...props }) {
               url: "notifications-settings",
               permissionCodes: [100147],
             },
+            {
+              title: "Compulsory Savings",
+              url: "compulsory-savings-settings",
+              permissionCodes: [100137],
+            },
           ],
         },
         {
@@ -212,6 +223,30 @@ export function AppSidebar({ ...props }) {
           url: "/clients",
           icon: Users,
         },
+        {
+          name: "Register Individual",
+          url: "/clients/individual/new",
+          icon: PersonStanding,
+          permissionCodes: [100007],
+        },
+        {
+          name: "Register Group",
+          url: "/clients/group/new",
+          icon: Accessibility,
+          permissionCodes: [100012],
+        },
+        {
+          name: "Register Company",
+          url: "/clients/company/new",
+          icon: CreditCard,
+          permissionCodes: [100012],
+        },
+        {
+          name: "Open Joint Account",
+          url: "/clients/joint-account/new",
+          icon: BanknoteIcon,
+          permissionCodes: [100012],
+        },
       ],
     },
     transactions: {
@@ -253,7 +288,7 @@ export function AppSidebar({ ...props }) {
 
     loans: {
       title: "Loans",
-      permissionCodes: [100067, 100158],
+      permissionCodes: [100067, 100158, 100202, 100203],
       items: [
         {
           title: "Loans",
@@ -270,13 +305,23 @@ export function AppSidebar({ ...props }) {
               url: "group-loans",
               permissionCodes: [100158],
             },
+            {
+              title: "Joint Account Loans",
+              url: "joint-loans",
+              permissionCodes: [100202],
+            },
+            {
+              title: "Company Loans",
+              url: "company-loans",
+              permissionCodes: [100203],
+            },
           ],
         },
       ],
     },
     accounting: {
       title: "Accounting",
-      permissionCodes: [100104, 100107, 100109, 100111],
+      permissionCodes: [100104, 100107, 100109, 100111, 100204],
       items: [
         {
           name: "External Incomes",
@@ -309,6 +354,12 @@ export function AppSidebar({ ...props }) {
           permissionCodes: [100109],
         },
 
+        {
+          name: "Inter-Branch Transfers",
+          icon: ArrowLeftRight,
+          url: "inter-branch-transfers",
+          permissionCodes: [100211],
+        },
         {
           name: "Closing A Business Day",
           icon: CircleX,
@@ -373,6 +424,24 @@ export function AppSidebar({ ...props }) {
           name: "Staff Management",
           url: "staff-management",
           icon: PersonStanding,
+          permissionCodes: [100174],
+        },
+        {
+          name: "Attendance",
+          url: "attendance",
+          icon: ClipboardList,
+          permissionCodes: [100174],
+        },
+        {
+          name: "Leave Management",
+          url: "leave-management",
+          icon: CalendarOff,
+          permissionCodes: [100174],
+        },
+        {
+          name: "Public Holidays",
+          url: "public-holidays",
+          icon: CalendarDays,
           permissionCodes: [100174],
         },
         {
@@ -472,11 +541,59 @@ export function AppSidebar({ ...props }) {
         },
       ],
     },
+    qms: {
+      title: "QMS — Checker / Maker",
+      permissionCodes: [100001],
+      items: [
+        {
+          name: "Approval Queue",
+          url: "/qms",
+          icon: ShieldCheck,
+          permissionCodes: [100001],
+        },
+        {
+          name: "QMS Policies",
+          url: "/qms?tab=policies",
+          icon: Settings2,
+          permissionCodes: [100001],
+        },
+      ],
+    },
+    aml: {
+      title: "AML & Compliance",
+      permissionCodes: [100001],
+      items: [
+        {
+          name: "AML Engine",
+          url: "/aml",
+          icon: Shield,
+          permissionCodes: [100001],
+        },
+        {
+          name: "AML Policies",
+          url: "/aml?tab=policies",
+          icon: BookUp2,
+          permissionCodes: [100001],
+        },
+        {
+          name: "AML Alerts",
+          url: "/aml?tab=alerts",
+          icon: Asterisk,
+          permissionCodes: [100001],
+        },
+        {
+          name: "AML Cases",
+          url: "/aml?tab=cases",
+          icon: FolderGit,
+          permissionCodes: [100001],
+        },
+      ],
+    },
     reports: {
       title: "Reports",
       permissionCodes: [
         100126, 100127, 100128, 100129, 100130, 100131, 100132, 100133, 100134,
-        100134,
+        100194, 100174, 100257,
       ],
       items: [
         {
@@ -495,6 +612,12 @@ export function AppSidebar({ ...props }) {
           name: "Loans Reports",
           url: "loans-reports",
           icon: BookUp2,
+          permissionCodes: [100128],
+        },
+        {
+          name: "Group Reports",
+          url: "group-reports",
+          icon: FolderGit,
           permissionCodes: [100128],
         },
         {
@@ -532,6 +655,12 @@ export function AppSidebar({ ...props }) {
           url: "activity-log",
           icon: Footprints,
           permissionCodes: [100134],
+        },
+        {
+          name: "HR & Performance Reports",
+          url: "hr-reports",
+          icon: ClipboardList,
+          permissionCodes: [100257, 100194, 100174],
         },
       ],
     },
@@ -623,6 +752,12 @@ export function AppSidebar({ ...props }) {
         )}
         {filteredSidebar.customer_care && (
           <NavSingle data={filteredSidebar.customer_care} />
+        )}
+        {filteredSidebar.qms && (
+          <NavSingle data={filteredSidebar.qms} />
+        )}
+        {filteredSidebar.aml && (
+          <NavSingle data={filteredSidebar.aml} />
         )}
         {filteredSidebar.bulk_studio && (
           <NavMain data={filteredSidebar.bulk_studio} />

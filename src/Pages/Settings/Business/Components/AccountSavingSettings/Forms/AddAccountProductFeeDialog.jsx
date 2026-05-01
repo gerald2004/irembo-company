@@ -1,5 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useForm, useFieldArray } from "react-hook-form";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -29,7 +30,6 @@ import { useParams } from "react-router-dom";
 const AddAccountProductFeeDialog = ({
   isOpen,
   onClose,
-  refetch,
   accountsData,
   isLoadingAccounts,
   isErrorAccounts,
@@ -37,6 +37,7 @@ const AddAccountProductFeeDialog = ({
   isRefetchingAccounts,
 }) => {
   const axiosPrivate = useAxiosPrivate();
+  const queryClient = useQueryClient();
   const params = useParams();
 
   const {
@@ -87,11 +88,11 @@ const AddAccountProductFeeDialog = ({
       toast({
         title: "Success",
         description:
-          response?.data?.messages || "Auto Charge added successfully",
+          response?.data?.messages || "Auto charge added successfully",
       });
       reset();
-      refetch?.();
       onClose();
+      queryClient.invalidateQueries({ queryKey: ["accounts-settings-fees-data"] });
     } catch (error) {
       const errorMessage =
         error?.response?.data?.messages || "No server response";

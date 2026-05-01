@@ -55,7 +55,7 @@ const ActiveLoansReport = () => {
         throw error;
       }
     },
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   });
 
   const totalAmountDisbursed = data?.reduce(
@@ -188,6 +188,20 @@ const ActiveLoansReport = () => {
     setFilters(data);
     refetch();
   };
+
+  const fmt = (n) => new Intl.NumberFormat("en-UG", { maximumFractionDigits: 0 }).format(n ?? 0);
+
+  const KPI = ({ label, value, sub, accent = "bg-blue-500" }) => (
+    <div className={`rounded-xl border bg-card shadow-sm overflow-hidden`}>
+      <div className={`h-1 ${accent}`} />
+      <div className="p-4">
+        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
+        <p className="text-xl font-bold mt-1">{value}</p>
+        {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
+      </div>
+    </div>
+  );
+
   return (
     <>
       <Breadcrumb>
@@ -213,7 +227,7 @@ const ActiveLoansReport = () => {
               Active Loans Report
             </h5>
           </div>
-          <LoanGeneralReportQuery
+          <LoanGeneralReportQuery show={{ product: true }}
             onFilterChange={handleFilterChange}
             isRefetching={isRefetching}
             refetch={refetch}
@@ -231,7 +245,14 @@ const ActiveLoansReport = () => {
             }}
             title={"Active Loans Report"}
           />
-          <div className="max-w-[1200px]">
+          {/* KPI Strip */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <KPI label="Total Disbursed" value={`UGX ${fmt(data?.reduce((s,l)=>s+(l.amount_disbursed??0),0))}`} sub={`${data?.length ?? 0} active loans`} accent="bg-emerald-500" />
+            <KPI label="Total Outstanding" value={`UGX ${fmt(data?.reduce((s,l)=>s+(l.amount_due??0),0))}`} sub="Balance due" accent="bg-blue-500" />
+            <KPI label="Avg Loan Size" value={`UGX ${fmt(data?.length ? data.reduce((s,l)=>s+(l.amount_disbursed??0),0)/data.length : 0)}`} sub="Per borrower" accent="bg-violet-500" />
+            <KPI label="Avg Outstanding" value={`UGX ${fmt(data?.length ? data.reduce((s,l)=>s+(l.amount_due??0),0)/data.length : 0)}`} sub="Per loan" accent="bg-amber-500" />
+          </div>
+          <div className="overflow-x-auto max-w-[1200px]">
             <DatatableReport
               ref={tableRef}
               columns={columns}

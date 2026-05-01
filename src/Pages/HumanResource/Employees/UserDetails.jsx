@@ -17,7 +17,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import { X, Shield, ShieldCheck, ShieldOff, Smartphone, MessageSquare, Mail, AlertTriangle } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 
 import { useQuery } from "@tanstack/react-query";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
@@ -86,6 +90,8 @@ const StaffDetails = () => {
 
   const [isLoadingReset, setIsLoadingReset] = useState(false);
   const [isDisabled, setIsDisabled] = useState(false);
+  const [show2faReset, setShow2faReset] = useState(false);
+  const [twoFaLoading, setTwoFaLoading] = useState(false);
 
   const resetUserPassword = async () => {
     const controller = new AbortController();
@@ -311,6 +317,37 @@ const StaffDetails = () => {
       });
     } finally {
       setIsLoadingReset(false);
+    }
+  };
+
+  const reset2fa = async () => {
+    try {
+      setTwoFaLoading(true);
+      await axiosPrivate.patch(`/business/employees/${params.id}`, { reset_2fa: true }, {
+        headers: { "Content-Type": "application/json" },
+      });
+      await refetch();
+      setShow2faReset(false);
+      toast({ title: "Success", description: "Two-factor authentication has been disabled for this user." });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to reset 2FA.", variant: "destructive" });
+    } finally {
+      setTwoFaLoading(false);
+    }
+  };
+
+  const update2faMethod = async (method) => {
+    try {
+      setTwoFaLoading(true);
+      await axiosPrivate.patch(`/business/employees/${params.id}`, { two_fa_method: method }, {
+        headers: { "Content-Type": "application/json" },
+      });
+      await refetch();
+      toast({ title: "Success", description: `2FA method updated to ${method.toUpperCase()}.` });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to update 2FA method.", variant: "destructive" });
+    } finally {
+      setTwoFaLoading(false);
     }
   };
 
@@ -634,6 +671,102 @@ const StaffDetails = () => {
                   </Card>
                 </div>
 
+                {/* 2FA Security Settings */}
+                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card className="shadow-lg rounded-xl overflow-hidden">
+                    <div className={`h-1 ${userData?.two_factor_enabled === "yes" ? "bg-emerald-500" : "bg-slate-300"}`} />
+                    <CardHeader className="p-4 pb-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {userData?.two_factor_enabled === "yes"
+                            ? <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                            : <Shield className="w-5 h-5 text-muted-foreground" />}
+                          <CardTitle className="text-base font-semibold">Two-Factor Authentication</CardTitle>
+                        </div>
+                        <Badge variant="outline" className={userData?.two_factor_enabled === "yes"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400"
+                          : "bg-muted text-muted-foreground"}>
+                          {userData?.two_factor_enabled === "yes" ? "Enabled" : "Disabled"}
+                        </Badge>
+                      </div>
+                      <CardDescription className="text-xs mt-1">Manage staff 2FA security settings</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-2 space-y-4">
+                      {userData?.two_factor_enabled === "yes" ? (
+                        <>
+                          {/* Current method display */}
+                          <div className="flex flex-wrap gap-3 text-sm">
+                            {[
+                              { id: "sms",   label: "SMS",   icon: MessageSquare },
+                              { id: "email", label: "Email", icon: Mail },
+                              { id: "app",   label: "App",   icon: Smartphone },
+                            ].map(({ id, label, icon: Icon }) => (
+                              <button
+                                key={id}
+                                disabled={twoFaLoading || userData?.two_factor_method === id}
+                                onClick={() => update2faMethod(id)}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all
+                                  ${userData?.two_factor_method === id
+                                    ? "border-emerald-400 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 cursor-default"
+                                    : "border-muted hover:border-primary/50 hover:bg-muted/50 text-muted-foreground cursor-pointer disabled:opacity-50"}`}
+                              >
+                                <Icon className="w-3.5 h-3.5" />
+                                {label}
+                                {userData?.two_factor_method === id && (
+                                  <span className="ml-1 text-emerald-600">✓</span>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                          <p className="text-xs text-muted-foreground">Click a method to switch. Active method shown in green.</p>
+                          {userData?.two_factor_confirmed_at && (
+                            <p className="text-xs text-muted-foreground">
+                              Enabled: <strong>{new Date(userData.two_factor_confirmed_at).toLocaleDateString()}</strong>
+                            </p>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 text-xs text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/5"
+                            onClick={() => setShow2faReset(true)}
+                            disabled={twoFaLoading}
+                          >
+                            <ShieldOff className="w-3.5 h-3.5 mr-1.5" /> Disable 2FA for this user
+                          </Button>
+                        </>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 flex gap-2">
+                            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                            <p className="text-xs text-amber-800 dark:text-amber-300">
+                              This staff member has not set up two-factor authentication.
+                            </p>
+                          </div>
+                          <p className="text-xs text-muted-foreground">Enable with a specific method:</p>
+                          <div className="flex gap-2 flex-wrap">
+                            {[
+                              { id: "sms",   label: "Enable via SMS",   icon: MessageSquare },
+                              { id: "email", label: "Enable via Email", icon: Mail },
+                              { id: "app",   label: "Enable via App",   icon: Smartphone },
+                            ].map(({ id, label, icon: Icon }) => (
+                              <Button
+                                key={id}
+                                size="sm"
+                                variant="outline"
+                                className="h-8 text-xs"
+                                disabled={twoFaLoading}
+                                onClick={() => update2faMethod(id)}
+                              >
+                                <Icon className="w-3.5 h-3.5 mr-1.5" /> {label}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
                 {/* Bottom: resets */}
                 <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Card className="shadow-lg rounded-xl">
@@ -682,6 +815,27 @@ const StaffDetails = () => {
           </div>
         </div>
       </div>
+      {/* 2FA disable confirmation dialog */}
+      <Dialog open={show2faReset} onOpenChange={setShow2faReset}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldOff className="w-5 h-5 text-destructive" /> Disable 2FA
+            </DialogTitle>
+            <DialogDescription>
+              This will immediately disable two-factor authentication for{" "}
+              <strong>{userData?.user_firstname} {userData?.user_lastname}</strong>.
+              They will no longer need a verification code to sign in.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShow2faReset(false)}>Cancel</Button>
+            <Button variant="destructive" size="sm" onClick={reset2fa} disabled={twoFaLoading}>
+              {twoFaLoading ? "Disabling…" : "Confirm Disable"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

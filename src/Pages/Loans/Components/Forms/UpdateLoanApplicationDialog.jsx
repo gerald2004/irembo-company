@@ -63,7 +63,7 @@ const UpdateLoanApplicationDialog = ({ isOpen, onClose, refetch, defaultValues }
         throw error;
       }
     },
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   });
 
   const {

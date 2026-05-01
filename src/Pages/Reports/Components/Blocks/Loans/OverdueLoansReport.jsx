@@ -63,7 +63,7 @@ const OverdueLoansReport = () => {
         throw error;
       }
     },
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
     staleTime: 60_000,
   });
 
@@ -228,6 +228,19 @@ const OverdueLoansReport = () => {
     refetch();
   };
 
+  const fmt = (n) => new Intl.NumberFormat("en-UG", { maximumFractionDigits: 0 }).format(n ?? 0);
+
+  const KPI = ({ label, value, sub, accent = "bg-blue-500" }) => (
+    <div className={`rounded-xl border bg-card shadow-sm overflow-hidden`}>
+      <div className={`h-1 ${accent}`} />
+      <div className="p-4">
+        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
+        <p className="text-xl font-bold mt-1">{value}</p>
+        {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
+      </div>
+    </div>
+  );
+
   return (
     <>
       <Breadcrumb>
@@ -257,7 +270,7 @@ const OverdueLoansReport = () => {
               </h5>
             </div>
 
-            <LoanGeneralReportQuery
+            <LoanGeneralReportQuery show={{ product: true }}
               onFilterChange={handleFilterChange}
               isRefetching={isRefetching}
               refetch={refetch}
@@ -272,6 +285,14 @@ const OverdueLoansReport = () => {
               }}
               title="Overdue Loans Report"
             />
+
+            {/* KPI Strip */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <KPI label="Total Overdue" value={`UGX ${fmt(safeData?.reduce((s,l)=>s+(l.overdue_amount??0),0))}`} sub={`${safeData?.length ?? 0} loans`} accent="bg-red-500" />
+              <KPI label="Avg Days Overdue" value={`${Math.round(safeData?.reduce((s,l)=>s+(l.days_overdue??0),0)/(safeData?.length||1))} days`} sub="Average overdue period" accent="bg-orange-500" />
+              <KPI label="Total Remaining" value={`UGX ${fmt(safeData?.reduce((s,l)=>s+(l.remaining_balance??0),0))}`} sub="Outstanding balance" accent="bg-amber-500" />
+              <KPI label="Loans at Risk" value={safeData?.length ?? 0} sub="Requiring attention" accent="bg-rose-500" />
+            </div>
 
             {/* Table wrapper: scroller only when needed (no page bleed) */}
             <div className="relative -mx-2 md:mx-0">

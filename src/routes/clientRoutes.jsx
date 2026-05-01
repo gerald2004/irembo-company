@@ -7,6 +7,12 @@ import AddNewMember from "@/Pages/Clients/Components/Individuals/AddNewMember";
 import AddNewGroup from "@/Pages/Clients/Components/Groups/AddGroup";
 import EditMember from "@/Pages/Clients/Components/Individuals/EditMember";
 import EditGroup from "@/Pages/Clients/Components/Groups/EditGroup";
+import AddCompany from "@/Pages/Clients/Components/Company/AddCompany";
+import SingleCompanyClient from "@/Pages/Clients/Components/Company/SingleCompanyClient";
+import EditCompany from "@/Pages/Clients/Components/Company/EditCompany";
+import AddJointAccount from "@/Pages/Clients/Components/JointAccounts/AddJointAccount";
+import SingleJointAccountClient from "@/Pages/Clients/Components/JointAccounts/SingleJointAccountClient";
+import EditJointAccount from "@/Pages/Clients/Components/JointAccounts/EditJointAccount";
 
 const clientsRoutes = [
   {
@@ -53,6 +59,36 @@ const clientsRoutes = [
     path: "/clients/group/:id/edit-client",
     element: <EditGroup />,
     roles: [100013],
+  },
+  {
+    path: "/clients/company/:id",
+    element: <SingleCompanyClient />,
+    roles: [100008],
+  },
+  {
+    path: "/clients/company/new",
+    element: <AddCompany />,
+    roles: [100012],
+  },
+  {
+    path: "/clients/company/:id/edit-client",
+    element: <EditCompany />,
+    roles: [100009],
+  },
+  {
+    path: "/clients/joint-account/:id",
+    element: <SingleJointAccountClient />,
+    roles: [100008],
+  },
+  {
+    path: "/clients/joint-account/new",
+    element: <AddJointAccount />,
+    roles: [100012],
+  },
+  {
+    path: "/clients/joint-account/:id/edit-client",
+    element: <EditJointAccount />,
+    roles: [100009],
   },
 ];
 

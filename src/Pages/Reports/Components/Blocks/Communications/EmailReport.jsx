@@ -54,7 +54,7 @@ const EmailReport = () => {
         throw error;
       }
     },
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   });
 
   const columns = [
@@ -128,7 +128,7 @@ const EmailReport = () => {
           <div className="flex items-center justify-between space-y-2">
             <h5 className="text-2xl font-bold tracking-tight">Email Report</h5>
           </div>
-          <LoanGeneralReportQuery
+          <LoanGeneralReportQuery show={{ officer: false, status: true }} statusOptions={[{ value: 'delivered', label: 'Delivered' }, { value: 'failed', label: 'Failed' }, { value: 'pending', label: 'Pending' }]}
             onFilterChange={handleFilterChange}
             isRefetching={isRefetching}
             refetch={refetch}

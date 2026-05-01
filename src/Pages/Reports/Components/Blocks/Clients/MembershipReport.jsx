@@ -40,10 +40,12 @@ const MembershipReport = () => {
       try {
         const response = await axiosPrivate.get(fetchURL, {
           params: {
-            startDate: filters.startDate,
-            endDate: filters.endDate,
-            branch_id: filters.branch_id,
-            user_id: filters.user_id,
+            startDate:     filters.startDate,
+            endDate:       filters.endDate,
+            branch_id:     filters.branch_id,
+            client_status: filters.client_status,
+            client_type:   filters.client_type,
+            gender:        filters.gender,
           },
           signal: controller.signal,
         });
@@ -55,7 +57,7 @@ const MembershipReport = () => {
         throw error;
       }
     },
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   });
 
   const columns = [
@@ -173,6 +175,20 @@ const MembershipReport = () => {
     setFilters(data);
     refetch();
   };
+
+  const fmt = (n) => new Intl.NumberFormat("en-UG", { maximumFractionDigits: 0 }).format(n ?? 0);
+
+  const KPI = ({ label, value, sub, accent = "bg-blue-500" }) => (
+    <div className={`rounded-xl border bg-card shadow-sm overflow-hidden`}>
+      <div className={`h-1 ${accent}`} />
+      <div className="p-4">
+        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
+        <p className="text-xl font-bold mt-1">{value}</p>
+        {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
+      </div>
+    </div>
+  );
+
   return (
     <>
       <Breadcrumb>
@@ -198,7 +214,7 @@ const MembershipReport = () => {
               Membership Report
             </h5>
           </div>
-          <LoanGeneralReportQuery
+          <LoanGeneralReportQuery show={{ officer: false, clientStatus: true, clientType: true, gender: true }}
             onFilterChange={handleFilterChange}
             isRefetching={isRefetching}
             refetch={refetch}
@@ -212,15 +228,24 @@ const MembershipReport = () => {
             }}
             title={"Membership Report"}
           />
-          <DatatableReport
-            ref={tableRef}
-            columns={columns}
-            data={data ?? []}
-            fetchData={refetch}
-            isLoading={isLoading}
-            isRefetching={isRefetching}
-            isError={isError}
-          />
+          {/* KPI Strip */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <KPI label="Total Members" value={data?.length ?? 0} sub="In selected period/branch" accent="bg-blue-500" />
+            <KPI label="Active" value={data?.filter(m=>(m.status??'').toLowerCase()==='active').length ?? 0} sub="Active members" accent="bg-emerald-500" />
+            <KPI label="Inactive" value={data?.filter(m=>(m.status??'').toLowerCase()==='inactive').length ?? 0} sub="Inactive members" accent="bg-amber-500" />
+            <KPI label="Individual" value={data?.filter(m=>(m.client_type??'').toLowerCase()==='individual').length ?? 0} sub={`${data?.filter(m=>(m.client_type??'').toLowerCase()==='group').length ?? 0} groups`} accent="bg-violet-500" />
+          </div>
+          <div className="overflow-x-auto max-w-[1200px]">
+            <DatatableReport
+              ref={tableRef}
+              columns={columns}
+              data={data ?? []}
+              fetchData={refetch}
+              isLoading={isLoading}
+              isRefetching={isRefetching}
+              isError={isError}
+            />
+          </div>
         </div>
       </div>
     </>

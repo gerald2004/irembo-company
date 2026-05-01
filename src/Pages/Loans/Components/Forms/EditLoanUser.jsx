@@ -61,7 +61,7 @@ const EditLoanUser = ({ isOpen, onClose, refetch }) => {
         throw error;
       }
     },
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   });
 
   const {

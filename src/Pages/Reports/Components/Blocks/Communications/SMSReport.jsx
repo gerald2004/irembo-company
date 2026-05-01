@@ -54,7 +54,7 @@ const SMSReport = () => {
         throw error;
       }
     },
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   });
 
   const columns = [
@@ -105,6 +105,24 @@ const SMSReport = () => {
     setFilters(data);
     refetch();
   };
+
+  const smsRows     = data?.data ?? data ?? [];
+  const delivered   = data?.meta?.delivered ?? smsRows.filter(r => r.status === "Y").length;
+  const failed      = data?.meta?.failed    ?? smsRows.filter(r => r.status === "N").length;
+  const total       = data?.meta?.total     ?? smsRows.length;
+  const delivRate   = total > 0 ? Math.round((delivered / total) * 100) : 0;
+
+  const KPI = ({ label, value, sub, accent = "bg-blue-500" }) => (
+    <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+      <div className={`h-1 ${accent}`} />
+      <div className="p-4">
+        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
+        <p className="text-xl font-bold mt-1">{value}</p>
+        {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
+      </div>
+    </div>
+  );
+
   return (
     <>
       <Breadcrumb>
@@ -130,24 +148,28 @@ const SMSReport = () => {
           <div className="flex items-center justify-between space-y-2">
             <h5 className="text-2xl font-bold tracking-tight">SMS Report</h5>
           </div>
-          <LoanGeneralReportQuery
+          <LoanGeneralReportQuery show={{ officer: false, status: true }}
+            statusOptions={[{ value: "Y", label: "Delivered" }, { value: "N", label: "Failed" }]}
             onFilterChange={handleFilterChange}
             isRefetching={isRefetching}
-            refetch={refetch}
-            data={data?.data}
+            data={smsRows}
             tableRef={tableRef}
             filters={filters}
             colSpan={2}
-            mode={{
-              format: "A4-L",
-              orientation: "L",
-            }}
-            title={"SMS Report"}
+            mode={{ format: "A4-L", orientation: "L" }}
+            title="SMS Report"
           />
+          {/* KPI Strip */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <KPI label="Total Messages" value={total}        sub="In selected period" accent="bg-blue-500" />
+            <KPI label="Delivered"      value={delivered}    sub="Successfully sent"  accent="bg-emerald-500" />
+            <KPI label="Failed"         value={failed}       sub="Delivery failures"  accent="bg-red-500" />
+            <KPI label="Delivery Rate"  value={`${delivRate}%`} sub="Success rate"    accent="bg-violet-500" />
+          </div>
           <DatatableReport
             ref={tableRef}
             columns={columns}
-            data={data?.data ?? []}
+            data={smsRows}
             fetchData={refetch}
             isLoading={isLoading}
             isRefetching={isRefetching}

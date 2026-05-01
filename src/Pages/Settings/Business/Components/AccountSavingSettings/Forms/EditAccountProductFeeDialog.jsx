@@ -1,5 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useForm, useFieldArray } from "react-hook-form";
 import {
   Dialog,
@@ -28,7 +29,6 @@ import { AccountCombobox } from "@/Pages/Components/AccountCombobox";
 const EditAccountProductFeeDialog = ({
   isOpen,
   onClose,
-  refetch,
   defaultValues,
   accountsData,
   isLoadingAccounts,
@@ -37,6 +37,7 @@ const EditAccountProductFeeDialog = ({
   isRefetchingAccounts,
 }) => {
   const axiosPrivate = useAxiosPrivate();
+  const queryClient = useQueryClient();
   const {
     register,
     handleSubmit,
@@ -120,8 +121,8 @@ const EditAccountProductFeeDialog = ({
           response?.data?.messages || "Account fee updated successfully",
       });
       reset();
-      refetch?.();
       onClose();
+      queryClient.invalidateQueries({ queryKey: ["accounts-settings-fees-data"] });
     } catch (error) {
       const errorMessage =
         error?.response?.data?.messages || "No server response";

@@ -55,7 +55,7 @@ const LoansPortfolioReport = () => {
         throw error;
       }
     },
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   });
 
   const totalAmountDisbursed = data?.reduce(

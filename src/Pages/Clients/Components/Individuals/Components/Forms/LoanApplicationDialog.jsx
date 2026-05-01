@@ -1,6 +1,7 @@
 /* eslint-disable react/prop-types */
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
+import ChargesReviewStep from "@/Pages/Components/ChargesReviewStep";
 import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
@@ -15,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate, useParams } from "react-router-dom";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
@@ -32,6 +34,7 @@ import {
   X,
   Info,
   LockKeyhole,
+  Receipt,
 } from "lucide-react";
 import {
   InputOTP,
@@ -40,17 +43,22 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 
+const intervalLabel = {
+  daily: "days",
+  weekly: "weeks",
+  monthly: "months",
+  yearly: "years",
+};
+
 const LoanApplicationDialog = ({ isOpen, onClose, refetch }) => {
   const axiosPrivate = useAxiosPrivate();
-  const { id: clientId, client_id: accountId } = useParams(); // ✅ Get client_id from params
+  const { id: clientId, client_id: accountId } = useParams();
   const navigate = useNavigate();
 
-  // ✅ Fetch Loan Products
   const { data: loanProducts = [], isLoading } = useQuery({
     queryKey: ["loan-products"],
     queryFn: async () => {
       const controller = new AbortController();
-
       try {
         const response = await axiosPrivate.get("/settings/loans/products", {
           signal: controller.signal,
@@ -71,63 +79,77 @@ const LoanApplicationDialog = ({ isOpen, onClose, refetch }) => {
     handleSubmit,
     control,
     trigger,
+    watch,
     reset,
     formState: { errors, isSubmitting },
   } = useForm();
 
   const [step, setStep] = useState(1);
+  const [skipChargeIds, setSkipChargeIds] = useState([]);
+  const [chargeOverrides, setChargeOverrides] = useState({});
+
+  const watchedAmount = parseFloat(watch("loan_application_amount")) || 0;
+  const watchedProductId = watch("loan_product_id");
+
+  const selectedProduct = loanProducts.find(
+    (p) => String(p.id) === String(watchedProductId)
+  );
+  const tenureUnit = intervalLabel[selectedProduct?.product_interval] ?? "periods";
+
+  const handleClose = () => {
+    reset();
+    setSkipChargeIds([]);
+    setChargeOverrides({});
+    setStep(1);
+    onClose();
+  };
 
   const validateStep = async () => {
-    const valid = await trigger();
-    if (valid && step < 2) {
-      setStep((prev) => prev + 1);
+    if (step === 1) {
+      const valid = await trigger(["loan_application_amount", "loan_application_tenure_period", "loan_product_id"]);
+      if (valid) setStep(2);
+      return;
     }
+    if (step === 2) { setStep(3); return; }
   };
 
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
 
   const onSubmit = async (data) => {
     const controller = new AbortController();
-
     try {
       const payload = {
         ...data,
         client_id: clientId,
         client_account_id: accountId,
+        skip_charge_ids: skipChargeIds,
+        charge_overrides: chargeOverrides,
       };
-
       const response = await axiosPrivate.post("/loans/applications", payload, {
         signal: controller.signal,
       });
-
-      toast({
-        title: "Success",
-        description: response.data.messages,
-      });
-
+      toast({ title: "Success", description: response.data.messages });
       reset();
+      setSkipChargeIds([]);
+      setChargeOverrides({});
+      setStep(1);
       refetch();
       onClose();
     } catch (error) {
-      const errorMessage =
-        error?.response?.data?.messages || "No server response";
       toast({
         title: "Uh oh! Something went wrong.",
         variant: "destructive",
-        description: errorMessage,
+        description: error?.response?.data?.messages || "No server response",
       });
     }
   };
 
+  const TOTAL_STEPS = 3;
+
   const stepIcons = [
-    {
-      icon: <Info className="w-6 h-6 text-blue-500" />,
-      label: "Loan Details",
-    },
-    {
-      icon: <LockKeyhole className="w-6 h-6 text-yellow-500" />,
-      label: "PinCode",
-    },
+    { icon: <Info className="w-6 h-6 text-blue-500" />, label: "Loan Details" },
+    { icon: <Receipt className="w-6 h-6 text-purple-500" />, label: "Charges" },
+    { icon: <LockKeyhole className="w-6 h-6 text-yellow-500" />, label: "PinCode" },
   ];
 
   return (
@@ -140,78 +162,35 @@ const LoanApplicationDialog = ({ isOpen, onClose, refetch }) => {
           </DialogDescription>
           <DialogClose asChild>
             <button
-              className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              onClick={onClose}
+              className="absolute right-4 top-4 rounded-sm opacity-70 hover:opacity-100 focus:outline-none"
+              onClick={handleClose}
             >
               <X className="h-4 w-4" />
             </button>
           </DialogClose>
         </DialogHeader>
 
-        {/* Step Progress Indicator */}
         <div className="flex items-center space-x-4 my-1">
           {stepIcons.map((stepIcon, index) => (
             <div
               key={index}
-              className={`flex items-center ${
-                step > index + 1 ? "opacity-100" : "opacity-50"
-              } transition-opacity`}
+              className={`flex items-center ${step > index + 1 ? "opacity-100" : "opacity-50"} transition-opacity`}
             >
               {stepIcon.icon}
               <span className="ml-2 text-sm font-medium">{stepIcon.label}</span>
               {index < stepIcons.length - 1 && (
-                <div className="h-[2px] w-8 bg-gray-300 mx-2"></div>
+                <div className="h-[2px] w-8 bg-gray-300 mx-2" />
               )}
             </div>
           ))}
         </div>
-        <Progress value={(step / 2) * 100} className="my-1" />
+        <Progress value={(step / TOTAL_STEPS) * 100} className="my-1" />
 
-        {/* Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Step 1: Loan Details */}
           {step === 1 && (
             <fieldset className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Loan Amount */}
-              <div>
-                <Label htmlFor="loan_application_amount">Loan Amount</Label>
-                <Input
-                  id="loan_application_amount"
-                  type="number"
-                  placeholder="Enter amount"
-                  {...register("loan_application_amount", {
-                    required: "Amount is required",
-                  })}
-                />
-                {errors.loan_application_amount && (
-                  <p className="text-red-500 text-sm">
-                    {errors.loan_application_amount.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Loan Tenure Period */}
-              <div>
-                <Label htmlFor="loan_application_tenure_period">
-                  Tenure Period (months)
-                </Label>
-                <Input
-                  id="loan_application_tenure_period"
-                  type="number"
-                  placeholder="Enter period in months"
-                  {...register("loan_application_tenure_period", {
-                    required: "Tenure period is required",
-                  })}
-                />
-                {errors.loan_application_tenure_period && (
-                  <p className="text-red-500 text-sm">
-                    {errors.loan_application_tenure_period.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Loan Product */}
-              <div>
+              {/* Loan Product — pick first so tenure label can update */}
+              <div className="md:col-span-2">
                 <Label htmlFor="loan_product_id">Loan Product</Label>
                 <Controller
                   name="loan_product_id"
@@ -220,24 +199,19 @@ const LoanApplicationDialog = ({ isOpen, onClose, refetch }) => {
                   render={({ field }) => (
                     <Select
                       value={field.value}
-                      onValueChange={(value) => field.onChange(value)}
+                      onValueChange={field.onChange}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select a product">
-                          {loanProducts?.find(
-                            (item) => String(item.id) === String(field.value)
-                          )?.title || "Select Product"}
+                          {loanProducts?.find((item) => String(item.id) === String(field.value))?.title || "Select Product"}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {isLoading ? (
-                          <SelectItem disabled>Loading...</SelectItem>
+                          <SelectItem value="loading" disabled>Loading...</SelectItem>
                         ) : (
                           loanProducts.map((product) => (
-                            <SelectItem
-                              key={product.id}
-                              value={String(product.id)}
-                            >
+                            <SelectItem key={product.id} value={String(product.id)}>
                               {product.title} ({product.interest_rate}%)
                             </SelectItem>
                           ))
@@ -247,78 +221,117 @@ const LoanApplicationDialog = ({ isOpen, onClose, refetch }) => {
                   )}
                 />
                 {errors.loan_product_id && (
-                  <p className="text-red-500 text-sm">
-                    {errors.loan_product_id.message}
-                  </p>
+                  <p className="text-red-500 text-sm">{errors.loan_product_id.message}</p>
+                )}
+              </div>
+
+              {/* Product info strip */}
+              {selectedProduct && (
+                <div className="md:col-span-2 flex flex-wrap gap-2 bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-800/50 rounded-md px-3 py-2">
+                  <Badge variant="outline" className="text-xs capitalize">
+                    {selectedProduct.type?.replace("_", " ")}
+                  </Badge>
+                  <Badge variant="outline" className="text-xs capitalize">
+                    {selectedProduct.product_interval} repayments
+                  </Badge>
+                  <Badge variant="outline" className="text-xs text-blue-700">
+                    {selectedProduct.interest_rate}% interest
+                  </Badge>
+                  <span className="text-xs text-muted-foreground self-center ml-auto">
+                    Enter tenure in <strong>{tenureUnit}</strong>
+                  </span>
+                </div>
+              )}
+
+              {/* Loan Amount */}
+              <div>
+                <Label htmlFor="loan_application_amount">Loan Amount</Label>
+                <Input
+                  id="loan_application_amount"
+                  type="number"
+                  step="0.01"
+                  placeholder="Enter amount"
+                  {...register("loan_application_amount", { required: "Amount is required" })}
+                />
+                {errors.loan_application_amount && (
+                  <p className="text-red-500 text-sm">{errors.loan_application_amount.message}</p>
+                )}
+              </div>
+
+              {/* Tenure — label unit reflects product interval */}
+              <div>
+                <Label htmlFor="loan_application_tenure_period">
+                  Tenure Period ({tenureUnit})
+                </Label>
+                <Input
+                  id="loan_application_tenure_period"
+                  type="number"
+                  min="1"
+                  placeholder={`Enter number of ${tenureUnit}`}
+                  {...register("loan_application_tenure_period", {
+                    required: "Tenure period is required",
+                    min: { value: 1, message: "Must be at least 1" },
+                  })}
+                />
+                {errors.loan_application_tenure_period && (
+                  <p className="text-red-500 text-sm">{errors.loan_application_tenure_period.message}</p>
                 )}
               </div>
             </fieldset>
           )}
 
-          {/* Step 2: PIN Entry */}
           {step === 2 && (
+            <ChargesReviewStep
+              amount={watchedAmount}
+              loanProductId={watchedProductId}
+              trigger="on_application"
+              onSkipChange={setSkipChargeIds}
+              onOverrideChange={setChargeOverrides}
+            />
+          )}
+
+          {step === 3 && (
             <div className="flex flex-col items-center">
               <Controller
                 control={control}
                 name="user_pincode"
                 rules={{
                   required: "Pincode is required",
-                  pattern: {
-                    value: /^\d{4}$/,
-                    message: "PIN must be exactly 4 digits",
-                  },
+                  pattern: { value: /^\d{4}$/, message: "PIN must be exactly 4 digits" },
                 }}
                 render={({ field }) => (
                   <>
                     <Label>Enter Pincode</Label>
                     <InputOTP maxLength={4} {...field}>
                       <InputOTPGroup className="flex space-x-3 py-4">
-                        <InputOTPSlot
-                          index={0}
-                          className="h-10 w-10 text-center rounded-md"
-                        />
-                        <InputOTPSlot
-                          index={1}
-                          className="h-10 w-10 text-center rounded-md"
-                        />
+                        <InputOTPSlot index={0} className="h-10 w-10 text-center rounded-md" />
+                        <InputOTPSlot index={1} className="h-10 w-10 text-center rounded-md" />
                         <InputOTPSeparator />
-                        <InputOTPSlot
-                          index={2}
-                          className="h-10 w-10 text-center rounded-md"
-                        />
-                        <InputOTPSlot
-                          index={3}
-                          className="h-10 w-10 text-center rounded-md"
-                        />
+                        <InputOTPSlot index={2} className="h-10 w-10 text-center rounded-md" />
+                        <InputOTPSlot index={3} className="h-10 w-10 text-center rounded-md" />
                       </InputOTPGroup>
                     </InputOTP>
                   </>
                 )}
               />
               {errors.user_pincode && (
-                <p className="text-red-500 text-sm mt-1">
-                  {errors.user_pincode.message}
-                </p>
+                <p className="text-red-500 text-sm mt-1">{errors.user_pincode.message}</p>
               )}
             </div>
           )}
 
-          {/* Footer Navigation */}
           <DialogFooter>
-            <Button type="button" onClick={prevStep} variant="secondary">
+            <Button type="button" onClick={prevStep} variant="secondary" disabled={step === 1}>
               <ArrowLeft className="mr-2" /> Back
             </Button>
-            {step === 1 ? (
+            {step < TOTAL_STEPS && (
               <Button type="button" onClick={validateStep}>
                 Next <ArrowRight className="ml-2" />
               </Button>
-            ) : (
-              ""
             )}
-            {step === 2 && (
+            {step === TOTAL_STEPS && (
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Processing..." : "Save"}{" "}
-                <CheckCircle className="ml-2" />
+                {isSubmitting ? "Processing..." : "Save"} <CheckCircle className="ml-2" />
               </Button>
             )}
           </DialogFooter>

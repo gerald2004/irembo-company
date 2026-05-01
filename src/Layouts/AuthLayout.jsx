@@ -157,6 +157,22 @@ const markAllNotificationsRead = async () => {
                               <MenubarShortcut />
                             </MenubarItem>
                           )}
+                          {hasPermission(roles, 100007) && (
+                            <MenubarItem>
+                              <Link to="clients/company/new">
+                                New Company 
+                              </Link>
+                              <MenubarShortcut />
+                            </MenubarItem>
+                          )}
+                          {hasPermission(roles, 100007) && (
+                            <MenubarItem>
+                              <Link to="clients/joint-account/new">
+                                New Joint Account
+                              </Link>
+                              <MenubarShortcut />
+                            </MenubarItem>
+                          )}
                           {hasPermission(roles, [100011, 100015]) && (
                             <MenubarItem>
                               <Link to="clients">View Clients</Link>
@@ -318,10 +334,10 @@ const markAllNotificationsRead = async () => {
                             n.level === "critical"
                               ? "text-red-600"
                               : n.level === "warning"
-                              ? "text-orange-600"
-                              : n.level === "success"
-                              ? "text-green-600"
-                              : "text-blue-600"
+                                ? "text-orange-600"
+                                : n.level === "success"
+                                  ? "text-green-600"
+                                  : "text-blue-600"
                           }`}
                         >
                           {n.title}

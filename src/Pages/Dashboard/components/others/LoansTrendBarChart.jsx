@@ -4,8 +4,8 @@ import {
   BarChart,
   CartesianGrid,
   XAxis,
-  Legend,
   YAxis,
+  Legend,
   ResponsiveContainer,
 } from "recharts";
 import {
@@ -14,50 +14,17 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 
-// Define chart configuration for colors and labels
 const chartConfig = {
-  disbursed: {
-    label: "Disbursed (Total)",
-    color: "hsl(var(--chart-1))",
-  },
-  settled: {
-    label: "Settled (Total)",
-    color: "hsl(var(--chart-2))",
-  },
+  disbursed_amount: { label: "Disbursed", color: "hsl(var(--chart-1))" },
+  settled_amount: { label: "Settled", color: "hsl(var(--chart-2))" },
 };
 
-export function LoansTrendBarChart({ loansTrendData }) {
-  // Consolidate the data by month
-  const consolidatedData = loansTrendData.reduce((acc, curr) => {
-    const existing = acc.find((item) => item.month === curr.month);
-    if (existing) {
-      existing.disbursedCount += curr.disbursed.count;
-      existing.disbursedTotal += curr.disbursed.total;
-      existing.settledCount += curr.settled.count;
-      existing.settledTotal += curr.settled.total;
-    } else {
-      acc.push({
-        month: curr.month,
-        disbursedCount: curr.disbursed.count,
-        disbursedTotal: curr.disbursed.total,
-        settledCount: curr.settled.count,
-        settledTotal: curr.settled.total,
-      });
-    }
-    return acc;
-  }, []);
-
-  // Format numbers with commas
-  const formatMoney = (value) =>
-    value ? value.toLocaleString("en-US", { style: "decimal" }) : "0";
-
+// Accepts monthly_trend: [{ month, disbursed_count, disbursed_amount, settled_count, settled_amount }]
+export function LoansTrendBarChart({ monthly_trend = [] }) {
   return (
-    <ResponsiveContainer width="100%" height={350}>
+    <ResponsiveContainer width="100%" height={300}>
       <ChartContainer config={chartConfig} className="p-0">
-        <BarChart
-          data={consolidatedData}
-          margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-        >
+        <BarChart data={monthly_trend} margin={{ top: 8, right: 16, left: 8, bottom: 4 }}>
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
           <XAxis
             dataKey="month"
@@ -66,36 +33,19 @@ export function LoansTrendBarChart({ loansTrendData }) {
             tickMargin={8}
             tickFormatter={(value) => {
               const [year, month] = value.split("-");
-              return `${month}/${year}`;
+              return `${month}/${year.slice(2)}`;
             }}
           />
           <YAxis
-            tick={{ fontSize: 11, fill: "gray" }}
-            tickMargin={5}
-            axisLine={{ stroke: "lightgray" }}
-            tickFormatter={(value) => value.toLocaleString()}
+            tick={{ fontSize: 11 }}
+            axisLine={false}
+            tickLine={false}
+            tickFormatter={(v) => v.toLocaleString()}
           />
-          <ChartTooltip
-            content={<ChartTooltipContent />}
-            formatter={(value, name) =>
-              `${formatMoney(value)} ${
-                chartConfig[name]?.label ? `(${chartConfig[name].label})` : ""
-              }`
-            }
-          />
-          <Legend formatter={(value) => chartConfig[value]?.label || value} />
-          <Bar
-            dataKey="disbursedTotal"
-            fill={chartConfig.disbursed.color}
-            name="disbursed"
-            barSize={60}
-          />
-          <Bar
-            dataKey="settledTotal"
-            fill={chartConfig.settled.color}
-            name="settled"
-            barSize={60}
-          />
+          <ChartTooltip content={<ChartTooltipContent />} />
+          <Legend formatter={(v) => chartConfig[v]?.label || v} />
+          <Bar dataKey="disbursed_amount" fill={chartConfig.disbursed_amount.color} name="disbursed_amount" barSize={40} />
+          <Bar dataKey="settled_amount" fill={chartConfig.settled_amount.color} name="settled_amount" barSize={40} />
         </BarChart>
       </ChartContainer>
     </ResponsiveContainer>

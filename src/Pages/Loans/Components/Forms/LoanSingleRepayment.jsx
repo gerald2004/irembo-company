@@ -24,6 +24,7 @@ import {
   X,
   Info,
   LockKeyhole,
+  PiggyBank,
 } from "lucide-react";
 import {
   InputOTP,
@@ -140,23 +141,44 @@ const LoanSingleRepayment = ({ isOpen, onClose, refetch }) => {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Step 1: Loan Details */}
           {step === 1 && (
-            <fieldset className="grid grid-cols-1 md:grid-cols-1 gap-4">
-              {/* Loan Guarantor Amount */}
+            <fieldset className="grid grid-cols-1 gap-4">
               <div>
-                <Label htmlFor="amount">Amount</Label>
+                <Label htmlFor="amount">Repayment Amount</Label>
                 <Input
                   id="amount"
                   type="number"
+                  step="0.01"
                   placeholder="Enter amount"
                   {...register("amount", {
                     required: "Amount is required",
+                    min: { value: 1, message: "Must be greater than 0" },
                   })}
                 />
                 {errors.amount && (
-                  <p className="text-red-500 text-sm">
-                    {errors.amount.message}
-                  </p>
+                  <p className="text-red-500 text-sm">{errors.amount.message}</p>
                 )}
+              </div>
+              <div>
+                <Label htmlFor="savings_amount" className="flex items-center gap-1.5">
+                  <PiggyBank className="w-3.5 h-3.5 text-green-600" />
+                  Compulsory Savings (optional)
+                </Label>
+                <Input
+                  id="savings_amount"
+                  type="number"
+                  step="0.01"
+                  placeholder="Leave blank to use setting default (e.g. 2000)"
+                  {...register("savings_amount", {
+                    min: { value: 0, message: "Cannot be negative" },
+                  })}
+                />
+                {errors.savings_amount && (
+                  <p className="text-red-500 text-sm">{errors.savings_amount.message}</p>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  Deducted alongside the repayment and credited to the group savings account.
+                  Leave blank to apply the configured default amount.
+                </p>
               </div>
             </fieldset>
           )}

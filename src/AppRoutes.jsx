@@ -3,6 +3,7 @@ import Layout from "@/Layouts/Layout";
 import AuthLayout from "@/Layouts/AuthLayout";
 import PersistLogin from "@/MiddleWares/Components/PersistLogin";
 import RequireAuth from "@/MiddleWares/Components/RequireAuth";
+import RequireOTP from "@/MiddleWares/Components/RequireOTP";
 import Missing from "@/Pages/Others/Missing";
 
 // 📦 Route imports
@@ -19,6 +20,8 @@ import floatRoutes from "./routes/floatRoutes";
 import dashBoardRoutes from "./routes/dashBoardRoutes"; // verify & dashboard
 import profileRoutes from "./routes/profileRoutes";
 import externalTransactionsRoutes from "./routes/externalTransactionsRoutes";
+import amlRoutes from "./routes/amlRoutes";
+import qmsRoutes from "./routes/qmsRoutes";
 const protectedRoutes = [
   ...clientRoutes,
   ...loansRoutes,
@@ -29,7 +32,9 @@ const protectedRoutes = [
   ...settingsRoutes,
   ...bulkRoutes,
   ...floatRoutes,
-  ... externalTransactionsRoutes
+  ...externalTransactionsRoutes,
+  ...amlRoutes,
+  ...qmsRoutes,
 ];
 
 const AppRoutes = () => {
@@ -42,28 +47,31 @@ const AppRoutes = () => {
         ))}
       </Route>
 
-      {/* Auth-only routes like dashboard, verify */}
+      {/* Auth-only routes */}
       <Route element={<PersistLogin />}>
         <Route element={<RequireAuth allowedRoles={[100001]} />}>
           <Route element={<AuthLayout />}>
-            {/* profile and change password */}
-            {profileRoutes.map(({ path, element }, i) => (
-              <Route key={i} path={path} element={element} />
-            ))}
-            {dashBoardRoutes.map(({ path, element }, i) => (
-              <Route key={i} path={path} element={element} />
-            ))}
+            <Route element={<RequireOTP />}>
+              {profileRoutes.map(({ path, element }, i) => (
+                <Route key={i} path={path} element={element} />
+              ))}
+              {dashBoardRoutes.map(({ path, element }, i) => (
+                <Route key={i} path={path} element={element} />
+              ))}
+            </Route>
           </Route>
         </Route>
 
         {/* Main protected business routes under Layout */}
         <Route element={<Layout />}>
           <Route element={<AuthLayout />}>
-            {protectedRoutes.map(({ path, element, roles }, i) => (
-              <Route element={<RequireAuth allowedRoles={roles} />} key={i}>
-                <Route path={path} element={element} />
-              </Route>
-            ))}
+            <Route element={<RequireOTP />}>
+              {protectedRoutes.map(({ path, element, roles }, i) => (
+                <Route element={<RequireAuth allowedRoles={roles} />} key={i}>
+                  <Route path={path} element={element} />
+                </Route>
+              ))}
+            </Route>
           </Route>
         </Route>
       </Route>

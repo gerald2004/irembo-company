@@ -36,44 +36,12 @@ const TYPES = [
   { v: "bank_to_safe", label: "Bank → Safe", from: "bank", to: "safe" },
   { v: "till_to_bank", label: "Till → Bank", from: "till", to: "bank" },
   { v: "till_to_till", label: "Till → Till", from: "till", to: "till" },
-
-  // Mobile money directions
-  {
-    v: "mobile_money_to_till",
-    label: "Mobile Money → Till",
-    from: "mobile_money",
-    to: "till",
-  },
-  {
-    v: "till_to_mobile_money",
-    label: "Till → Mobile Money",
-    from: "till",
-    to: "mobile_money",
-  },
-  {
-    v: "mobile_money_to_safe",
-    label: "Mobile Money → Safe",
-    from: "mobile_money",
-    to: "safe",
-  },
-  {
-    v: "safe_to_mobile_money",
-    label: "Safe → Mobile Money",
-    from: "safe",
-    to: "mobile_money",
-  },
-  {
-    v: "mobile_money_to_bank",
-    label: "Mobile Money → Bank",
-    from: "mobile_money",
-    to: "bank",
-  },
-  {
-    v: "bank_to_mobile_money",
-    label: "Bank → Mobile Money",
-    from: "bank",
-    to: "mobile_money",
-  },
+  { v: "mobile_money_to_till",  label: "Mobile Money → Till",  from: "mobile_money", to: "till" },
+  { v: "till_to_mobile_money",  label: "Till → Mobile Money",  from: "till",         to: "mobile_money" },
+  { v: "mobile_money_to_safe",  label: "Mobile Money → Safe",  from: "mobile_money", to: "safe" },
+  { v: "safe_to_mobile_money",  label: "Safe → Mobile Money",  from: "safe",         to: "mobile_money" },
+  { v: "mobile_money_to_bank",  label: "Mobile Money → Bank",  from: "mobile_money", to: "bank" },
+  { v: "bank_to_mobile_money",  label: "Bank → Mobile Money",  from: "bank",         to: "mobile_money" },
 ];
 
 function getTypeMeta(type) {
@@ -84,7 +52,6 @@ function fmtAmount(n) {
   if (n == null) return "";
   const num = Number(n);
   if (Number.isNaN(num)) return "";
-  // compact-ish without forcing locale; adjust to your needs
   return num.toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
 
@@ -116,21 +83,18 @@ export default function CashTransferDialog({
       : ""
   );
   const [type, setType] = React.useState("till_to_safe");
-  const [fromRef, setFromRef] = React.useState(""); // numeric ref id (string)
-  const [toRef, setToRef] = React.useState(""); // numeric ref id (string)
+  const [fromRef, setFromRef] = React.useState("");
+  const [toRef, setToRef] = React.useState("");
   const [amount, setAmount] = React.useState("");
-  const [channelId, setChannelId] = React.useState(""); // keep "" for unset
+  const [channelId, setChannelId] = React.useState("");
   const [narration, setNarration] = React.useState("");
+
   // reset on open
   React.useEffect(() => {
     if (isOpen) {
       setBusinessDate(defaultDate || new Date().toISOString().slice(0, 10));
       setBranchId(
-        isSaccoUser
-          ? defaultBranchId || ""
-          : branchLockedId
-          ? String(branchLockedId)
-          : ""
+        isSaccoUser ? defaultBranchId || "" : branchLockedId ? String(branchLockedId) : ""
       );
       setType("till_to_safe");
       setFromRef("");
@@ -143,29 +107,20 @@ export default function CashTransferDialog({
 
   const meta = getTypeMeta(type);
 
-  // ── branches (SACCO only select)
+  // ── branches (SACCO users only)
   const { data: branchesRaw = [] } = useQuery({
     queryKey: ["branches"],
     queryFn: async () => {
       const ctrl = new AbortController();
-      const r = await axiosPrivate.get("/settings/branches", {
-        signal: ctrl.signal,
-      });
+      const r = await axiosPrivate.get("/settings/branches", { signal: ctrl.signal });
       const raw = r?.data?.data?.branches ?? [];
-      return raw.map((b) => ({
-        id: b.id ?? b.branch_id,
-        name: b.name ?? b.branch_name,
-      }));
+      return raw.map((b) => ({ id: b.id ?? b.branch_id, name: b.name ?? b.branch_name }));
     },
     enabled: isSaccoUser,
   });
 
-  // normalized branches with non-empty ids (string)
   const branches = (branchesRaw ?? [])
-    .map((b) => ({
-      id: String(b.id ?? ""),
-      name: b.name ?? `Branch #${b.id}`,
-    }))
+    .map((b) => ({ id: String(b.id ?? ""), name: b.name ?? `Branch #${b.id}` }))
     .filter((b) => b.id !== "");
 
   // ── channels (optional)
@@ -185,24 +140,20 @@ export default function CashTransferDialog({
   });
   const channels = (channelsRaw ?? []).filter((c) => c?.id != null);
 
-  // ── helper to load operational accounts by scope & branch (NEW endpoint)
+  // ── helper to load operational accounts by scope
   const useOperationalList = (scope, enabled) =>
     useQuery({
-      queryKey: ["operational-accounts", scope, branchId, isSaccoUser],
+      queryKey: ["operational-accounts", scope, branchId],
       queryFn: async () => {
         const ctrl = new AbortController();
         const params = new URLSearchParams();
-        params.set("scope", scope); // till|safe|bank|mobile_money
-        // For sacco users, respect chosen branch in UI
+        params.set("scope", scope);
         if (isSaccoUser && branchId) params.set("branch_id", branchId);
-        // For branch users, backend auto-filters by privilege
         const r = await axiosPrivate.get(
           `/accounting/operational-accounts?${params.toString()}`,
           { signal: ctrl.signal }
         );
-        // Expect { items: [{ ref_id, name, account_id, available? }] }
         const items = r?.data?.data?.items ?? r?.data?.data ?? [];
-        // normalize to guaranteed string value
         return (items ?? [])
           .filter((it) => it?.ref_id != null)
           .map((it) => ({
@@ -216,16 +167,13 @@ export default function CashTransferDialog({
       staleTime: 10_000,
     });
 
-  // from/to choices
+  const fromEnabled = isOpen && (!isSaccoUser || !!branchId);
+  const toEnabled   = isOpen && (!isSaccoUser || !!branchId);
+
   const { data: fromChoices = [], isFetching: loadingFrom } =
-    useOperationalList(
-      meta?.from ?? "till",
-      isOpen && !!meta && (!isSaccoUser || !!branchId)
-    );
-  const { data: toChoices = [], isFetching: loadingTo } = useOperationalList(
-    meta?.to ?? "safe",
-    isOpen && !!meta && (!isSaccoUser || !!branchId)
-  );
+    useOperationalList(meta?.from ?? "till", fromEnabled);
+  const { data: toChoices = [], isFetching: loadingTo } =
+    useOperationalList(meta?.to ?? "safe", toEnabled);
 
   // ── validations
   const sameTillInvalid =
@@ -239,31 +187,23 @@ export default function CashTransferDialog({
   // ── submit
   const { mutate: submit, isPending } = useMutation({
     mutationFn: async () => {
+      if (!amountNum || amountNum <= 0) throw new Error("Amount must be greater than zero");
       if (!meta) throw new Error("Invalid transfer type");
-      if (!amountNum || amountNum <= 0)
-        throw new Error("Amount must be greater than zero");
-      if (!fromRef || !toRef)
-        throw new Error("Select both source and destination");
+      if (!fromRef || !toRef) throw new Error("Select both source and destination");
       if (sameTillInvalid) throw new Error("Cannot transfer to the same till");
 
       const payload = {
-        // backend now expects transfer_date (your controller maps/accepts business_date too)
         transfer_date: businessDate,
-        business_date: businessDate, // harmless if ignored
+        business_date: businessDate,
         transfer_type: type,
-        from_scope: meta.from,
-        from_ref_id: parseInt(fromRef, 10),
-        to_scope: meta.to,
-        to_ref_id: parseInt(toRef, 10),
-        amount: amountNum,
-        narration: narration || undefined,
-        channel_id:
-          channelId && channelId !== "none"
-            ? parseInt(channelId, 10)
-            : undefined,
-        ...(isSaccoUser && branchId
-          ? { branch_id: parseInt(branchId, 10) }
-          : {}),
+        from_scope:    meta.from,
+        from_ref_id:   parseInt(fromRef, 10),
+        to_scope:      meta.to,
+        to_ref_id:     parseInt(toRef, 10),
+        amount:        amountNum,
+        narration:     narration || undefined,
+        channel_id:    channelId && channelId !== "none" ? parseInt(channelId, 10) : undefined,
+        ...(isSaccoUser && branchId ? { branch_id: parseInt(branchId, 10) } : {}),
       };
 
       const ctrl = new AbortController();
@@ -323,158 +263,96 @@ export default function CashTransferDialog({
 
         {/* Form */}
         <div className="space-y-4">
+          {/* Row 1: Date + Type + Branch (for SACCO users) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <DateField
-              value={businessDate}
-              onChange={setBusinessDate}
-              label="Business Date"
-              className="w-full"
-            />
+            <DateField value={businessDate} onChange={setBusinessDate} label="Business Date" className="w-full" />
 
             <div>
               <Label>Transfer Type</Label>
               <Select
                 value={type}
-                onValueChange={(v) => {
-                  setType(v);
-                  // reset refs when type changes
-                  setFromRef("");
-                  setToRef("");
-                }}
+                onValueChange={(v) => { setType(v); setFromRef(""); setToRef(""); }}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Type" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger>
                 <SelectContent>
-                  {TYPES.map((t) => (
-                    <SelectItem key={t.v} value={t.v}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
+                  {TYPES.map((t) => <SelectItem key={t.v} value={t.v}>{t.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Branch (SACCO only) */}
             {isSaccoUser && (
               <div>
                 <Label>Branch</Label>
-                <Select
-                  value={branchId}
-                  onValueChange={(v) => {
-                    setBranchId(v);
-                    // when branch changes, clear selections so lists refresh cleanly
-                    setFromRef("");
-                    setToRef("");
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Branch" />
-                  </SelectTrigger>
+                <Select value={branchId} onValueChange={(v) => { setBranchId(v); setFromRef(""); setToRef(""); }}>
+                  <SelectTrigger><SelectValue placeholder="Select Branch" /></SelectTrigger>
                   <SelectContent>
-                    {branches.map((b) => (
-                      <SelectItem key={b.id} value={b.id}>
-                        {b.name}
-                      </SelectItem>
-                    ))}
+                    {branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
             )}
           </div>
 
-          {/* From / To */}
+          {/* From / To account pickers */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <Label>From ({meta?.from ? meta.from.toUpperCase() : "—"})</Label>
+              <Label>From ({(meta?.from ?? "—").replace("_", " ").toUpperCase()})</Label>
               <Select
                 value={fromRef}
                 onValueChange={setFromRef}
-                disabled={loadingFrom || !meta || (isSaccoUser && !branchId)}
+                disabled={loadingFrom || (isSaccoUser && !branchId)}
               >
                 <SelectTrigger>
-                  <SelectValue
-                    placeholder={loadingFrom ? "Loading…" : "Select Source"}
-                  />
+                  <SelectValue placeholder={loadingFrom ? "Loading…" : "Select Source"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {fromChoices.map((it) => {
-                    const val = String(it.ref_id); // non-empty
-                    return (
-                      <SelectItem key={val} value={val}>
-                        {renderChoice(it)}
-                      </SelectItem>
-                    );
-                  })}
+                  {fromChoices.map((it) => (
+                    <SelectItem key={String(it.ref_id)} value={String(it.ref_id)}>{renderChoice(it)}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div>
-              <Label>To ({meta?.to ? meta.to.toUpperCase() : "—"})</Label>
+              <Label>To ({(meta?.to ?? "—").replace("_", " ").toUpperCase()})</Label>
               <Select
                 value={toRef}
                 onValueChange={setToRef}
-                disabled={loadingTo || !meta || (isSaccoUser && !branchId)}
+                disabled={loadingTo || (isSaccoUser && !branchId)}
               >
                 <SelectTrigger>
-                  <SelectValue
-                    placeholder={loadingTo ? "Loading…" : "Select Destination"}
-                  />
+                  <SelectValue placeholder={loadingTo ? "Loading…" : "Select Destination"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {toChoices.map((it) => {
-                    const val = String(it.ref_id); // non-empty
-                    return (
-                      <SelectItem key={val} value={val}>
-                        {renderChoice(it)}
-                      </SelectItem>
-                    );
-                  })}
+                  {toChoices.map((it) => (
+                    <SelectItem key={String(it.ref_id)} value={String(it.ref_id)}>{renderChoice(it)}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {sameTillInvalid && (
-                <p className="text-xs text-red-600 mt-1">
-                  You can’t transfer to the same till.
-                </p>
+                <p className="text-xs text-red-600 mt-1">You can&apos;t transfer to the same till.</p>
               )}
             </div>
           </div>
 
-          {/* Amount / Channel */}
+          {/* Amount + Channel */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <Label>Amount</Label>
               <Input
-                type="number"
-                inputMode="decimal"
-                min="0"
-                step="0.01"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.00"
+                type="number" inputMode="decimal" min="0" step="0.01"
+                value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00"
               />
             </div>
             <div>
               <Label>Channel (optional)</Label>
-              <Select
-                value={channelId || "none"}
-                onValueChange={(v) => setChannelId(v === "none" ? "" : v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Channel" />
-                </SelectTrigger>
+              <Select value={channelId || "none"} onValueChange={(v) => setChannelId(v === "none" ? "" : v)}>
+                <SelectTrigger><SelectValue placeholder="Select Channel" /></SelectTrigger>
                 <SelectContent>
-                  {/* Non-empty sentinel so Radix doesn't crash */}
                   <SelectItem value="none">— None —</SelectItem>
-                  {channels.map((c) => {
-                    const val = String(c.id);
-                    return (
-                      <SelectItem key={val} value={val}>
-                        {c.name}
-                      </SelectItem>
-                    );
-                  })}
+                  {channels.map((c) => (
+                    <SelectItem key={String(c.id)} value={String(c.id)}>{c.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -482,11 +360,7 @@ export default function CashTransferDialog({
 
           <div>
             <Label>Reason / Narration (optional)</Label>
-            <Textarea
-              placeholder="Short reason for audit trail…"
-              value={narration}
-              onChange={(e) => setNarration(e.target.value)}
-            />
+            <Textarea placeholder="Short reason for audit trail…" value={narration} onChange={(e) => setNarration(e.target.value)} />
           </div>
         </div>
 
@@ -495,7 +369,7 @@ export default function CashTransferDialog({
             type="button"
             onClick={() => submit()}
             disabled={
-              isPending || // 🔐 prevent double submits
+              isPending ||
               !businessDate ||
               !type ||
               !fromRef ||

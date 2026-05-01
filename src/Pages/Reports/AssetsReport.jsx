@@ -53,7 +53,7 @@ const AssetsReport = () => {
         throw error;
       }
     },
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   });
   const columns = [
     {

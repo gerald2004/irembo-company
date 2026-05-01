@@ -22,6 +22,26 @@ import { formatDateTimestamp, hasPermission } from "@/lib/utils";
 import EditLoanUser from "./Forms/EditLoanUser";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
 
+const loanStatusBadge = (status) => {
+  const s = (status || "").toLowerCase();
+  const cls = {
+    pending:     "bg-amber-100 text-amber-800 border-amber-300",
+    processed:   "bg-blue-100 text-blue-800 border-blue-300",
+    approved:    "bg-green-100 text-green-800 border-green-300",
+    disbursed:   "bg-emerald-100 text-emerald-800 border-emerald-300",
+    overdue:     "bg-red-100 text-red-700 border-red-300",
+    rejected:    "bg-red-100 text-red-700 border-red-300",
+    paid_off:    "bg-slate-100 text-slate-600 border-slate-300",
+    settled:     "bg-slate-100 text-slate-600 border-slate-300",
+    writternoff: "bg-gray-800 text-gray-100 border-gray-700",
+    writtenoff:  "bg-gray-800 text-gray-100 border-gray-700",
+    refinanced:  "bg-purple-100 text-purple-800 border-purple-300",
+    active:      "bg-emerald-100 text-emerald-800 border-emerald-300",
+    due_today:   "bg-orange-100 text-orange-800 border-orange-300",
+  }[s] || "";
+  return <Badge variant="outline" className={`capitalize font-medium ${cls}`}>{status}</Badge>;
+};
+
 const LoanSummary = ({ data, refetch, totals }) => {
   const [showDialog, setShowDialog] = useState(false);
   const [action, setAction] = useState("");
@@ -252,8 +272,8 @@ const LoanSummary = ({ data, refetch, totals }) => {
         </div>
         <div className="flex gap-x-4 items-center">
           <Label className="w-1/3 font-semibold">Application Status</Label>
-          <span className="w-2/3 capitalize">
-            <Badge>{data?.loan_application_status}</Badge>
+          <span className="w-2/3">
+            {loanStatusBadge(data?.loan_application_status)}
           </span>
         </div>
         <div className="flex gap-x-4 items-center">
@@ -302,7 +322,7 @@ const LoanSummary = ({ data, refetch, totals }) => {
               <span className="w-2/3">
                 {
                   data?.loan_applied_settings_disbursement
-                    ?.loan_applied_settings_disurbment_interest
+                    ?.loan_applied_settings_disbursement_interest
                 }{" "}
                 %
               </span>
@@ -312,7 +332,7 @@ const LoanSummary = ({ data, refetch, totals }) => {
               <span className="w-2/3">
                 {fmt(
                   data?.loan_applied_settings_disbursement
-                    ?.loan_applied_settings_disurbment_amount
+                    ?.loan_applied_settings_disbursement_amount
                 )}
               </span>
             </div>
@@ -320,10 +340,10 @@ const LoanSummary = ({ data, refetch, totals }) => {
               <Label className="w-1/3 font-semibold">Disbursed Date</Label>
               <span className="w-2/3">
                 {data?.loan_applied_settings_disbursement
-                  ?.loan_applied_settings_disurbment_date
+                  ?.loan_applied_settings_disbursement_date
                   ? formatDateTimestamp(
                       data.loan_applied_settings_disbursement
-                        .loan_applied_settings_disurbment_date
+                        .loan_applied_settings_disbursement_date
                     )
                   : "No Disbursement Date"}
               </span>
@@ -333,7 +353,7 @@ const LoanSummary = ({ data, refetch, totals }) => {
               <span className="w-2/3">
                 {formatDateTimestamp(
                   data?.loan_applied_settings_disbursement
-                    ?.loan_applied_settings_disurbment_timestamp
+                    ?.loan_applied_settings_disbursement_timestamp
                 )}
               </span>
             </div>
@@ -342,7 +362,7 @@ const LoanSummary = ({ data, refetch, totals }) => {
               <span className="w-2/3">
                 {
                   data?.loan_applied_settings_disbursement
-                    ?.loan_applied_settings_disurbment_tenure_period
+                    ?.loan_applied_settings_disbursement_tenure_period
                 }{" "}
                 {data?.loan_product?.loan_product_interval === "monthly"
                   ? "Months"
@@ -355,13 +375,8 @@ const LoanSummary = ({ data, refetch, totals }) => {
             </div>
             <div className="flex gap-x-4 items-center">
               <Label className="w-1/3 font-semibold">Loan Status</Label>
-              <span className="w-2/3 capitalize">
-                <Badge>
-                  {
-                    data?.loan_applied_settings_disbursement
-                      ?.loan_applied_settings_disurbment_status
-                  }
-                </Badge>
+              <span className="w-2/3">
+                {loanStatusBadge(data?.loan_applied_settings_disbursement?.loan_applied_settings_disbursement_status)}
               </span>
             </div>
 
@@ -405,87 +420,30 @@ const LoanSummary = ({ data, refetch, totals }) => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {/* Principal */}
-                <TableRow>
-                  <TableCell>Principal</TableCell>
-                  <TableCell className="text-right">
-                    {fmt(totals?.total_principal)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {fmt(totals?.total_principal_paid)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {fmt(
-                      n(totals?.total_principal) -
-                        n(totals?.total_principal_paid)
-                    )}
-                  </TableCell>
-                </TableRow>
-
-                {/* Interest */}
-                <TableRow>
-                  <TableCell>Interest</TableCell>
-                  <TableCell className="text-right">
-                    {fmt(totals?.total_interest)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {fmt(totals?.total_interest_paid)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {fmt(
-                      n(totals?.total_interest) - n(totals?.total_interest_paid)
-                    )}
-                  </TableCell>
-                </TableRow>
-
-                {/* Penalties */}
-                <TableRow>
-                  <TableCell>Penalties</TableCell>
-                  <TableCell className="text-right">
-                    {fmt(totals?.total_penalties)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {fmt(totals?.total_penalties_paid)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {fmt(
-                      n(totals?.total_penalties) -
-                        n(totals?.total_penalties_paid)
-                    )}
-                  </TableCell>
-                </TableRow>
-
-                {/* ✅ Monitoring Fees */}
-                <TableRow>
-                  <TableCell>Monitoring Fees</TableCell>
-                  <TableCell className="text-right">
-                    {fmt(totals?.total_monitoring)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {fmt(totals?.total_monitoring_paid)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {fmt(
-                      n(totals?.total_monitoring) -
-                        n(totals?.total_monitoring_paid)
-                    )}
-                  </TableCell>
-                </TableRow>
+                {[
+                  { label: "Principal",      total: totals?.total_principal,   paid: totals?.total_principal_paid },
+                  { label: "Interest",       total: totals?.total_interest,    paid: totals?.total_interest_paid },
+                  { label: "Penalties",      total: totals?.total_penalties,   paid: totals?.total_penalties_paid },
+                  { label: "Monitoring Fees",total: totals?.total_monitoring,  paid: totals?.total_monitoring_paid },
+                ].map(({ label, total, paid }) => {
+                  const bal = Math.max(0, n(total) - n(paid));
+                  return (
+                    <TableRow key={label}>
+                      <TableCell className="font-medium">{label}</TableCell>
+                      <TableCell className="text-right tabular-nums">{fmt(total)}</TableCell>
+                      <TableCell className="text-right tabular-nums text-green-700 font-medium">{fmt(paid)}</TableCell>
+                      <TableCell className={`text-right tabular-nums font-semibold ${bal > 0 ? "text-red-600" : "text-green-700"}`}>{fmt(bal)}</TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
 
-              {/* Grand totals include Monitoring */}
               <TableFooter>
-                <TableRow className="font-semibold">
+                <TableRow className="font-semibold text-base">
                   <TableCell>Total</TableCell>
-                  <TableCell className="text-right">
-                    {fmt(totalSum.total)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {fmt(totalSum.paid)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {fmt(totalSum.balance)}
-                  </TableCell>
+                  <TableCell className="text-right tabular-nums">{fmt(totalSum.total)}</TableCell>
+                  <TableCell className="text-right tabular-nums text-green-700">{fmt(totalSum.paid)}</TableCell>
+                  <TableCell className={`text-right tabular-nums ${totalSum.balance > 0 ? "text-red-600" : "text-green-700"}`}>{fmt(totalSum.balance)}</TableCell>
                 </TableRow>
               </TableFooter>
             </Table>

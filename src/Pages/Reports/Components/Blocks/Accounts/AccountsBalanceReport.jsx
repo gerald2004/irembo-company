@@ -54,7 +54,7 @@ const AccountsBalanceReport = () => {
         throw error;
       }
     },
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   });
   const columns = [
     {
@@ -173,7 +173,7 @@ const AccountsBalanceReport = () => {
               Account Balances Report
             </h5>
           </div>
-          <LoanGeneralReportQuery
+          <LoanGeneralReportQuery show={{ officer: false }}
             onFilterChange={handleFilterChange}
             isRefetching={isRefetching}
             refetch={refetch}

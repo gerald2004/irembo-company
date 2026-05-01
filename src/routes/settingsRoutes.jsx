@@ -13,6 +13,7 @@ import VendorManagement from "@/Pages/Settings/Business/VendorManagement";
 import TransactionChannels from "@/Pages/Settings/Business/TransactionChannels";
 import PayrollSettings from "@/Pages/Settings/Business/PayrollSettings";
 import NotificationSettings from "@/Pages/Settings/Business/NotificationSettings";
+import CompulsorySavingsSettings from "@/Pages/Settings/Business/CompulsorySavingsSettings";
 
 import SystemNotifcationsTriggers from "@/Pages/Settings/System/SystemNotifcationsTriggers";
 import Roles from "@/Pages/Settings/System/Roles";
@@ -82,6 +83,11 @@ const settingsRoutes = [
     path: "/notifications-settings",
     element: <NotificationSettings />,
     roles: [100147],
+  },
+  {
+    path: "/compulsory-savings-settings",
+    element: <CompulsorySavingsSettings />,
+    roles: [100137],
   },
 
   // System Settings

@@ -1,3 +1,6 @@
+import { useState } from "react";
+import { format } from "date-fns";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
   Breadcrumb,
@@ -7,13 +10,22 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarDateRangePicker } from "@/components/date-range-picker";
+import {
+  LayoutDashboard,
+  Landmark,
+  CreditCard,
+  Users,
+  Bell,
+  RefreshCw,
+  BarChart3,
+} from "lucide-react";
 import DashboardOverview from "./components/DashboardOverview";
 import DashboardTransactions from "./components/DashboardTransactions";
 import DashboardLoans from "./components/DashboardLoans";
 import DashboardMembership from "./components/DashboardMembership";
 import DashboardNotifications from "./components/DashboardNotifications";
+import DashboardFinancial from "./components/DashboardFinancial";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
 import { hasPermission } from "@/lib/utils";
 
@@ -21,8 +33,17 @@ const Dashboard = () => {
   const { auth } = useAuth();
   const roles = auth?.roles;
 
+  const fyStart = auth?.fiscalYear?.start_date;
+  const [dateRange, setDateRange] = useState({
+    from: fyStart ? new Date(fyStart) : new Date(new Date().getFullYear(), 0, 1),
+    to: new Date(),
+  });
+
+  const startDate = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : null;
+  const endDate   = dateRange?.to   ? format(dateRange.to,   "yyyy-MM-dd") : null;
+
   return (
-    <>
+    <div className="space-y-6">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -34,53 +55,104 @@ const Dashboard = () => {
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
-      <div className="flex-col md:flex">
-        <div className="border-b" />
-        <div className="flex-1 space-y-4 p-0 pt-2">
-          <div className="flex items-center justify-between space-y-2">
-            <h5 className="text-2xl font-bold tracking-tight">Dashboard</h5>
-            <div className="flex items-center space-x-2">
-              <CalendarDateRangePicker />
-              <Button size="sm">Update</Button>
-            </div>
-          </div>
-          <Tabs defaultValue={auth?.user?.dashboard} className="space-y-4">
-            <TabsList>
-              {hasPermission(roles, 100002) && (
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-              )}
-              {hasPermission(roles, 100003) && (
-                <TabsTrigger value="accounting">Accounting</TabsTrigger>
-              )}
-              {hasPermission(roles, 100005) && (
-                <TabsTrigger value="loans">Loans</TabsTrigger>
-              )}
-              {hasPermission(roles, 100006) && (
-                <TabsTrigger value="members">Members</TabsTrigger>
-              )}
-              {hasPermission(roles, 100004) && (
-                <TabsTrigger value="notifications">Notifications</TabsTrigger>
-              )}
-            </TabsList>
-            <TabsContent value="overview" className="space-y-4">
-              {hasPermission(roles, 100002) && <DashboardOverview />}
-            </TabsContent>
-            <TabsContent value="accounting" className="space-y-4">
-              {hasPermission(roles, 100003) && <DashboardTransactions />}
-            </TabsContent>
-            <TabsContent value="loans" className="space-y-4">
-              {hasPermission(roles, 100005) && <DashboardLoans />}
-            </TabsContent>
-            <TabsContent value="members" className="space-y-4">
-              {hasPermission(roles, 100006) && <DashboardMembership />}
-            </TabsContent>
-            <TabsContent value="notifications" className="space-y-4">
-              {hasPermission(roles, 100004) && <DashboardNotifications />}
-            </TabsContent>
-          </Tabs>
+
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Welcome back, {auth?.user?.firstname}. Here&apos;s what&apos;s happening today.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <CalendarDateRangePicker
+            defaultValue={dateRange}
+            onChange={(range) => range?.from && range?.to && setDateRange(range)}
+          />
+          <Button size="sm" className="gap-1.5">
+            <RefreshCw className="h-3.5 w-3.5" />
+            Refresh
+          </Button>
         </div>
       </div>
-    </>
+
+      <Tabs defaultValue={auth?.user?.dashboard} className="space-y-6">
+        <TabsList className="h-10 bg-muted/60 p-1 rounded-xl border gap-0.5 flex-wrap h-auto">
+          {hasPermission(roles, 100002) && (
+            <TabsTrigger
+              value="overview"
+              className="gap-1.5 rounded-lg text-xs font-medium px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
+              <LayoutDashboard className="h-3.5 w-3.5" />
+              Overview
+            </TabsTrigger>
+          )}
+          {hasPermission(roles, 100003) && (
+            <TabsTrigger
+              value="accounting"
+              className="gap-1.5 rounded-lg text-xs font-medium px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
+              <Landmark className="h-3.5 w-3.5" />
+              Accounting
+            </TabsTrigger>
+          )}
+          {hasPermission(roles, 100005) && (
+            <TabsTrigger
+              value="loans"
+              className="gap-1.5 rounded-lg text-xs font-medium px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
+              <CreditCard className="h-3.5 w-3.5" />
+              Loans
+            </TabsTrigger>
+          )}
+          {hasPermission(roles, 100006) && (
+            <TabsTrigger
+              value="members"
+              className="gap-1.5 rounded-lg text-xs font-medium px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
+              <Users className="h-3.5 w-3.5" />
+              Members
+            </TabsTrigger>
+          )}
+          {hasPermission(roles, 100007) && (
+            <TabsTrigger
+              value="financial"
+              className="gap-1.5 rounded-lg text-xs font-medium px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
+              <BarChart3 className="h-3.5 w-3.5" />
+              Financial
+            </TabsTrigger>
+          )}
+          {hasPermission(roles, 100004) && (
+            <TabsTrigger
+              value="notifications"
+              className="gap-1.5 rounded-lg text-xs font-medium px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
+              <Bell className="h-3.5 w-3.5" />
+              Notifications
+            </TabsTrigger>
+          )}
+        </TabsList>
+
+        <TabsContent value="overview">
+          {hasPermission(roles, 100002) && <DashboardOverview />}
+        </TabsContent>
+        <TabsContent value="accounting">
+          {hasPermission(roles, 100003) && <DashboardTransactions startDate={startDate} endDate={endDate} />}
+        </TabsContent>
+        <TabsContent value="loans">
+          {hasPermission(roles, 100005) && <DashboardLoans startDate={startDate} endDate={endDate} />}
+        </TabsContent>
+        <TabsContent value="members">
+          {hasPermission(roles, 100006) && <DashboardMembership startDate={startDate} endDate={endDate} />}
+        </TabsContent>
+        <TabsContent value="financial">
+          {hasPermission(roles, 100007) && <DashboardFinancial startDate={startDate} endDate={endDate} />}
+        </TabsContent>
+        <TabsContent value="notifications">
+          {hasPermission(roles, 100004) && <DashboardNotifications startDate={startDate} endDate={endDate} />}
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 
