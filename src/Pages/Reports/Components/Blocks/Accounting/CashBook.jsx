@@ -38,15 +38,21 @@ const CashBook = () => {
   const bankRows  = data?.bank  ?? [];
   const totals    = data?.totals ?? {};
 
-  const exportHeaders = ["Date", "Description", "Cash In", "Cash Out", "Bank In", "Bank Out"];
-  const exportRows = cashRows.map((r, i) => [
-    r.date ?? "",
-    r.description ?? "",
-    parseFloat(r.cash_in  || 0).toFixed(2),
-    parseFloat(r.cash_out || 0).toFixed(2),
-    parseFloat(bankRows[i]?.bank_in  || 0).toFixed(2),
-    parseFloat(bankRows[i]?.bank_out || 0).toFixed(2),
-  ]);
+  const exportHeaders = ["Type", "Date", "Description", "Debit", "Credit", "Balance"];
+  const exportRows = [
+    ...cashRows.map((r) => [
+      "Cash", r.date ?? "", r.description ?? "",
+      parseFloat(r.debit   || 0).toFixed(2),
+      parseFloat(r.credit  || 0).toFixed(2),
+      parseFloat(r.balance || 0).toFixed(2),
+    ]),
+    ...bankRows.map((r) => [
+      "Bank", r.date ?? "", r.description ?? "",
+      parseFloat(r.debit   || 0).toFixed(2),
+      parseFloat(r.credit  || 0).toFixed(2),
+      parseFloat(r.balance || 0).toFixed(2),
+    ]),
+  ];
 
   return (
     <>

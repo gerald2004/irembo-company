@@ -1,89 +1,28 @@
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-
-const Instructions = () => {
-  return (
-    <div className="mt-6 space-y-6">
-      {/* Card for General Instructions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-foreground">Instructions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="list-disc list-inside text-sm space-y-1 text-foreground">
-            <li>
-              Only <span className="font-medium">valid</span> client IDs will be processed.
-            </li>
-            <li>
-              Ensure dates are in <span className="font-medium">YYYY-MM-DD</span> format.
-            </li>
-            <li>
-              Loan amount must be a <span className="font-medium">positive number</span>.
-            </li>
-            <li>
-              Loan type must match an <span className="font-medium">existing loan product</span>.
-            </li>
-            <li>
-              Repayment period must be a <span className="font-medium">valid number</span> of months.
-            </li>
-            <li>
-              Reference is optional but recommended for tracking.
-            </li>
-            <li>
-              CSV file should not exceed <span className="font-medium">1000 rows</span>.
-            </li>
-          </ul>
-        </CardContent>
-      </Card>
-
-      {/* Card for CSV Format */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-foreground">CSV Format Requirements</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4">
-            <div className="grid grid-cols-3 gap-4">
-              {/* Column */}
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Column</p>
-                <p className="text-sm text-foreground">client_id</p>
-                <p className="text-sm text-foreground">loan_type</p>
-                <p className="text-sm text-foreground">amount</p>
-                <p className="text-sm text-foreground">repayment_period</p>
-                <p className="text-sm text-foreground">application_date</p>
-                <p className="text-sm text-foreground">reference</p>
-              </div>
-              {/* Type */}
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Type</p>
-                <p className="text-sm text-foreground">Number</p>
-                <p className="text-sm text-foreground">Text</p>
-                <p className="text-sm text-foreground">Number</p>
-                <p className="text-sm text-foreground">Number (Months)</p>
-                <p className="text-sm text-foreground">Date (YYYY-MM-DD)</p>
-                <p className="text-sm text-foreground">Text</p>
-              </div>
-              {/* Description */}
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Description</p>
-                <p className="text-sm text-foreground">Unique member ID</p>
-                <p className="text-sm text-foreground">Loan product name</p>
-                <p className="text-sm text-foreground">Requested loan amount</p>
-                <p className="text-sm text-foreground">Repayment duration in months</p>
-                <p className="text-sm text-foreground">Date of application</p>
-                <p className="text-sm text-foreground">Optional tracking reference</p>
-              </div>
-            </div>
-            <div className="mt-2">
-              <p className="text-sm text-muted-foreground">
-                Note: First row must contain headers
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+const Instructions = () => (
+  <div className="space-y-4">
+    <div className="rounded-lg border p-4 space-y-2">
+      <h4 className="font-semibold text-sm">Instructions</h4>
+      <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+        <li>Use the client&apos;s registered phone number to identify them</li>
+        <li>loan_product_id must be a valid loan product ID in this SACCO</li>
+        <li>Applications are created with status &ldquo;pending&rdquo; — review before disbursing</li>
+        <li>Tenure is in months. Amount must be at least 1,000</li>
+        <li>Maximum 500 rows per upload</li>
+      </ul>
     </div>
-  );
-};
-
+    <div className="rounded-lg border p-4 space-y-2">
+      <h4 className="font-semibold text-sm">CSV Format</h4>
+      <table className="w-full text-xs">
+        <thead><tr className="border-b"><th className="py-1 text-left">Column</th><th className="py-1 text-left">Required</th><th className="py-1 text-left">Example</th></tr></thead>
+        <tbody className="text-muted-foreground">
+          <tr className="border-b"><td className="py-1">client_phone</td><td>Yes</td><td>0701234567</td></tr>
+          <tr className="border-b"><td className="py-1">loan_product_id</td><td>Yes</td><td>1</td></tr>
+          <tr className="border-b"><td className="py-1">amount</td><td>Yes</td><td>2000000</td></tr>
+          <tr className="border-b"><td className="py-1">tenure_months</td><td>Yes</td><td>12</td></tr>
+          <tr><td className="py-1">purpose</td><td>No</td><td>Business expansion</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+);
 export default Instructions;

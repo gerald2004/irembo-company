@@ -14,6 +14,8 @@ import { formatDateTimestamp } from "@/lib/utils";
 import LoanGeneralReportQuery from "../Queries/LoanGeneralReportQuery";
 import { useState, useRef, useMemo } from "react";
 import { Progress } from "@/components/ui/progress";
+import { Activity, Wallet, TrendingUp, BarChart3 } from "lucide-react";
+import ReportKpi from "@/Pages/Reports/Components/ReportKpi";
 
 const fmtMoney = (v) =>
   new Intl.NumberFormat("en-UG", { maximumFractionDigits: 0 }).format(v ?? 0);
@@ -51,8 +53,11 @@ const LoanTrackingReport = () => {
     placeholderData: (prev) => prev,
   });
 
-  const totalDisbursed = useMemo(() => data.reduce((s, r) => s + (r.amount_disbursed ?? 0), 0), [data]);
-  const totalPrincipalPaid = useMemo(() => data.reduce((s, r) => s + (r.principal_paid ?? 0), 0), [data]);
+  const totalDisbursed    = useMemo(() => data.reduce((s, r) => s + (r.amount_disbursed    ?? 0), 0), [data]);
+  const totalPrincipalPaid = useMemo(() => data.reduce((s, r) => s + (r.principal_paid     ?? 0), 0), [data]);
+  const totalInterestPaid  = useMemo(() => data.reduce((s, r) => s + (r.interest_paid      ?? 0), 0), [data]);
+  const totalOutstanding   = useMemo(() => data.reduce((s, r) => s + (r.outstanding_balance ?? 0), 0), [data]);
+  const avgProgress        = useMemo(() => data.length ? (data.reduce((s, r) => s + (r.progress_pct ?? 0), 0) / data.length).toFixed(1) : 0, [data]);
 
   const columns = [
     {
@@ -174,6 +179,12 @@ const LoanTrackingReport = () => {
             }}
             title="Loan Tracking Report"
           />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <ReportKpi label="Loans Tracked"      value={data.length}                     hint="Active loans"               accent="bg-blue-500"    icon={<Activity size={16} />} />
+            <ReportKpi label="Total Loan Balance"  value={`UGX ${fmtMoney(totalOutstanding)}`} hint="Outstanding balance"    accent="bg-violet-600" icon={<Wallet size={16} />} />
+            <ReportKpi label="Total Repaid"        value={`UGX ${fmtMoney(totalPrincipalPaid)}`} hint="Principal collected"  accent="bg-emerald-500" icon={<TrendingUp size={16} />} />
+            <ReportKpi label="Avg Progress"        value={`${avgProgress}%`}               hint="Average repayment progress" accent="bg-amber-500"   icon={<BarChart3 size={16} />} />
+          </div>
           <div className="max-w-[1200px]">
             <DatatableReport
               ref={tableRef}
@@ -183,9 +194,15 @@ const LoanTrackingReport = () => {
               isLoading={isLoading}
               isRefetching={isRefetching}
               isError={isError}
-              colSpan={11}
-              totalDebit={totalDisbursed}
-              totalCredit={totalPrincipalPaid}
+              footerCells={[
+                { value: totalDisbursed },    // col 5: amount_disbursed
+                { empty: true },              // col 6: installments_paid
+                { empty: true },              // col 7: progress_pct
+                { value: totalPrincipalPaid },// col 8: principal_paid
+                { value: totalInterestPaid }, // col 9: interest_paid
+                { value: totalOutstanding },  // col 10: outstanding_balance
+                { empty: true },              // col 11: next_payment_date
+              ]}
             />
           </div>
         </div>

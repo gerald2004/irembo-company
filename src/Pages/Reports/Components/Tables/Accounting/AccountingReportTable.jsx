@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import {
   Scale, TrendingUp, LayoutList, ArrowRightLeft, BookOpen,
   Wallet, ClipboardList, CalendarDays, DollarSign, Receipt,
-  FileSearch, FileBarChart2, BarChart3,
+  FileSearch, FileBarChart2, BarChart3, FileText, Layers, Tag,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -58,6 +58,33 @@ const SECTIONS = [
         color: "text-indigo-600",
         bg: "bg-indigo-50 dark:bg-indigo-900/20",
         permission: 100218,
+      },
+      {
+        title: "Comprehensive Trial Balance",
+        link: "accounting-reports/comprehensive-trial-balance",
+        description: "Opening balance + period movements + closing balance per account",
+        icon: <Layers className="w-5 h-5" />,
+        color: "text-teal-600",
+        bg: "bg-teal-50 dark:bg-teal-900/20",
+        permission: 100263,
+      },
+      {
+        title: "Notes of Accounts",
+        link: "accounting-reports/notes-of-accounts",
+        description: "Detailed account notes with opening, period movements and closing balances",
+        icon: <FileText className="w-5 h-5" />,
+        color: "text-slate-600",
+        bg: "bg-slate-50 dark:bg-slate-900/20",
+        permission: 100262,
+      },
+      {
+        title: "Category Report",
+        link: "accounting-reports/category-report",
+        description: "Accounts grouped by type (assets, liabilities, equity, income, expenses) with subtotals",
+        icon: <Tag className="w-5 h-5" />,
+        color: "text-orange-600",
+        bg: "bg-orange-50 dark:bg-orange-900/20",
+        permission: 100264,
       },
     ],
   },

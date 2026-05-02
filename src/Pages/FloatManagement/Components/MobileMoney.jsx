@@ -5,31 +5,49 @@ import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Smartphone } from "lucide-react";
 
 const currency = (n) => Number(n || 0).toLocaleString();
 
-const ProviderCard = ({ title, data, onView }) => {
+const getProviderBorderClass = (provider) => {
+  const name = (provider || "").toLowerCase();
+  if (name.includes("mtn")) return "border-l-4 border-l-yellow-400";
+  if (name.includes("airtel")) return "border-l-4 border-l-red-500";
+  return "border-l-4 border-l-blue-400";
+};
+
+const ProviderCard = ({ channel, onView }) => {
+  const borderClass = getProviderBorderClass(channel.provider);
+
   return (
-    <Card>
+    <Card className={`overflow-hidden ${borderClass}`}>
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
+        <div className="flex items-center gap-2">
+          <div className="rounded-md bg-primary/10 p-1.5">
+            <Smartphone className="h-4 w-4 text-primary" />
+          </div>
+          <CardTitle className="text-base">{channel.provider} Mobile Money</CardTitle>
+        </div>
       </CardHeader>
 
       <CardContent className="space-y-2">
         <div className="text-xl font-bold text-green-700">
-          {currency(data?.available)}
+          {currency(channel?.available)}
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Reserved: {currency(data?.reserved)}
+          Reserved: {currency(channel?.reserved)}
         </p>
 
-        <p className="text-sm text-muted-foreground">
-          {data?.transactions ?? 0} Transactions
-        </p>
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="text-xs">
+            {channel?.transactions ?? 0} Transactions
+          </Badge>
+        </div>
 
-        <Button size="sm" disabled={!data} onClick={onView}>
-          View details
+        <Button size="sm" disabled={!channel} onClick={onView}>
+          View Transactions →
         </Button>
       </CardContent>
     </Card>
@@ -85,8 +103,7 @@ const MobileMoney = () => {
       {balances.map((channel) => (
         <ProviderCard
           key={channel.channel_id}
-          title={`${channel.provider} Mobile Money`}
-          data={channel}
+          channel={channel}
           onView={() =>
             navigate(`/float-management/mobile-banking/${channel.channel_id}`)
           }

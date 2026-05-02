@@ -46,6 +46,7 @@ import {
   ClipboardList,
   Shield,
   ShieldCheck,
+  BarChart3,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -321,7 +322,7 @@ export function AppSidebar({ ...props }) {
     },
     accounting: {
       title: "Accounting",
-      permissionCodes: [100104, 100107, 100109, 100111, 100204],
+      permissionCodes: [100104, 100107, 100109, 100111, 100204, 100270, 100275],
       items: [
         {
           name: "External Incomes",
@@ -371,6 +372,12 @@ export function AppSidebar({ ...props }) {
           icon: ChartCandlestick,
           url: "assets",
           permissionCodes: [100111],
+        },
+        {
+          name: "Budgets",
+          icon: BarChart3,
+          url: "budgets",
+          permissionCodes: [100270, 100275],
         },
       ],
     },

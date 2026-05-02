@@ -13,7 +13,10 @@ import DatatableReport from "@/Pages/Components/DatatableReport";
 import { formatDateTimestamp } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import LoanGeneralReportQuery from "../Queries/LoanGeneralReportQuery";
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
+import { FileText, CheckCircle2, Clock, XCircle } from "lucide-react";
+import ReportKpi from "@/Pages/Reports/Components/ReportKpi";
+
 const LoanApplicationsReport = () => {
   const axiosPrivate = useAxiosPrivate();
   const navigate = useNavigate();
@@ -143,23 +146,15 @@ const LoanApplicationsReport = () => {
       ),
     },
   ];
+  const fmt = (n) => new Intl.NumberFormat("en-UG", { maximumFractionDigits: 0 }).format(n ?? 0);
+
+  const approved = useMemo(() => data?.filter(l => ['approved', 'processed'].includes(l.status)).length ?? 0, [data]);
+  const approvalRate = useMemo(() => data?.length ? ((approved / data.length) * 100).toFixed(1) : 0, [data, approved]);
+
   const handleFilterChange = (data) => {
     setFilters(data);
     refetch();
   };
-
-  const fmt = (n) => new Intl.NumberFormat("en-UG", { maximumFractionDigits: 0 }).format(n ?? 0);
-
-  const KPI = ({ label, value, sub, accent = "bg-blue-500" }) => (
-    <div className={`rounded-xl border bg-card shadow-sm overflow-hidden`}>
-      <div className={`h-1 ${accent}`} />
-      <div className="p-4">
-        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
-        <p className="text-xl font-bold mt-1">{value}</p>
-        {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
-      </div>
-    </div>
-  );
 
   return (
     <>
@@ -203,10 +198,10 @@ const LoanApplicationsReport = () => {
           />
           {/* KPI Strip */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <KPI label="Total Applications" value={data?.length ?? 0} sub={`UGX ${fmt(data?.reduce((s,l)=>s+(l.amount??0),0))}`} accent="bg-blue-500" />
-            <KPI label="Pending" value={data?.filter(l=>l.status==='pending').length ?? 0} sub="Awaiting decision" accent="bg-amber-500" />
-            <KPI label="Approved" value={data?.filter(l=>['approved','processed'].includes(l.status)).length ?? 0} sub="Ready to disburse" accent="bg-emerald-500" />
-            <KPI label="Rejected" value={data?.filter(l=>l.status==='rejected').length ?? 0} sub="Declined applications" accent="bg-red-500" />
+            <ReportKpi label="Total Applications" value={data?.length ?? 0}          hint={`UGX ${fmt(totalSum)}`}          accent="bg-blue-500"    icon={<FileText size={16} />} />
+            <ReportKpi label="Approval Rate"      value={`${approvalRate}%`}         hint={`${approved} approved`}          accent="bg-emerald-500" icon={<CheckCircle2 size={16} />} />
+            <ReportKpi label="Pending Review"     value={data?.filter(l=>l.status==='pending').length ?? 0} hint="Awaiting decision"  accent="bg-amber-500"  icon={<Clock size={16} />} />
+            <ReportKpi label="Rejected"           value={data?.filter(l=>l.status==='rejected').length ?? 0} hint="Declined applications" accent="bg-red-500" icon={<XCircle size={16} />} />
           </div>
           <div className="overflow-x-auto max-w-[1200px]">
             <DatatableReport

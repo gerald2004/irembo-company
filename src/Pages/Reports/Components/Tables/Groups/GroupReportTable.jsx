@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import {
-  Users, TrendingUp, PiggyBank, BarChart3,
+  Users, TrendingUp, PiggyBank, BarChart3, AlertTriangle, Briefcase, CalendarClock, Activity,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +47,51 @@ const SECTIONS = [
         color: "text-amber-600",
         bg: "bg-amber-50 dark:bg-amber-900/20",
         permission: 100243,
+      },
+      {
+        title: "Active Group Loans",
+        link: "group-reports/active-group-loans",
+        description: "All active (disbursed) group loans with outstanding balances — toggle individual or consolidated view",
+        icon: <Activity className="w-5 h-5" />,
+        color: "text-sky-600",
+        bg: "bg-sky-50 dark:bg-sky-900/20",
+        permission: 100244,
+      },
+      {
+        title: "Overdue Group Loans",
+        link: "group-reports/overdue-group-loans",
+        description: "Group loans with overdue installments showing days past due and amounts at risk",
+        icon: <AlertTriangle className="w-5 h-5" />,
+        color: "text-red-600",
+        bg: "bg-red-50 dark:bg-red-900/20",
+        permission: 100245,
+      },
+      {
+        title: "Group Loan Portfolio",
+        link: "group-reports/group-portfolio",
+        description: "Portfolio at risk (PAR) breakdown per group loan with outstanding and overdue principals",
+        icon: <Briefcase className="w-5 h-5" />,
+        color: "text-indigo-600",
+        bg: "bg-indigo-50 dark:bg-indigo-900/20",
+        permission: 100246,
+      },
+      {
+        title: "Group Loans Due Today",
+        link: "group-reports/loans-due-today",
+        description: "Group loans with installments due today — principal, interest and penalties breakdown",
+        icon: <CalendarClock className="w-5 h-5" />,
+        color: "text-orange-600",
+        bg: "bg-orange-50 dark:bg-orange-900/20",
+        permission: 100247,
+      },
+      {
+        title: "Group Member Loans",
+        link: "group-reports/member-loans",
+        description: "Loans belonging to individual members of groups — filter by group, toggle per-loan or per-member view",
+        icon: <Users className="w-5 h-5" />,
+        color: "text-teal-600",
+        bg: "bg-teal-50 dark:bg-teal-900/20",
+        permission: 100248,
       },
     ],
   },

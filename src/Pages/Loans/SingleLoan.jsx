@@ -25,6 +25,7 @@ import useAuth from "@/MiddleWares/Hooks/useAuth";
 import { hasPermission } from "@/lib/utils";
 import LoanIntelligenceDashboard from "./Components/Blocks/LoanIntelligenceDashboard";
 import GroupLoanAllocations from "./Components/Tables/GroupLoanAllocations";
+import LoanStatement from "./Components/Blocks/LoanStatement";
 
 const SingleLoan = () => {
   const navigate = useNavigate();
@@ -191,6 +192,11 @@ const SingleLoan = () => {
                     Member Allocations
                   </TabsTrigger>
                 )}
+                {["disbursed", "settled", "writternoff", "paid_off", "refinanced"].includes(
+                  data?.loan_application?.loan_application_status
+                ) && hasPermission(roles, 100161) && (
+                  <TabsTrigger value="loan-statement">Statement</TabsTrigger>
+                )}
               </TabsList>
             </div>
             <TabsContent value="summary" className="space-y-4">
@@ -279,6 +285,11 @@ const SingleLoan = () => {
             <TabsContent value="group-allocations" className="space-y-4">
               {data?.loan_application?.client?.client_type === "group" && (
                 <GroupLoanAllocations />
+              )}
+            </TabsContent>
+            <TabsContent value="loan-statement" className="space-y-4">
+              {hasPermission(roles, 100161) && (
+                <LoanStatement loanId={params.loanid} />
               )}
             </TabsContent>
           </Tabs>

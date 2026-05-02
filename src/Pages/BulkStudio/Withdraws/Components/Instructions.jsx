@@ -1,80 +1,26 @@
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-
-const Instructions = () => {
-  return (
-    <div className="mt-6 space-y-6">
-      {/* Card for General Instructions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-foreground">Instructions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="list-disc list-inside text-sm space-y-1 text-foreground">
-            <li>
-              Only <span className="font-medium">valid</span> client IDs will be processed.
-            </li>
-            <li>
-              Ensure dates are in <span className="font-medium">YYYY-MM-DD</span> format.
-            </li>
-            <li>
-              Amount should be a <span className="font-medium">number</span> greater than zero.
-            </li>
-            <li>
-              Reference is optional but recommended for tracking.
-            </li>
-            <li>
-              CSV file should not exceed <span className="font-medium">1000 rows</span>.
-            </li>
-            <li>
-              Withdrawals will fail if the account has <span className="font-medium">insufficient balance</span>.
-            </li>
-          </ul>
-        </CardContent>
-      </Card>
-
-      {/* Card for CSV Format */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-foreground">CSV Format Requirements</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4">
-            <div className="grid grid-cols-3 gap-4">
-              {/* Column */}
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Column</p>
-                <p className="text-sm text-foreground">client_id</p>
-                <p className="text-sm text-foreground">amount</p>
-                <p className="text-sm text-foreground">transaction_date</p>
-                <p className="text-sm text-foreground">reference</p>
-              </div>
-              {/* Type */}
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Type</p>
-                <p className="text-sm text-foreground">Number</p>
-                <p className="text-sm text-foreground">Number</p>
-                <p className="text-sm text-foreground">Date (YYYY-MM-DD)</p>
-                <p className="text-sm text-foreground">Text</p>
-              </div>
-              {/* Description */}
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Description</p>
-                <p className="text-sm text-foreground">Unique member ID</p>
-                <p className="text-sm text-foreground">Withdraw amount</p>
-                <p className="text-sm text-foreground">Transaction date</p>
-                <p className="text-sm text-foreground">Reference number</p>
-              </div>
-            </div>
-            <div className="mt-2">
-              <p className="text-sm text-muted-foreground">
-                Note: First row must contain headers
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+const Instructions = () => (
+  <div className="space-y-4">
+    <div className="rounded-lg border p-4 space-y-2">
+      <h4 className="font-semibold text-sm">Instructions</h4>
+      <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+        <li>Upload a CSV file with the columns below — header row required</li>
+        <li>Account must have sufficient balance to cover the withdrawal amount</li>
+        <li>Minimum balance rules apply per account product</li>
+        <li>Withdrawal fees are not auto-applied in bulk mode</li>
+        <li>Maximum 1,000 rows per upload</li>
+      </ul>
     </div>
-  );
-};
-
+    <div className="rounded-lg border p-4 space-y-2">
+      <h4 className="font-semibold text-sm">CSV Format</h4>
+      <table className="w-full text-xs">
+        <thead><tr className="border-b"><th className="py-1 text-left">Column</th><th className="py-1 text-left">Required</th><th className="py-1 text-left">Example</th></tr></thead>
+        <tbody className="text-muted-foreground">
+          <tr className="border-b"><td className="py-1">account_number</td><td>Yes</td><td>ACC001234</td></tr>
+          <tr className="border-b"><td className="py-1">amount</td><td>Yes</td><td>20000</td></tr>
+          <tr><td className="py-1">reference</td><td>No</td><td>WTHDRW-001</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+);
 export default Instructions;

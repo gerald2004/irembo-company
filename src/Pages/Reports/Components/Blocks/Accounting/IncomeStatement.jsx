@@ -34,6 +34,18 @@ const IncomeStatement = () => {
     placeholderData: (prev) => prev,
   });
 
+  const stmt = data?.income_statement ?? {};
+  const stmtTotals = data?.totals ?? {};
+
+  const exportHeaders = ["Section", "Account", "Code", "Amount"];
+  const exportRows = [
+    ...(stmt.income ?? []).map((r) => ["Income", r.title ?? "", r.code ?? "", r.amount ?? 0]),
+    ["", "TOTAL INCOME", "", stmtTotals.total_income ?? 0],
+    ...(stmt.expenses ?? []).map((r) => ["Expenses", r.title ?? "", r.code ?? "", r.amount ?? 0]),
+    ["", "TOTAL EXPENSES", "", stmtTotals.total_expenses ?? 0],
+    ["", "NET INCOME", "", stmtTotals.net_income ?? 0],
+  ];
+
   return (
     <>
       <Breadcrumb>
@@ -53,7 +65,11 @@ const IncomeStatement = () => {
           onApply={setFilters}
           isLoading={isRefetching}
           showStatus={false}
-          exportDisabled
+          exportTitle="Income Statement"
+          exportFilename="income_statement"
+          exportHeaders={exportHeaders}
+          exportRows={exportRows}
+          exportDisabled={exportRows.length === 0}
         />
 
         {isError && (

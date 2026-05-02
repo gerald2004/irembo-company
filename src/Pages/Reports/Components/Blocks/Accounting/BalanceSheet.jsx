@@ -34,6 +34,19 @@ const BalanceSheet = () => {
     placeholderData: (prev) => prev,
   });
 
+  const bs = data?.balance_sheet ?? {};
+  const totals = data?.totals ?? {};
+
+  const exportHeaders = ["Section", "Code", "Title", "Sub Group", "Balance"];
+  const exportRows = [
+    ...(bs.assets ?? []).map((r) => ["Assets", r.code ?? "", r.title ?? "", r.sub_group?.title ?? "", r.balance ?? 0]),
+    ["Assets", "", "TOTAL ASSETS", "", totals.total_assets ?? 0],
+    ...(bs.liabilities ?? []).map((r) => ["Liabilities", r.code ?? "", r.title ?? "", r.sub_group?.title ?? "", r.balance ?? 0]),
+    ...(bs.equity ?? []).map((r) => ["Equity", r.code ?? "", r.title ?? "", r.sub_group?.title ?? "", r.balance ?? 0]),
+    ["Equity", "", "YTD Profit/Loss", "", totals.net_income ?? 0],
+    ["", "", "TOTAL LIABILITIES + EQUITY", "", (totals.total_liabilities ?? 0) + (totals.net_income ?? 0)],
+  ];
+
   return (
     <>
       <Breadcrumb>
@@ -53,7 +66,11 @@ const BalanceSheet = () => {
           onApply={setFilters}
           isLoading={isRefetching}
           showStatus={false}
-          exportDisabled
+          exportTitle="Balance Sheet"
+          exportFilename="balance_sheet"
+          exportHeaders={exportHeaders}
+          exportRows={exportRows}
+          exportDisabled={exportRows.length === 0}
         />
 
         {isError && (

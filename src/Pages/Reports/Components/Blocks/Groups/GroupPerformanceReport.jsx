@@ -1,10 +1,6 @@
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
+  Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList,
+  BreadcrumbPage, BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { useQuery } from "@tanstack/react-query";
@@ -35,13 +31,7 @@ const GroupPerformanceReport = () => {
     queryKey: ["group-performance-report", filters],
     queryFn: async () => {
       try {
-        const res = await axiosPrivate.get("reports/groups/performance", {
-          params: {
-            startDate: filters.startDate,
-            endDate: filters.endDate,
-            branch_id: filters.branch_id,
-          },
-        });
+        const res = await axiosPrivate.get("reports/groups/performance", { params: filters });
         return res?.data?.data ?? [];
       } catch (error) {
         if (error?.response?.status === 401)
@@ -52,8 +42,13 @@ const GroupPerformanceReport = () => {
     placeholderData: (prev) => prev,
   });
 
-  const totalDisbursed   = useMemo(() => data.reduce((s, r) => s + (r.total_disbursed ?? 0), 0), [data]);
-  const totalOutstanding = useMemo(() => data.reduce((s, r) => s + (r.total_outstanding ?? 0), 0), [data]);
+  // Totals — cols 4–11 (8 footer cells, label spans cols 1–3)
+  const totalDisbursed    = useMemo(() => data.reduce((s, r) => s + (r.total_disbursed ?? 0), 0), [data]);
+  const totalOutstanding  = useMemo(() => data.reduce((s, r) => s + (r.total_outstanding ?? 0), 0), [data]);
+  const totalRepaid       = useMemo(() => data.reduce((s, r) => s + (r.total_repaid ?? 0), 0), [data]);
+  const totalInterest     = useMemo(() => data.reduce((s, r) => s + (r.total_interest_earned ?? 0), 0), [data]);
+  const totalOverdue      = useMemo(() => data.reduce((s, r) => s + (r.overdue_loans ?? 0), 0), [data]);
+  const totalGroupSavings = useMemo(() => data.reduce((s, r) => s + (r.total_savings ?? 0), 0), [data]);
 
   const columns = [
     {
@@ -78,22 +73,22 @@ const GroupPerformanceReport = () => {
     {
       accessorKey: "total_disbursed",
       header: "Total Disbursed",
-      cell: ({ row }) => <p className="text-xs">{fmtMoney(row.original.total_disbursed)}</p>,
+      cell: ({ row }) => <p className="text-xs text-right">{fmtMoney(row.original.total_disbursed)}</p>,
     },
     {
       accessorKey: "total_outstanding",
       header: "Outstanding",
-      cell: ({ row }) => <p className="text-xs">{fmtMoney(row.original.total_outstanding)}</p>,
+      cell: ({ row }) => <p className="text-xs text-right">{fmtMoney(row.original.total_outstanding)}</p>,
     },
     {
       accessorKey: "total_repaid",
       header: "Total Repaid",
-      cell: ({ row }) => <p className="text-xs">{fmtMoney(row.original.total_repaid)}</p>,
+      cell: ({ row }) => <p className="text-xs text-right">{fmtMoney(row.original.total_repaid)}</p>,
     },
     {
       accessorKey: "total_interest_earned",
       header: "Interest Earned",
-      cell: ({ row }) => <p className="text-xs text-green-700">{fmtMoney(row.original.total_interest_earned)}</p>,
+      cell: ({ row }) => <p className="text-xs text-green-700 text-right">{fmtMoney(row.original.total_interest_earned)}</p>,
     },
     {
       accessorKey: "repayment_rate_pct",
@@ -112,7 +107,7 @@ const GroupPerformanceReport = () => {
       accessorKey: "overdue_loans",
       header: "Overdue",
       cell: ({ row }) => (
-        <p className={`text-xs font-semibold ${row.original.overdue_loans > 0 ? "text-red-600" : "text-green-700"}`}>
+        <p className={`text-xs font-semibold text-center ${row.original.overdue_loans > 0 ? "text-red-600" : "text-green-700"}`}>
           {row.original.overdue_loans}
         </p>
       ),
@@ -122,17 +117,13 @@ const GroupPerformanceReport = () => {
       header: "PAR%",
       cell: ({ row }) => {
         const pct = row.original.par_pct ?? 0;
-        return (
-          <Badge variant={parColor(pct)}>
-            {pct.toFixed(1)}%
-          </Badge>
-        );
+        return <Badge variant={parColor(pct)}>{pct.toFixed(1)}%</Badge>;
       },
     },
     {
       accessorKey: "total_savings",
       header: "Group Savings",
-      cell: ({ row }) => <p className="text-xs">{fmtMoney(row.original.total_savings)}</p>,
+      cell: ({ row }) => <p className="text-xs text-right">{fmtMoney(row.original.total_savings)}</p>,
     },
   ];
 
@@ -153,7 +144,8 @@ const GroupPerformanceReport = () => {
         <div className="border-b" />
         <div className="flex-1 space-y-4 p-0 pt-2">
           <h5 className="text-2xl font-bold tracking-tight">Group Performance Report</h5>
-          <LoanGeneralReportQuery show={{ officer: false, group: true }}
+          <LoanGeneralReportQuery
+            show={{ officer: false, group: true }}
             onFilterChange={handleFilterChange}
             isRefetching={isRefetching}
             refetch={refetch}
@@ -162,10 +154,7 @@ const GroupPerformanceReport = () => {
             filters={filters}
             colSpan={3}
             mode={{ format: "A4-L", orientation: "L" }}
-            totals={{
-              totalAmountDisbursed: totalDisbursed,
-              totalAmountDue: totalOutstanding,
-            }}
+            totals={{ totalAmountDisbursed: totalDisbursed, totalAmountDue: totalOutstanding }}
             title="Group Performance Report"
           />
           <div className="max-w-[1200px]">
@@ -177,9 +166,16 @@ const GroupPerformanceReport = () => {
               isLoading={isLoading}
               isRefetching={isRefetching}
               isError={isError}
-              colSpan={11}
-              totalDebit={totalDisbursed}
-              totalCredit={totalOutstanding}
+              footerCells={[
+                { value: totalDisbursed },
+                { value: totalOutstanding },
+                { value: totalRepaid },
+                { value: totalInterest, className: "text-green-700" },
+                { empty: true },
+                { value: totalOverdue, isCount: true, className: totalOverdue > 0 ? "text-red-600" : "" },
+                { empty: true },
+                { value: totalGroupSavings },
+              ]}
             />
           </div>
         </div>

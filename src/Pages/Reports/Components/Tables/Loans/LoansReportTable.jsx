@@ -3,7 +3,7 @@ import {
   FileText, TrendingUp, AlertTriangle, BarChart2, BarChart3,
   Scale, PieChart, Layers, Clock, CheckCircle2, XCircle,
   ArrowDownToLine, Users, ShieldAlert, Wallet, Target,
-  TrendingDown, BookOpen, Receipt,
+  TrendingDown, BookOpen, Receipt, CalendarRange, BellOff,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -69,6 +69,15 @@ const SECTIONS = [
         bg: "bg-amber-50 dark:bg-amber-900/20",
         permission: 100231,
       },
+      {
+        title: "Periodic Repayments",
+        link: "loans-reports/repayment-periodic",
+        description: "Collections by day, week, or month — principal, interest, penalty breakdown",
+        icon: <CalendarRange className="w-5 h-5" />,
+        color: "text-green-600",
+        bg: "bg-green-50 dark:bg-green-900/20",
+        permission: 100261,
+      },
     ],
   },
   {
@@ -105,11 +114,20 @@ const SECTIONS = [
       {
         title: "Loan Arrears",
         link: "loans-reports/loan-arrears",
-        description: "Detailed arrears schedule with principal and interest overdue",
+        description: "Detailed arrears schedule with principal and interest overdue per installment",
         icon: <ShieldAlert className="w-5 h-5" />,
         color: "text-rose-600",
         bg: "bg-rose-50 dark:bg-rose-900/20",
         permission: 100236,
+      },
+      {
+        title: "Missed Installments",
+        link: "loans-reports/missed-installments",
+        description: "Per-loan summary of all missed installments — count, principal, interest, penalties and max DPD",
+        icon: <BellOff className="w-5 h-5" />,
+        color: "text-red-700",
+        bg: "bg-red-50 dark:bg-red-900/20",
+        permission: 100265,
       },
       {
         title: "Loan Tracking",

@@ -8,6 +8,9 @@ import OpeningDay from "@/Pages/Accounting/OpeningDay";
 import ClosingDay from "@/Pages/Accounting/ClosingDay";
 import CashTransfers from "@/Pages/Accounting/CashTransfers";
 import InterBranchTransfers from "@/Pages/Accounting/InterBranchTransfers";
+import Budgets from "@/Pages/Accounting/Budgets";
+import BudgetDetail from "@/Pages/Accounting/BudgetDetail";
+import BudgetVariance from "@/Pages/Accounting/BudgetVariance";
 
 const accountingRoutes = [
   {
@@ -60,6 +63,9 @@ const accountingRoutes = [
     element: <InterBranchTransfers />,
     roles: [100211],
   },
+  { path: "/budgets",                    element: <Budgets />,        roles: [100270, 100275] },
+  { path: "/budgets/:budgetId",          element: <BudgetDetail />,   roles: [100270, 100275] },
+  { path: "/budgets/:budgetId/variance", element: <BudgetVariance />, roles: [100274, 100275] },
 ];
 
 export default accountingRoutes;

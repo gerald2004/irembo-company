@@ -13,6 +13,9 @@ import ExpenseReport from "@/Pages/Reports/Components/Blocks/Accounting/ExpenseR
 import IncomeDetails from "@/Pages/Reports/Components/Blocks/Accounting/IncomeDetails";
 import ExpenseDetails from "@/Pages/Reports/Components/Blocks/Accounting/ExpenseDetails";
 import ComprehensiveIncomeReport from "@/Pages/Reports/Components/Blocks/Accounting/ComprehensiveIncomeReport";
+import NotesOfAccounts from "@/Pages/Reports/Components/Blocks/Accounting/NotesOfAccounts";
+import ComprehensiveTrialBalance from "@/Pages/Reports/Components/Blocks/Accounting/ComprehensiveTrialBalance";
+import CategoryReport from "@/Pages/Reports/Components/Blocks/Accounting/CategoryReport";
 
 import LoanReport from "@/Pages/Reports/LoanReports";
 import LoanApplicationsReport from "@/Pages/Reports/Components/Blocks/Loans/LoanApplicationsReport";
@@ -53,12 +56,19 @@ import LoanTrackingReport from "@/Pages/Reports/Components/Blocks/Loans/LoanTrac
 import LoanArrearsReport from "@/Pages/Reports/Components/Blocks/Loans/LoanArrearsReport";
 import GuarantorsReport from "@/Pages/Reports/Components/Blocks/Loans/GuarantorsReport";
 import PaidOffLoansReport from "@/Pages/Reports/Components/Blocks/Loans/PaidOffLoansReport";
+import LoanPeriodicRepaymentReport from "@/Pages/Reports/Components/Blocks/Loans/LoanPeriodicRepaymentReport";
+import MissedInstallmentsReport from "@/Pages/Reports/Components/Blocks/Loans/MissedInstallmentsReport";
 
 import GroupReports from "@/Pages/Reports/GroupReports";
 import GroupLoansReport from "@/Pages/Reports/Components/Blocks/Groups/GroupLoansReport";
 import GroupMembersReport from "@/Pages/Reports/Components/Blocks/Groups/GroupMembersReport";
 import GroupSavingsReport from "@/Pages/Reports/Components/Blocks/Groups/GroupSavingsReport";
 import GroupPerformanceReport from "@/Pages/Reports/Components/Blocks/Groups/GroupPerformanceReport";
+import GroupActiveLoansReport from "@/Pages/Reports/Components/Blocks/Groups/GroupActiveLoansReport";
+import GroupOverdueLoansReport from "@/Pages/Reports/Components/Blocks/Groups/GroupOverdueLoansReport";
+import GroupPortfolioReport from "@/Pages/Reports/Components/Blocks/Groups/GroupPortfolioReport";
+import GroupLoansDueTodayReport from "@/Pages/Reports/Components/Blocks/Groups/GroupLoansDueTodayReport";
+import GroupMemberLoansReport from "@/Pages/Reports/Components/Blocks/Groups/GroupMemberLoansReport";
 
 import HRReports from "@/Pages/Reports/HRReports";
 import LoanOfficerPerformanceReport from "@/Pages/Reports/Components/Blocks/HR/LoanOfficerPerformanceReport";
@@ -82,7 +92,10 @@ const reportsRoutes = [
   { path: "/accounting-reports/expense-reports",        element: <ExpenseReport />,             roles: [100215, 100127] },
   { path: "/accounting-reports/income-report-detailed", element: <IncomeDetails />,             roles: [100216, 100127] },
   { path: "/accounting-reports/expense-report-detailed",element: <ExpenseDetails />,            roles: [100217, 100127] },
-  { path: "/accounting-reports/comprehensive-income",   element: <ComprehensiveIncomeReport />, roles: [100218, 100127] },
+  { path: "/accounting-reports/comprehensive-income",        element: <ComprehensiveIncomeReport />,   roles: [100218, 100127] },
+  { path: "/accounting-reports/notes-of-accounts",          element: <NotesOfAccounts />,             roles: [100262, 100127] },
+  { path: "/accounting-reports/comprehensive-trial-balance", element: <ComprehensiveTrialBalance />,   roles: [100263, 100127] },
+  { path: "/accounting-reports/category-report",            element: <CategoryReport />,              roles: [100264, 100127] },
 
   // Loan Reports
   { path: "/loans-reports",                             element: <LoanReport />,                roles: [100219, 100128] },
@@ -105,6 +118,8 @@ const reportsRoutes = [
   { path: "/loans-reports/loan-arrears",                element: <LoanArrearsReport />,         roles: [100236, 100128] },
   { path: "/loans-reports/guarantors",                  element: <GuarantorsReport />,          roles: [100237, 100128] },
   { path: "/loans-reports/paid-off-loans",              element: <PaidOffLoansReport />,        roles: [100238, 100128] },
+  { path: "/loans-reports/repayment-periodic",          element: <LoanPeriodicRepaymentReport />, roles: [100261, 100128] },
+  { path: "/loans-reports/missed-installments",         element: <MissedInstallmentsReport />,    roles: [100265, 100128] },
 
   // Group Reports
   { path: "/group-reports",                             element: <GroupReports />,              roles: [100239, 100128] },
@@ -112,6 +127,11 @@ const reportsRoutes = [
   { path: "/group-reports/group-members",               element: <GroupMembersReport />,        roles: [100241, 100128] },
   { path: "/group-reports/group-savings",               element: <GroupSavingsReport />,        roles: [100242, 100128] },
   { path: "/group-reports/group-performance",           element: <GroupPerformanceReport />,    roles: [100243, 100128] },
+  { path: "/group-reports/active-group-loans",          element: <GroupActiveLoansReport />,    roles: [100244, 100128] },
+  { path: "/group-reports/overdue-group-loans",         element: <GroupOverdueLoansReport />,   roles: [100245, 100128] },
+  { path: "/group-reports/group-portfolio",             element: <GroupPortfolioReport />,      roles: [100246, 100128] },
+  { path: "/group-reports/loans-due-today",             element: <GroupLoansDueTodayReport />,  roles: [100247, 100128] },
+  { path: "/group-reports/member-loans",                element: <GroupMemberLoansReport />,    roles: [100248, 100128] },
 
   // Savings Reports
   { path: "/savings-reports",                           element: <SavingsReports />,            roles: [100244, 100129] },

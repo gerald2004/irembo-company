@@ -44,6 +44,7 @@ const DatatableReport = forwardRef(
       colSpan,
       totalDebit  = 0,
       totalCredit = 0,
+      footerCells,
     },
     ref
   ) => {
@@ -214,27 +215,31 @@ const DatatableReport = forwardRef(
                       </TableRow>
                     ))}
 
-                    {/* Totals row */}
-                    {(totalDebit > 0 || totalCredit > 0) && (
+                    {/* Totals row — footerCells (per-column alignment) or legacy totalDebit/totalCredit */}
+                    {footerCells?.length > 0 ? (
                       <TableRow className="bg-muted font-semibold text-xs border-t-2">
-                        <TableCell
-                          colSpan={columns.length - colSpan}
-                          className="px-3 py-2 text-muted-foreground"
-                        >
+                        <TableCell colSpan={columns.length - footerCells.length} className="px-3 py-2 text-muted-foreground">
+                          Total ({totalRows} records)
+                        </TableCell>
+                        {footerCells.map((cell, i) => (
+                          <TableCell key={i} className={`px-3 py-2 tabular-nums text-right ${cell.className ?? ""}`}>
+                            {cell.empty ? "—" : cell.isCount ? Number(cell.value ?? 0).toLocaleString() : fmt(cell.value ?? 0)}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ) : (totalDebit > 0 || totalCredit > 0) ? (
+                      <TableRow className="bg-muted font-semibold text-xs border-t-2">
+                        <TableCell colSpan={columns.length - colSpan} className="px-3 py-2 text-muted-foreground">
                           Total ({totalRows} records)
                         </TableCell>
                         {totalDebit > 0 && (
-                          <TableCell className="px-3 py-2 text-right tabular-nums">
-                            {fmt(totalDebit)}
-                          </TableCell>
+                          <TableCell className="px-3 py-2 text-right tabular-nums">{fmt(totalDebit)}</TableCell>
                         )}
                         {totalCredit > 0 && (
-                          <TableCell className="px-3 py-2 text-right tabular-nums">
-                            {fmt(totalCredit)}
-                          </TableCell>
+                          <TableCell className="px-3 py-2 text-right tabular-nums">{fmt(totalCredit)}</TableCell>
                         )}
                       </TableRow>
-                    )}
+                    ) : null}
                   </>
                 )}
 

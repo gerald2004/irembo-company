@@ -71,12 +71,13 @@ const EditAccountProductFeeDialog = ({
   useEffect(() => {
     if (defaultValues) {
       reset({
-        title: defaultValues?.title || "",
-        type: defaultValues?.type || "",
+        title:        defaultValues?.title || "",
+        type:         defaultValues?.type || "",
         calculated_as: defaultValues?.calculated_as || "",
-        trigger: defaultValues?.trigger || "",
-        charge: defaultValues?.charge || "",
-        value: defaultValues?.value || "",
+        trigger:      defaultValues?.trigger || "",
+        charge:       defaultValues?.charge || "",
+        value:        defaultValues?.value || "",
+        run_on_day:   defaultValues?.run_on_day ?? "",
         ranges:
           defaultValues?.calculated_as === "range"
             ? defaultValues?.value || []
@@ -91,19 +92,20 @@ const EditAccountProductFeeDialog = ({
     }
   }, [defaultValues, setValue, reset]);
 
-  // Watch selected calculation method
   const calculatedAs = watch("calculated_as");
+  const trigger      = watch("trigger");
 
   const onSubmit = async (data) => {
           const controller = new AbortController();
 
     const payload = {
-      title: data.title,
-      type: data.type,
-      calculated_as: data.calculated_as,
-      account_id: selectedAccounts.account_id,
+      title:              data.title,
+      type:               data.type,
+      calculated_as:      data.calculated_as,
+      account_id:         selectedAccounts.account_id,
       receivable_account: selectedAccounts.receivable_account,
-      trigger: data.trigger,
+      trigger:            data.trigger,
+      run_on_day:         data.trigger === "on_membership" && data.run_on_day ? Number(data.run_on_day) : null,
       ...(data.calculated_as === "range"
         ? { ranges: data.ranges }
         : { value: data.value }),
@@ -266,6 +268,50 @@ const EditAccountProductFeeDialog = ({
               refetch={refetchAccounts}
               isRefetching={isRefetchingAccounts}
             />
+
+            <div>
+              <Label htmlFor="trigger">Trigger</Label>
+              <Select
+                defaultValue={defaultValues?.trigger}
+                onValueChange={(val) => setValue("trigger", val)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Trigger" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="on_saving">On Saving</SelectItem>
+                  <SelectItem value="on_withdrawal">On Withdrawal</SelectItem>
+                  <SelectItem value="on_membership">On Membership</SelectItem>
+                  <SelectItem value="on_account_opening">On Account Opening</SelectItem>
+                  <SelectItem value="on_account_transfer_out">On Account Transfer Out</SelectItem>
+                  <SelectItem value="on_account_transfer_in">On Account Transfer In</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {trigger === "on_membership" && (
+              <div>
+                <Label htmlFor="run_on_day">Day of Month to Run (1–31)</Label>
+                <Input
+                  id="run_on_day"
+                  type="number"
+                  min="1"
+                  max="31"
+                  placeholder="e.g. 1"
+                  {...register("run_on_day", {
+                    required: "Day of month is required for membership charges",
+                    min: { value: 1, message: "Minimum day is 1" },
+                    max: { value: 31, message: "Maximum day is 31" },
+                  })}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  The membership charge will be collected on this day each month.
+                </p>
+                {errors.run_on_day && (
+                  <p className="text-red-500 text-sm">{errors.run_on_day.message}</p>
+                )}
+              </div>
+            )}
           </div>
 
           {calculatedAs === "range" &&

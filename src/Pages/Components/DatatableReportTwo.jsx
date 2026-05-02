@@ -181,7 +181,7 @@ const DatatableReportTwo = forwardRef(
                         }
                       />
                       {Object.entries(summaryFields).map(([key, value]) => (
-                        <TableCell key={key} className="text-start">
+                        <TableCell key={key} className="text-right font-semibold tabular-nums">
                           {value >= 0 ? value.toLocaleString() : 0}
                         </TableCell>
                       ))}

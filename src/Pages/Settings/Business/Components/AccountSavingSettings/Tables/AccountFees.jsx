@@ -154,6 +154,15 @@ export function AccountFees() {
       ),
     },
     {
+      id: "run_on_day",
+      header: "Run On Day",
+      cell: ({ row }) => (
+        row.original.trigger === "on_membership" && row.original.run_on_day
+          ? <span className="text-xs font-medium">Day {row.original.run_on_day}</span>
+          : <span className="text-muted-foreground text-xs">—</span>
+      ),
+    },
+    {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => (

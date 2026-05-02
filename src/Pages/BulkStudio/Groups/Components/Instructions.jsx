@@ -1,77 +1,27 @@
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-
-const Instructions = () => {
-  return (
-    <div className="mt-6 space-y-6">
-      {/* Card for General Instructions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-foreground">Instructions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="list-disc list-inside text-sm space-y-1 text-foreground">
-            <li>
-              Group names must be <span className="font-medium">unique</span>.
-            </li>
-            <li>
-              Group leader&lsquo;s client ID must be <span className="font-medium">valid</span> and already registered.
-            </li>
-            <li>
-              Date of registration should be in <span className="font-medium">YYYY-MM-DD</span> format.
-            </li>
-            <li>
-              Location is optional but helps in identification.
-            </li>
-            <li>
-              CSV file should not exceed <span className="font-medium">1000 rows</span>.
-            </li>
-          </ul>
-        </CardContent>
-      </Card>
-
-      {/* Card for CSV Format */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-foreground">CSV Format Requirements</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4">
-            <div className="grid grid-cols-3 gap-4">
-              {/* Column */}
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Column</p>
-                <p className="text-sm text-foreground">group_name</p>
-                <p className="text-sm text-foreground">leader_client_id</p>
-                <p className="text-sm text-foreground">registration_date</p>
-                <p className="text-sm text-foreground">location</p>
-              </div>
-              {/* Type */}
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Type</p>
-                <p className="text-sm text-foreground">Text</p>
-                <p className="text-sm text-foreground">Number</p>
-                <p className="text-sm text-foreground">Date (YYYY-MM-DD)</p>
-                <p className="text-sm text-foreground">Text</p>
-              </div>
-              {/* Description */}
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Description</p>
-                <p className="text-sm text-foreground">Name of the group</p>
-                <p className="text-sm text-foreground">Client ID of the group leader</p>
-                <p className="text-sm text-foreground">Date of group registration</p>
-                <p className="text-sm text-foreground">Optional location of the group</p>
-              </div>
-            </div>
-            <div className="mt-2">
-              <p className="text-sm text-muted-foreground">
-                Note: First row must contain headers
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+const Instructions = () => (
+  <div className="space-y-4">
+    <div className="rounded-lg border p-4 space-y-2">
+      <h4 className="font-semibold text-sm">Instructions</h4>
+      <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+        <li>Group name must be unique within this SACCO</li>
+        <li>Phone number must be unique — used as the group&apos;s contact</li>
+        <li>Email and address are optional</li>
+        <li>Groups are registered with status &ldquo;active&rdquo;</li>
+        <li>Maximum 200 rows per upload</li>
+      </ul>
     </div>
-  );
-};
-
+    <div className="rounded-lg border p-4 space-y-2">
+      <h4 className="font-semibold text-sm">CSV Format</h4>
+      <table className="w-full text-xs">
+        <thead><tr className="border-b"><th className="py-1 text-left">Column</th><th className="py-1 text-left">Required</th><th className="py-1 text-left">Example</th></tr></thead>
+        <tbody className="text-muted-foreground">
+          <tr className="border-b"><td className="py-1">group_name</td><td>Yes</td><td>Kampala Women Savers</td></tr>
+          <tr className="border-b"><td className="py-1">phone</td><td>Yes</td><td>0701234567</td></tr>
+          <tr className="border-b"><td className="py-1">email</td><td>No</td><td>kws@mail.com</td></tr>
+          <tr><td className="py-1">address</td><td>No</td><td>Kampala Central</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+);
 export default Instructions;

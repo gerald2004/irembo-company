@@ -17,8 +17,10 @@ import { CalendarIcon, Upload, Download } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
+import useAxiosPrivate from '@/MiddleWares/Hooks/useAxiosPrivate';
 
 const BulkEmailForm = () => {
+  const axios = useAxiosPrivate();
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [recipientType, setRecipientType] = useState('all');
@@ -89,53 +91,19 @@ const BulkEmailForm = () => {
   const handleSendEmail = async () => {
     setIsLoading(true);
     try {
-      if (recipientType === 'custom' && !csvFile) {
-        throw new Error('Please upload a CSV file for custom recipients');
-      }
-
-      const formData = new FormData();
-      formData.append('subject', subject);
-      formData.append('message', message);
-      formData.append('recipientType', recipientType);
-      
-      if (recipientType === 'groups') {
-        formData.append('selectedGroups', JSON.stringify(selectedGroups));
-      }
-      
-      if (recipientType === 'custom' && csvFile) {
-        formData.append('customList', csvFile);
-      }
-      
-      formData.append('scheduleType', scheduleType);
-      if (scheduleType === 'scheduled') {
-        formData.append('scheduledDate', scheduledDate.toISOString());
-      }
-
-      const response = await fetch('/api/sacco/email/send', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (response.ok) {
-        toast({
-          title: 'Email Sent Successfully',
-          description: 'Your bulk email has been queued for delivery.',
-        });
-        setSubject('');
-        setMessage('');
-        setRecipientType('all');
-        setSelectedGroups([]);
-        setCsvFile(null);
-        setFileName('');
+      if (recipientType === 'custom') {
+        if (!csvFile) throw new Error('Please upload a CSV file for custom recipients');
+        const text = await csvFile.text();
+        const emails = text.split('\n').slice(1).map(l => l.split(',')[0].trim()).filter(Boolean);
+        if (!emails.length) throw new Error('No valid email addresses found in CSV');
+        await axios.post('emails/selected-clients', { emails, subject, message });
       } else {
-        throw new Error('Failed to send email');
+        await axios.post('emails/branch-clients', { subject, message });
       }
+      toast({ title: 'Email Queued', description: 'Bulk email has been queued for delivery.' });
+      setSubject(''); setMessage(''); setRecipientType('all'); setSelectedGroups([]); setCsvFile(null); setFileName('');
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: error.response?.data?.messages?.[0] ?? error.message, variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }

@@ -5,34 +5,55 @@ import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Building2, Banknote } from "lucide-react";
 
 const currency = (n) => Number(n || 0).toLocaleString();
 
-const BankCard = ({ title, subtitle, data, onView }) => {
+const getBorderClass = (acc) => {
+  const available = Number(acc?.available || 0);
+  const reserved = Number(acc?.reserved || 0);
+  if (available > 0) return "border-t-4 border-t-green-500";
+  if (reserved > 0 && available < 1000) return "border-t-4 border-t-yellow-400";
+  return "border-t-4 border-t-gray-200";
+};
+
+const BankCard = ({ acc, onView }) => {
+  const borderClass = getBorderClass(acc);
+
   return (
-    <Card>
+    <Card className={`overflow-hidden ${borderClass}`}>
       <CardHeader className="space-y-1">
-        <CardTitle className="text-base">{title}</CardTitle>
-        {subtitle ? (
-          <p className="text-xs text-muted-foreground">{subtitle}</p>
-        ) : null}
+        <div className="flex items-center gap-2">
+          <div className="rounded-md bg-primary/10 p-1.5">
+            <Building2 className="h-4 w-4 text-primary" />
+          </div>
+          <CardTitle className="text-base">{acc.bank_name || "Bank"}</CardTitle>
+        </div>
+        <p className="text-xs text-muted-foreground">{acc.account_name}</p>
+        <p className="text-xs text-muted-foreground font-mono">{acc.account_number}</p>
       </CardHeader>
 
       <CardContent className="space-y-2">
-        <div className="text-xl font-bold text-green-700">
-          {currency(data?.available)}
+        <div className="flex items-center gap-2">
+          <Banknote className="h-4 w-4 text-green-600" />
+          <div className="text-xl font-bold text-green-700">
+            {currency(acc?.available)}
+          </div>
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Reserved: {currency(data?.reserved)}
+          Reserved: {currency(acc?.reserved)}
         </p>
 
-        <p className="text-sm text-muted-foreground">
-          {data?.transactions ?? 0} Transactions
-        </p>
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="text-xs">
+            {acc?.transactions ?? 0} Transactions
+          </Badge>
+        </div>
 
-        <Button size="sm" disabled={!data} onClick={onView}>
-          View details
+        <Button size="sm" disabled={!acc} onClick={onView}>
+          View Transactions →
         </Button>
       </CardContent>
     </Card>
@@ -47,7 +68,7 @@ const BankFloatAccounts = ({ branchId }) => {
     data,
     isLoading,
     isError,
-    error, // axios error
+    error,
   } = useQuery({
     queryKey: ["bank-float-accounts", branchId ?? "all"],
     queryFn: async () => {
@@ -72,7 +93,7 @@ const BankFloatAccounts = ({ branchId }) => {
     );
   }
 
-  // ✅ Special handling: 404 means no accounts
+  // Special handling: 404 means no accounts
   const status = error?.response?.status;
   if (status === 404) {
     return (
@@ -105,9 +126,7 @@ const BankFloatAccounts = ({ branchId }) => {
       {accounts.map((acc) => (
         <BankCard
           key={acc.bank_account_id}
-          title={acc.bank_name || "Bank"}
-          subtitle={`${acc.account_name} • ${acc.account_number}`}
-          data={acc}
+          acc={acc}
           onView={() =>
             navigate(`/float-management/bank/${acc.bank_account_id}`)
           }

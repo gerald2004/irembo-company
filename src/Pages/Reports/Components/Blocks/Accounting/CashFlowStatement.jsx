@@ -34,6 +34,13 @@ const CashFlowStatement = () => {
     placeholderData: (prev) => prev,
   });
 
+  const exportHeaders = ["Section", "Description", "Amount"];
+  const exportRows = [
+    ...(data?.cash_from_operating_activities ?? []).map((r) => ["Operating Activities", r.label ?? "", r.amount ?? 0]),
+    ...(data?.cash_from_investment_activities ?? []).map((r) => ["Investment Activities", r.label ?? "", r.amount ?? 0]),
+    ...(data?.cash_from_financing_activities ?? []).map((r) => ["Financing Activities", r.label ?? "", r.amount ?? 0]),
+  ];
+
   return (
     <>
       <Breadcrumb>
@@ -53,7 +60,11 @@ const CashFlowStatement = () => {
           onApply={setFilters}
           isLoading={isRefetching}
           showStatus={false}
-          exportDisabled
+          exportTitle="Cash Flow Statement"
+          exportFilename="cash_flow_statement"
+          exportHeaders={exportHeaders}
+          exportRows={exportRows}
+          exportDisabled={exportRows.length === 0}
         />
 
         {isError && (

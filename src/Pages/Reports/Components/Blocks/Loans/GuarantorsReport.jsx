@@ -1,10 +1,7 @@
+/* eslint-disable react/prop-types */
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
+  Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList,
+  BreadcrumbPage, BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { useQuery } from "@tanstack/react-query";
@@ -14,33 +11,38 @@ import { formatDateTimestamp } from "@/lib/utils";
 import LoanGeneralReportQuery from "../Queries/LoanGeneralReportQuery";
 import { useState, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Users, ShieldAlert, TrendingUp } from "lucide-react";
 
 const fmtMoney = (v) =>
   new Intl.NumberFormat("en-UG", { maximumFractionDigits: 0 }).format(v ?? 0);
+
+const statusVariant = (s) => {
+  if (s === "disbursed") return "default";
+  if (s === "paid_off" || s === "settled") return "secondary";
+  if (s === "writternoff" || s === "rejected") return "destructive";
+  return "outline";
+};
 
 const GuarantorsReport = () => {
   const axiosPrivate = useAxiosPrivate();
   const navigate = useNavigate();
   const tableRef = useRef(null);
 
-  const [filters, setFilters] = useState({
-    startDate: "",
-    endDate: "",
-    branch_id: "",
-  });
+  const [filters, setFilters] = useState({ startDate: "", endDate: "", branch_id: "" });
 
-  const { data = [], isLoading, refetch, isRefetching, isError } = useQuery({
+  const { data: raw = {}, isLoading, refetch, isRefetching, isError } = useQuery({
     queryKey: ["guarantors-report", filters],
     queryFn: async () => {
       try {
         const res = await axiosPrivate.get("reports/loans/guarantors", {
           params: {
-            startDate: filters.startDate,
-            endDate: filters.endDate,
-            branch_id: filters.branch_id,
+            startDate: filters.startDate || undefined,
+            endDate:   filters.endDate   || undefined,
+            branch_id: filters.branch_id || undefined,
           },
         });
-        return res?.data?.data ?? [];
+        return res?.data?.data ?? {};
       } catch (error) {
         if (error?.response?.status === 401)
           navigate("/", { state: { from: location }, replace: true });
@@ -50,35 +52,47 @@ const GuarantorsReport = () => {
     placeholderData: (prev) => prev,
   });
 
+  const rows    = raw?.rows    ?? [];
+  const summary = raw?.summary ?? {};
+  const exposure = raw?.exposure_by_guarantor ?? [];
+
   const columns = [
     {
       accessorKey: "guarantor_name",
-      header: "Guarantor Name",
+      header: "Guarantor",
       cell: ({ row }) => (
-        <p className="text-xs capitalize">{row.original.guarantor_name}</p>
+        <div>
+          <p className="text-xs font-medium capitalize">{row.original.guarantor_name}</p>
+          <p className="text-xs text-muted-foreground">{row.original.guarantor_contact || "—"}</p>
+        </div>
       ),
     },
     {
-      accessorKey: "guarantor_phone",
-      header: "Phone",
-      cell: ({ row }) => <p className="text-xs">{row.original.guarantor_phone ?? "—"}</p>,
+      accessorKey: "guarantor_account",
+      header: "Acct No.",
+      cell: ({ row }) => <p className="text-xs font-mono">{row.original.guarantor_account || "—"}</p>,
     },
     {
-      accessorKey: "guarantee_amount",
-      header: "Guarantee Amount",
+      accessorKey: "guarantor_amount",
+      header: "Guaranteed",
+      cell: ({ row }) => <p className="text-xs font-medium">{fmtMoney(row.original.guarantor_amount)}</p>,
+    },
+    {
+      accessorKey: "guarantor_type",
+      header: "Type",
       cell: ({ row }) => (
-        <p className="text-xs">{fmtMoney(row.original.guarantee_amount)}</p>
+        <Badge variant="outline" className="text-xs capitalize">{row.original.guarantor_type}</Badge>
       ),
     },
     {
-      accessorKey: "borrower_name",
+      accessorKey: "borrower",
       header: "Borrower",
       cell: ({ row }) => (
         <Link
-          to={`/clients/individual/${row.original.borrower_account_id}`}
-          className="text-xs capitalize"
+          to={`/clients/individual/${row.original.borrower_id}`}
+          className="text-xs text-primary hover:underline capitalize"
         >
-          {row.original.borrower_name}
+          {row.original.borrower}
         </Link>
       ),
     },
@@ -86,91 +100,182 @@ const GuarantorsReport = () => {
       accessorKey: "loan_code",
       header: "Loan No.",
       cell: ({ row }) => (
-        <Link to={`/loans/${row.original.loan_id}`} className="text-xs">
+        <Link to={`/loans/${row.original.loan_id}`} className="text-xs text-primary hover:underline font-mono">
           {row.original.loan_code}
         </Link>
       ),
     },
     {
-      accessorKey: "loan_amount",
-      header: "Loan Amount",
-      cell: ({ row }) => <p className="text-xs">{fmtMoney(row.original.loan_amount)}</p>,
+      accessorKey: "product",
+      header: "Product",
+      cell: ({ row }) => <p className="text-xs">{row.original.product || "—"}</p>,
+    },
+    {
+      accessorKey: "disbursed_amount",
+      header: "Disbursed",
+      cell: ({ row }) => <p className="text-xs">{fmtMoney(row.original.disbursed_amount)}</p>,
+    },
+    {
+      accessorKey: "loan_outstanding",
+      header: "Outstanding",
+      cell: ({ row }) => (
+        <p className={`text-xs font-medium ${row.original.loan_outstanding > 0 ? "text-red-600" : "text-green-600"}`}>
+          {fmtMoney(row.original.loan_outstanding)}
+        </p>
+      ),
     },
     {
       accessorKey: "loan_status",
-      header: "Loan Status",
+      header: "Status",
       cell: ({ row }) => (
-        <Badge variant={row.original.loan_status === "disbursed" ? "default" : "secondary"}>
+        <Badge variant={statusVariant(row.original.loan_status)} className="text-xs capitalize">
           {row.original.loan_status}
         </Badge>
       ),
     },
     {
-      accessorKey: "outstanding_balance",
-      header: "Outstanding",
-      cell: ({ row }) => (
-        <p className="text-xs">{fmtMoney(row.original.outstanding_balance)}</p>
-      ),
-    },
-    {
       accessorKey: "disbursement_date",
       header: "Disbursed On",
-      cell: ({ row }) => (
-        <p className="text-xs">{formatDateTimestamp(row.original.disbursement_date)}</p>
-      ),
+      cell: ({ row }) => <p className="text-xs">{formatDateTimestamp(row.original.disbursement_date)}</p>,
+    },
+    {
+      accessorKey: "branch",
+      header: "Branch",
+      cell: ({ row }) => <p className="text-xs">{row.original.branch || "—"}</p>,
     },
   ];
-
-  const handleFilterChange = (data) => {
-    setFilters(data);
-    refetch();
-  };
 
   return (
     <>
       <Breadcrumb>
         <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink to="/dashboard">Home</BreadcrumbLink>
-          </BreadcrumbItem>
+          <BreadcrumbItem><BreadcrumbLink to="/dashboard">Home</BreadcrumbLink></BreadcrumbItem>
           <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink to="/loans-reports">Loans Reports</BreadcrumbLink>
-          </BreadcrumbItem>
+          <BreadcrumbItem><BreadcrumbLink to="/loans-reports">Loans Reports</BreadcrumbLink></BreadcrumbItem>
           <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Guarantors Report</BreadcrumbPage>
-          </BreadcrumbItem>
+          <BreadcrumbItem><BreadcrumbPage>Guarantors Report</BreadcrumbPage></BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
+
       <div className="flex-col md:flex">
         <div className="border-b" />
         <div className="flex-1 space-y-4 p-0 pt-2">
           <h5 className="text-2xl font-bold tracking-tight">Guarantors Report</h5>
+
           <LoanGeneralReportQuery
-            onFilterChange={handleFilterChange}
+            onFilterChange={setFilters}
             isRefetching={isRefetching}
             refetch={refetch}
-            data={data}
+            data={rows}
             tableRef={tableRef}
             filters={filters}
-            colSpan={3}
+            colSpan={12}
             mode={{ format: "A4-L", orientation: "L" }}
             totals={{}}
             title="Guarantors Report"
           />
-          <div className="max-w-[1200px]">
+
+          {/* Summary KPIs */}
+          {!isLoading && !isError && summary.unique_guarantors > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <Card>
+                <CardHeader className="pb-1 pt-3 px-4">
+                  <CardTitle className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                    <Users className="w-3.5 h-3.5" /> Unique Guarantors
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-3">
+                  <p className="text-xl font-bold">{summary.unique_guarantors}</p>
+                  <p className="text-xs text-muted-foreground">{summary.unique_loans} loans covered</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-1 pt-3 px-4">
+                  <CardTitle className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                    <ShieldAlert className="w-3.5 h-3.5" /> Total Guaranteed
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-3">
+                  <p className="text-xl font-bold">{fmtMoney(summary.total_guaranteed_amount)}</p>
+                  <p className="text-xs text-muted-foreground">sum of all guarantees</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-1 pt-3 px-4">
+                  <CardTitle className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                    <TrendingUp className="w-3.5 h-3.5" /> Outstanding Exposure
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-3">
+                  <p className="text-xl font-bold text-red-600">{fmtMoney(summary.total_outstanding)}</p>
+                  <p className="text-xs text-muted-foreground">across active loans</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-1 pt-3 px-4">
+                  <CardTitle className="text-xs text-muted-foreground font-medium">Total Records</CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-3">
+                  <p className="text-xl font-bold">{summary.total_rows}</p>
+                  <p className="text-xs text-muted-foreground">guarantor–loan pairs</p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          <div className="max-w-[1400px]">
             <DatatableReport
               ref={tableRef}
               columns={columns}
-              data={data ?? []}
+              data={rows}
               fetchData={refetch}
               isLoading={isLoading}
               isRefetching={isRefetching}
               isError={isError}
-              colSpan={9}
+              colSpan={12}
             />
           </div>
+
+          {/* Per-guarantor exposure table */}
+          {!isLoading && !isError && exposure.length > 0 && (
+            <div className="space-y-2">
+              <h6 className="text-sm font-semibold">Guarantor Exposure Summary</h6>
+              <div className="rounded-lg border overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-medium">Guarantor</th>
+                      <th className="px-3 py-2 text-left font-medium">Account</th>
+                      <th className="px-3 py-2 text-left font-medium">Contact</th>
+                      <th className="px-3 py-2 text-right font-medium">Guaranteed</th>
+                      <th className="px-3 py-2 text-right font-medium">Outstanding</th>
+                      <th className="px-3 py-2 text-center font-medium">Loans</th>
+                      <th className="px-3 py-2 text-center font-medium">Active</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {exposure.map((e, i) => (
+                      <tr key={i} className="border-t hover:bg-muted/20">
+                        <td className="px-3 py-2 capitalize">{e.guarantor_name}</td>
+                        <td className="px-3 py-2 font-mono">{e.guarantor_account || "—"}</td>
+                        <td className="px-3 py-2">{e.guarantor_contact || "—"}</td>
+                        <td className="px-3 py-2 text-right">{fmtMoney(e.guaranteed_amount)}</td>
+                        <td className={`px-3 py-2 text-right font-medium ${e.outstanding_exposure > 0 ? "text-red-600" : "text-green-600"}`}>
+                          {fmtMoney(e.outstanding_exposure)}
+                        </td>
+                        <td className="px-3 py-2 text-center">{e.loans_count}</td>
+                        <td className="px-3 py-2 text-center">
+                          <Badge variant={e.active_loans > 0 ? "default" : "secondary"} className="text-xs">
+                            {e.active_loans}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </>

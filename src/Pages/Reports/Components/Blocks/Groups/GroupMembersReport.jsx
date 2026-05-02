@@ -1,10 +1,6 @@
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
+  Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList,
+  BreadcrumbPage, BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { useQuery } from "@tanstack/react-query";
@@ -12,7 +8,7 @@ import { Link, useNavigate } from "react-router-dom";
 import DatatableReport from "@/Pages/Components/DatatableReport";
 import { formatDateTimestamp } from "@/lib/utils";
 import LoanGeneralReportQuery from "../Queries/LoanGeneralReportQuery";
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 
 const fmtMoney = (v) =>
@@ -29,13 +25,7 @@ const GroupMembersReport = () => {
     queryKey: ["group-members-report", filters],
     queryFn: async () => {
       try {
-        const res = await axiosPrivate.get("reports/groups/members", {
-          params: {
-            startDate: filters.startDate,
-            endDate: filters.endDate,
-            branch_id: filters.branch_id,
-          },
-        });
+        const res = await axiosPrivate.get("reports/groups/members", { params: filters });
         return res?.data?.data ?? [];
       } catch (error) {
         if (error?.response?.status === 401)
@@ -45,6 +35,11 @@ const GroupMembersReport = () => {
     },
     placeholderData: (prev) => prev,
   });
+
+  // Totals for cols 7, 8, 9
+  const totalSavings    = useMemo(() => data.reduce((s, r) => s + (r.savings_balance ?? 0), 0), [data]);
+  const totalActiveLoans = useMemo(() => data.reduce((s, r) => s + (r.active_loans ?? 0), 0), [data]);
+  const totalLoanBalance = useMemo(() => data.reduce((s, r) => s + (r.loan_balance ?? 0), 0), [data]);
 
   const columns = [
     {
@@ -94,7 +89,7 @@ const GroupMembersReport = () => {
     {
       accessorKey: "savings_balance",
       header: "Savings Balance",
-      cell: ({ row }) => <p className="text-xs">{fmtMoney(row.original.savings_balance)}</p>,
+      cell: ({ row }) => <p className="text-xs text-right">{fmtMoney(row.original.savings_balance)}</p>,
     },
     {
       accessorKey: "active_loans",
@@ -105,7 +100,7 @@ const GroupMembersReport = () => {
       accessorKey: "loan_balance",
       header: "Loan Balance",
       cell: ({ row }) => (
-        <p className="text-xs font-medium">{fmtMoney(row.original.loan_balance)}</p>
+        <p className="text-xs font-medium text-right">{fmtMoney(row.original.loan_balance)}</p>
       ),
     },
   ];
@@ -127,7 +122,8 @@ const GroupMembersReport = () => {
         <div className="border-b" />
         <div className="flex-1 space-y-4 p-0 pt-2">
           <h5 className="text-2xl font-bold tracking-tight">Group Members Report</h5>
-          <LoanGeneralReportQuery show={{ officer: false, group: true }}
+          <LoanGeneralReportQuery
+            show={{ officer: false, group: true }}
             onFilterChange={handleFilterChange}
             isRefetching={isRefetching}
             refetch={refetch}
@@ -136,7 +132,7 @@ const GroupMembersReport = () => {
             filters={filters}
             colSpan={3}
             mode={{ format: "A4-L", orientation: "L" }}
-            totals={{}}
+            totals={{ totalAmountDisbursed: totalSavings, totalAmountDue: totalLoanBalance }}
             title="Group Members Report"
           />
           <div className="max-w-[1200px]">
@@ -148,7 +144,11 @@ const GroupMembersReport = () => {
               isLoading={isLoading}
               isRefetching={isRefetching}
               isError={isError}
-              colSpan={9}
+              footerCells={[
+                { value: totalSavings },
+                { value: totalActiveLoans, isCount: true },
+                { value: totalLoanBalance },
+              ]}
             />
           </div>
         </div>

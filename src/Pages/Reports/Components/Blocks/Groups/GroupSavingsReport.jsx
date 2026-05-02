@@ -1,10 +1,6 @@
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
+  Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList,
+  BreadcrumbPage, BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { useQuery } from "@tanstack/react-query";
@@ -27,13 +23,7 @@ const GroupSavingsReport = () => {
     queryKey: ["group-savings-report", filters],
     queryFn: async () => {
       try {
-        const res = await axiosPrivate.get("reports/groups/savings", {
-          params: {
-            startDate: filters.startDate,
-            endDate: filters.endDate,
-            branch_id: filters.branch_id,
-          },
-        });
+        const res = await axiosPrivate.get("reports/groups/savings", { params: filters });
         return res?.data?.data ?? [];
       } catch (error) {
         if (error?.response?.status === 401)
@@ -44,8 +34,12 @@ const GroupSavingsReport = () => {
     placeholderData: (prev) => prev,
   });
 
-  const totalSavings = useMemo(() => data.reduce((s, r) => s + (r.total_savings ?? 0), 0), [data]);
-  const totalDeposits = useMemo(() => data.reduce((s, r) => s + (r.deposits_in_period ?? 0), 0), [data]);
+  // Totals for all 5 numeric columns (cols 3–7)
+  const totalSavings     = useMemo(() => data.reduce((s, r) => s + (r.total_savings ?? 0), 0), [data]);
+  const totalFrozen      = useMemo(() => data.reduce((s, r) => s + (r.total_frozen ?? 0), 0), [data]);
+  const totalDeposits    = useMemo(() => data.reduce((s, r) => s + (r.deposits_in_period ?? 0), 0), [data]);
+  const totalWithdrawals = useMemo(() => data.reduce((s, r) => s + (r.withdrawals_in_period ?? 0), 0), [data]);
+  const totalNet         = useMemo(() => totalDeposits - totalWithdrawals, [totalDeposits, totalWithdrawals]);
 
   const columns = [
     {
@@ -65,25 +59,25 @@ const GroupSavingsReport = () => {
     {
       accessorKey: "total_savings",
       header: "Total Savings Balance",
-      cell: ({ row }) => <p className="text-xs">{fmtMoney(row.original.total_savings)}</p>,
+      cell: ({ row }) => <p className="text-xs text-right">{fmtMoney(row.original.total_savings)}</p>,
     },
     {
       accessorKey: "total_frozen",
       header: "Frozen / Compulsory",
-      cell: ({ row }) => <p className="text-xs">{fmtMoney(row.original.total_frozen)}</p>,
+      cell: ({ row }) => <p className="text-xs text-right">{fmtMoney(row.original.total_frozen)}</p>,
     },
     {
       accessorKey: "deposits_in_period",
       header: "Deposits (Period)",
       cell: ({ row }) => (
-        <p className="text-xs text-green-700 font-medium">{fmtMoney(row.original.deposits_in_period)}</p>
+        <p className="text-xs text-green-700 font-medium text-right">{fmtMoney(row.original.deposits_in_period)}</p>
       ),
     },
     {
       accessorKey: "withdrawals_in_period",
       header: "Withdrawals (Period)",
       cell: ({ row }) => (
-        <p className="text-xs text-red-600">{fmtMoney(row.original.withdrawals_in_period)}</p>
+        <p className="text-xs text-red-600 text-right">{fmtMoney(row.original.withdrawals_in_period)}</p>
       ),
     },
     {
@@ -92,7 +86,7 @@ const GroupSavingsReport = () => {
       cell: ({ row }) => {
         const net = row.original.net_savings_movement ?? 0;
         return (
-          <p className={`text-xs font-semibold ${net >= 0 ? "text-green-700" : "text-red-600"}`}>
+          <p className={`text-xs font-semibold text-right ${net >= 0 ? "text-green-700" : "text-red-600"}`}>
             {net >= 0 ? "+" : ""}{fmtMoney(Math.abs(net))}
           </p>
         );
@@ -117,7 +111,8 @@ const GroupSavingsReport = () => {
         <div className="border-b" />
         <div className="flex-1 space-y-4 p-0 pt-2">
           <h5 className="text-2xl font-bold tracking-tight">Group Savings Report</h5>
-          <LoanGeneralReportQuery show={{ officer: false, group: true }}
+          <LoanGeneralReportQuery
+            show={{ officer: false, group: true }}
             onFilterChange={handleFilterChange}
             isRefetching={isRefetching}
             refetch={refetch}
@@ -138,9 +133,13 @@ const GroupSavingsReport = () => {
               isLoading={isLoading}
               isRefetching={isRefetching}
               isError={isError}
-              colSpan={7}
-              totalDebit={totalSavings}
-              totalCredit={totalDeposits}
+              footerCells={[
+                { value: totalSavings },
+                { value: totalFrozen },
+                { value: totalDeposits, className: "text-green-700" },
+                { value: totalWithdrawals, className: "text-red-600" },
+                { value: totalNet, className: totalNet >= 0 ? "text-green-700" : "text-red-600" },
+              ]}
             />
           </div>
         </div>

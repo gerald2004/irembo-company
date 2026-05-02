@@ -78,7 +78,21 @@ const ComprehensiveIncomeReport = () => {
           onApply={setFilters}
           isLoading={isRefetching}
           showStatus={false}
-          exportDisabled
+          exportTitle="Comprehensive Income Statement"
+          exportFilename="comprehensive_income"
+          exportHeaders={["Section", "Item", "Amount"]}
+          exportRows={[
+            ...(revenue.income_accounts ?? []).map((r) => ["Revenue", r.account ?? "", r.amount ?? 0]),
+            ["Revenue", "Loan Interest Income", revenue.loan_interest_income ?? 0],
+            ["Revenue", "Loan Penalty / Late Fees", revenue.loan_penalty_income ?? 0],
+            ["Revenue", "GROSS OPERATING INCOME", revenue.gross_operating_income ?? 0],
+            ...(expenses.expense_accounts ?? []).map((r) => ["Expenses", r.account ?? "", r.amount ?? 0]),
+            ["Expenses", "Total Expenses", expenses.total_expenses ?? 0],
+            ["Expenses", "Dividend Outflow", expenses.dividend_outflow ?? 0],
+            ["", "NET OPERATING INCOME", net.net_operating_income ?? 0],
+            ["", "NET INCOME (after dividends)", net.net_income ?? 0],
+          ]}
+          exportDisabled={!data}
         />
 
         {isError && (

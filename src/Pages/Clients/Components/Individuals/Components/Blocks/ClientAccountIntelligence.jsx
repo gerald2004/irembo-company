@@ -28,6 +28,8 @@ import {
   RefreshCw,
   CheckCircle2,
   Loader2,
+  ShieldCheck,
+  CreditCard,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -113,26 +115,33 @@ function Kpi({ title, value, hint, icon, children, className }) {
 }
 
 function AccountsTable({ accounts = [] }) {
+  const totalBalance = accounts.reduce((s, a) => s + (a.balance ?? 0), 0);
+  const totalFrozen  = accounts.reduce((s, a) => s + (a.frozen  ?? 0), 0);
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b text-muted-foreground text-xs">
-            <th className="px-3 py-2 text-left font-medium">Account No</th>
             <th className="px-3 py-2 text-left font-medium">Product</th>
             <th className="px-3 py-2 text-right font-medium">Balance</th>
             <th className="px-3 py-2 text-right font-medium">Frozen</th>
+            <th className="px-3 py-2 text-right font-medium">Available</th>
           </tr>
         </thead>
         <tbody>
-          {accounts.map((a, i) => (
-            <tr key={i} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-              <td className="px-3 py-2 font-mono text-xs">{a.account_no}</td>
-              <td className="px-3 py-2">{a.product_name}</td>
-              <td className="px-3 py-2 text-right tabular-nums">{fmt(a.balance)}</td>
-              <td className="px-3 py-2 text-right tabular-nums text-amber-600">{fmt(a.frozen)}</td>
-            </tr>
-          ))}
+          {accounts.map((a, i) => {
+            const available = (a.balance ?? 0) - (a.frozen ?? 0);
+            return (
+              <tr key={i} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                <td className="px-3 py-2 text-xs font-medium">{a.product_name}</td>
+                <td className="px-3 py-2 text-right tabular-nums text-xs">{fmt(a.balance)}</td>
+                <td className="px-3 py-2 text-right tabular-nums text-xs text-amber-600">{fmt(a.frozen)}</td>
+                <td className={`px-3 py-2 text-right tabular-nums text-xs font-semibold ${available < 0 ? "text-red-600" : "text-emerald-700"}`}>
+                  {fmt(available)}
+                </td>
+              </tr>
+            );
+          })}
           {!accounts.length && (
             <tr>
               <td colSpan={4} className="px-3 py-6 text-center text-muted-foreground text-sm">
@@ -141,6 +150,18 @@ function AccountsTable({ accounts = [] }) {
             </tr>
           )}
         </tbody>
+        {accounts.length > 0 && (
+          <tfoot>
+            <tr className="border-t bg-muted/20 text-xs font-semibold">
+              <td className="px-3 py-2 text-muted-foreground">Total</td>
+              <td className="px-3 py-2 text-right tabular-nums">{fmt(totalBalance)}</td>
+              <td className="px-3 py-2 text-right tabular-nums text-amber-600">{fmt(totalFrozen)}</td>
+              <td className={`px-3 py-2 text-right tabular-nums ${(totalBalance - totalFrozen) < 0 ? "text-red-600" : "text-emerald-700"}`}>
+                {fmt(totalBalance - totalFrozen)}
+              </td>
+            </tr>
+          </tfoot>
+        )}
       </table>
     </div>
   );
@@ -260,9 +281,9 @@ export default function ClientAccountIntelligence({ clientId, windowDays = 90 })
       {activeSection === "analytics" && (
         <>
           {isLoading && !isFetched ? (
-            <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-              {[...Array(6)].map((_, i) => (
-                <Card key={i} className={cn("shadow-sm", i < 4 ? "" : "col-span-2")}>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {[...Array(8)].map((_, i) => (
+                <Card key={i} className="shadow-sm">
                   <CardHeader><Skeleton className="h-4 w-24" /></CardHeader>
                   <CardContent><Skeleton className="h-8 w-20" /></CardContent>
                 </Card>
@@ -283,36 +304,58 @@ export default function ClientAccountIntelligence({ clientId, windowDays = 90 })
           ) : (
             <>
               {/* KPIs */}
-              <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
-                <Kpi title="Accounts Open" value={kpis?.accounts?.accounts_open ?? 0} icon={<Banknote className="h-4 w-4" />} />
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                <Kpi
+                  title="Open Accounts"
+                  value={kpis?.accounts?.accounts_open ?? 0}
+                  hint="Active savings accounts"
+                  icon={<Banknote className="h-4 w-4" />}
+                />
                 <Kpi
                   title="Total Balance"
                   value={fmtCurrency(kpis?.accounts?.total_balance ?? 0)}
-                  hint="All savings"
+                  hint={`Frozen: ${fmtCurrency(kpis?.accounts?.total_frozen ?? 0)}`}
                   icon={<TrendingUp className="h-4 w-4" />}
-                />
-                <Kpi
-                  title="Frozen"
-                  value={fmtCurrency(kpis?.accounts?.total_frozen ?? 0)}
-                  hint={`Fixed: ${fmtCurrency(kpis?.accounts?.fixed_deposits ?? 0)}`}
-                  icon={<Activity className="h-4 w-4" />}
+                  className="border-blue-200 dark:border-blue-800"
                 />
                 <Kpi
                   title="Open Loans"
                   value={kpis?.open_loans ?? 0}
-                  hint="Active exposure"
-                  icon={<Gauge className="h-4 w-4" />}
+                  hint={`${kpis?.times_borrowed ?? 0} total loans taken`}
+                  icon={<CreditCard className="h-4 w-4" />}
+                  className="border-violet-200 dark:border-violet-800"
                 />
                 <Kpi
-                  title="Times Borrowed"
-                  value={kpis?.times_borrowed ?? 0}
-                  icon={<PieIcon className="h-4 w-4" />}
+                  title="Loan Exposure"
+                  value={fmtCurrency(kpis?.exposure?.exposure_total ?? 0)}
+                  hint={`Arrears: ${fmtCurrency(kpis?.exposure?.arrears ?? 0)}`}
+                  icon={<Gauge className="h-4 w-4" />}
+                  className="border-amber-200 dark:border-amber-800"
                 />
                 <Kpi
                   title="Approval Rate"
                   value={`${kpis?.approval_rate_all ?? 0}%`}
                   hint={`Window: ${kpis?.approval_rate_win ?? 0}%`}
                   icon={<TrendingUp className="h-4 w-4" />}
+                />
+                <Kpi
+                  title="Fixed Deposits"
+                  value={fmtCurrency(kpis?.accounts?.fixed_deposits ?? 0)}
+                  hint="Locked savings"
+                  icon={<Activity className="h-4 w-4" />}
+                />
+                <Kpi
+                  title="DPD (Avg / Max)"
+                  value={`${lx?.avg_dpd ?? 0} / ${lx?.max_dpd ?? 0}`}
+                  hint={`Arrears ratio: ${((lx?.arrears_ratio ?? 0) * 100).toFixed(1)}%`}
+                  icon={<AlertTriangle className="h-4 w-4" />}
+                  className={(lx?.avg_dpd ?? 0) > 30 ? "border-red-200 dark:border-red-800" : ""}
+                />
+                <Kpi
+                  title="CRB Checks"
+                  value={kpis?.crb_checks ?? 0}
+                  hint="Credit bureau enquiries"
+                  icon={<ShieldCheck className="h-4 w-4" />}
                 />
               </div>
 
@@ -343,39 +386,23 @@ export default function ClientAccountIntelligence({ clientId, windowDays = 90 })
 
                 <Card className="shadow-sm">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-semibold">DPD &amp; Window Repayments</CardTitle>
-                    <CardDescription className="text-xs">Avg / Max DPD and repayment mix</CardDescription>
+                    <CardTitle className="text-sm font-semibold">Window Repayments</CardTitle>
+                    <CardDescription className="text-xs">Principal / Interest / Penalty collected in window</CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-3 gap-3 mb-3">
-                      <div className="bg-muted/40 rounded-lg p-3">
-                        <p className="text-xs text-muted-foreground">Avg DPD</p>
-                        <p className="text-xl font-bold">{lx?.avg_dpd ?? 0}</p>
-                      </div>
-                      <div className="bg-muted/40 rounded-lg p-3">
-                        <p className="text-xs text-muted-foreground">Max DPD</p>
-                        <p className="text-xl font-bold">{lx?.max_dpd ?? 0}</p>
-                      </div>
-                      <div className="bg-muted/40 rounded-lg p-3">
-                        <p className="text-xs text-muted-foreground">Arrears Ratio</p>
-                        <p className="text-xl font-bold">{((lx?.arrears_ratio ?? 0) * 100).toFixed(1)}%</p>
-                      </div>
-                    </div>
-                    <div className="h-32">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={[kpis?.window_paid || {}]}>
-                          <CartesianGrid strokeDasharray="3 3" stroke={C.grid} />
-                          <XAxis dataKey={() => "Window"} tick={{ fill: C.axis, fontSize: 11 }} />
-                          <YAxis tick={{ fill: C.axis, fontSize: 11 }} />
-                          <RTooltip content={<Tip />} />
-                          <Legend wrapperStyle={{ fontSize: 11 }} />
-                          <Bar dataKey="principal" name="Principal" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                          <Bar dataKey="interest" name="Interest" fill="#16a34a" radius={[4, 4, 0, 0]} />
-                          <Bar dataKey="penalty" name="Penalty" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                          <Bar dataKey="monitoring" name="Monitoring" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
+                  <CardContent className="h-56">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={[kpis?.window_paid || {}]}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={C.grid} />
+                        <XAxis dataKey={() => "Window"} tick={{ fill: C.axis, fontSize: 11 }} />
+                        <YAxis tick={{ fill: C.axis, fontSize: 11 }} />
+                        <RTooltip content={<Tip />} />
+                        <Legend wrapperStyle={{ fontSize: 11 }} />
+                        <Bar dataKey="principal" name="Principal" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="interest" name="Interest" fill="#16a34a" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="penalty" name="Penalty" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="monitoring" name="Monitoring" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </CardContent>
                 </Card>
               </div>

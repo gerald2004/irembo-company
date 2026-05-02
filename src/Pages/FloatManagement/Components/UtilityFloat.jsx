@@ -6,17 +6,37 @@ import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Zap, Droplets, Wifi, Settings } from "lucide-react";
 
 const currency = (n) => Number(n || 0).toLocaleString();
 
+const getUtilityIcon = (utilityType) => {
+  const type = (utilityType || "").toLowerCase();
+  if (type === "electricity") return Zap;
+  if (type === "water") return Droplets;
+  if (type === "internet" || type === "wifi") return Wifi;
+  return Settings;
+};
+
 const UtilityCard = ({ acc, onView }) => {
   const isPostpaid = acc.billing_type === "postpaid";
+  const UtilityIcon = getUtilityIcon(acc.utility_type);
+
+  const feeDisplay =
+    acc.fee_type === "percent"
+      ? `${acc.fee_value}%`
+      : `UGX ${currency(acc.fee_value)}`;
 
   return (
     <Card className="flex flex-col">
       <CardHeader className="space-y-1">
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-base">{acc.name}</CardTitle>
+          <div className="flex items-center gap-2">
+            <div className="rounded-md bg-primary/10 p-1.5">
+              <UtilityIcon className="h-4 w-4 text-primary" />
+            </div>
+            <CardTitle className="text-base">{acc.name}</CardTitle>
+          </div>
           <Badge variant={isPostpaid ? "secondary" : "default"}>
             {isPostpaid ? "Postpaid" : "Prepaid"}
           </Badge>
@@ -24,23 +44,27 @@ const UtilityCard = ({ acc, onView }) => {
 
         <p className="text-xs text-muted-foreground">
           {acc.utility_type?.toUpperCase?.() || "UTILITY"} • Fee:{" "}
-          <span className="font-medium">{acc.fee_label}</span>
+          <span className="font-medium">{feeDisplay}</span>
         </p>
       </CardHeader>
 
       <CardContent className="space-y-2">
-        <div className="text-xl font-bold">{currency(acc.available)}</div>
+        <div className="text-xl font-bold text-green-700">
+          {currency(acc.available)}
+        </div>
 
         <p className="text-xs text-muted-foreground">
           Reserved: {currency(acc.reserved)}
         </p>
 
-        <p className="text-xs text-muted-foreground">
-          {acc.transactions ?? 0} Transactions
-        </p>
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="text-xs">
+            {acc.transactions ?? 0} Transactions
+          </Badge>
+        </div>
 
         <Button size="sm" onClick={onView}>
-          View transactions
+          View Transactions →
         </Button>
       </CardContent>
     </Card>
