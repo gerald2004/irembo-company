@@ -86,7 +86,7 @@ const Login = ({ className, ...props }) => {
       <div className="w-full max-w-sm space-y-6">
         <div className="flex justify-center mb-2">
           <img
-            src="/bank.png"
+            src="/logo.png"
             alt="App Logo"
             className="h-16 w-auto"
           />

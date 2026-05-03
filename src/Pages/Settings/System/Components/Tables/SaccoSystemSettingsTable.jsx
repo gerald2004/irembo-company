@@ -28,11 +28,6 @@ export function SaccoSystemSettingsTable() {
       description:
         "Enable or disable automatic penalties for overdue loan repayments based on Business policy.",
     },
-    sacco_sacco_loan_alerts: {
-      label: "Loan Alerts",
-      description:
-        "Toggle alerts sent to clients when their loans are due, overdue, or require attention.",
-    },
     sacco_mobile_app_login: {
       label: "Client App Login",
       description:
@@ -62,11 +57,6 @@ export function SaccoSystemSettingsTable() {
       label: "Monthly Charges",
       description:
         "Enable monthly automatic deductions for fees or savings products assigned to clients.",
-    },
-    sacco_loan_alerts: {
-      label: "Loan Alert Notifications",
-      description:
-        "Control whether clients receive automated alerts about their loans via SMS or email.",
     },
   };
   // ✅ Fetch current settings
@@ -128,13 +118,18 @@ export function SaccoSystemSettingsTable() {
     mutation.mutate({ key, value: newValue });
   };
 
+  // Loan alert toggles are managed in Loan Notifications Admin — exclude from this table
+  const EXCLUDED_KEYS = ['sacco_sacco_loan_alerts', 'sacco_loan_alerts'];
+
   // ✅ Format settings into rows
-  const settingData = Object.entries(settings).map(([key, value]) => ({
-    key,
-    label: settingLabels[key]?.label || key,
-    value,
-    description: settingLabels[key]?.description || "No description available.",
-  }));
+  const settingData = Object.entries(settings)
+    .filter(([key]) => !EXCLUDED_KEYS.includes(key))
+    .map(([key, value]) => ({
+      key,
+      label: settingLabels[key]?.label || key,
+      value,
+      description: settingLabels[key]?.description || "No description available.",
+    }));
 
   // ✅ Table Columns
   const columns = [

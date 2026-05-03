@@ -26,6 +26,7 @@ import { hasPermission } from "@/lib/utils";
 import LoanIntelligenceDashboard from "./Components/Blocks/LoanIntelligenceDashboard";
 import GroupLoanAllocations from "./Components/Tables/GroupLoanAllocations";
 import LoanStatement from "./Components/Blocks/LoanStatement";
+import LoanPenaltiesTable from "./Components/Tables/LoanPenaltiesTable";
 
 const SingleLoan = () => {
   const navigate = useNavigate();
@@ -197,6 +198,11 @@ const SingleLoan = () => {
                 ) && hasPermission(roles, 100161) && (
                   <TabsTrigger value="loan-statement">Statement</TabsTrigger>
                 )}
+                {["disbursed", "settled", "writternoff", "paid_off", "refinanced"].includes(
+                  data?.loan_application?.loan_application_status
+                ) && hasPermission(roles, 100267) && (
+                  <TabsTrigger value="loan-penalties">Penalties</TabsTrigger>
+                )}
               </TabsList>
             </div>
             <TabsContent value="summary" className="space-y-4">
@@ -290,6 +296,14 @@ const SingleLoan = () => {
             <TabsContent value="loan-statement" className="space-y-4">
               {hasPermission(roles, 100161) && (
                 <LoanStatement loanId={params.loanid} />
+              )}
+            </TabsContent>
+            <TabsContent value="loan-penalties" className="space-y-4">
+              {hasPermission(roles, 100267) && (
+                <LoanPenaltiesTable
+                  schedules={data?.loan_application?.loan_schedule ?? []}
+                  hasManagePermission={hasPermission(roles, 100267)}
+                />
               )}
             </TabsContent>
           </Tabs>

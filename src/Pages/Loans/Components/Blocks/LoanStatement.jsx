@@ -15,6 +15,7 @@ const TYPE_LABELS = {
   interest:        'Interest Payment',
   penalty:         'Penalty Payment',
   penalty_accrual: 'Penalty Accrual',
+  penalty_waiver:  'Penalty Waiver',
   monitoring:      'Monitoring Fee',
 };
 
@@ -24,6 +25,7 @@ const TYPE_BADGE = {
   interest:        'bg-amber-100 text-amber-800',
   penalty:         'bg-orange-100 text-orange-800',
   penalty_accrual: 'bg-red-100 text-red-800',
+  penalty_waiver:  'bg-teal-100 text-teal-800',
   monitoring:      'bg-purple-100 text-purple-800',
 };
 
@@ -163,74 +165,106 @@ export default function LoanStatement({ loanId }) {
 
       {/* Transaction Ledger */}
       <div>
-        <h3 className="text-sm font-semibold mb-2">Transaction Ledger ({transactions.length} entries)</h3>
-        {transactions.length === 0 ? (
-          <div className="border rounded-lg py-10 text-center text-sm text-muted-foreground">
-            No transactions recorded yet.
-          </div>
-        ) : (
-          <div className="border rounded-lg overflow-auto">
-            <table className="w-full text-xs">
-              <thead className="bg-muted/50 border-b sticky top-0">
-                <tr>
-                  <th className="px-3 py-2 text-left">Date</th>
-                  <th className="px-3 py-2 text-left">Reference</th>
-                  <th className="px-3 py-2 text-left">Type</th>
-                  <th className="px-3 py-2 text-left">Narrative</th>
-                  <th className="px-3 py-2 text-right text-blue-600">Disbursed</th>
-                  <th className="px-3 py-2 text-right text-emerald-600">Repaid / Accrued</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.map((tx) => {
-                  const isCredit = tx.type === 'disbursement';
-                  const isDebit = !isCredit;
-                  return (
-                    <tr key={tx.id} className="border-b hover:bg-muted/20">
-                      <td className="px-3 py-1.5 text-muted-foreground whitespace-nowrap">
-                        {new Date(tx.date).toLocaleDateString()}
-                      </td>
-                      <td className="px-3 py-1.5 font-mono">{tx.code}</td>
-                      <td className="px-3 py-1.5">
-                        <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-medium ${TYPE_BADGE[tx.type] ?? 'bg-gray-100 text-gray-700'}`}>
-                          {TYPE_LABELS[tx.type] ?? tx.type}
-                        </span>
-                      </td>
-                      <td className="px-3 py-1.5 text-muted-foreground">{tx.narrative}</td>
-                      <td className="px-3 py-1.5 text-right font-medium">
-                        {isCredit ? (
-                          <span className="flex items-center justify-end gap-1 text-blue-700">
-                            <TrendingUp className="w-3 h-3" />
-                            {fmt(tx.amount)}
-                          </span>
-                        ) : '—'}
-                      </td>
-                      <td className="px-3 py-1.5 text-right font-medium">
-                        {isDebit ? (
-                          <span className="flex items-center justify-end gap-1 text-emerald-700">
-                            <TrendingDown className="w-3 h-3" />
-                            {fmt(tx.amount)}
-                          </span>
-                        ) : '—'}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              <tfoot className="bg-muted/40 border-t">
-                <tr>
-                  <td colSpan={4} className="px-3 py-2 font-semibold text-right">Totals</td>
-                  <td className="px-3 py-2 text-right font-bold text-blue-700">
-                    {fmt(transactions.filter(t => t.type === 'disbursement').reduce((s, t) => s + t.amount, 0))}
-                  </td>
-                  <td className="px-3 py-2 text-right font-bold text-emerald-700">
-                    {fmt(transactions.filter(t => t.type !== 'disbursement').reduce((s, t) => s + t.amount, 0))}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        )}
+        {(() => {
+          // Group by transaction code so multi-component repayments collapse to one row
+          const grouped = [];
+          const seen = {};
+          for (const tx of transactions) {
+            if (!seen[tx.code]) {
+              seen[tx.code] = { ...tx, _components: [tx] };
+              grouped.push(seen[tx.code]);
+            } else {
+              seen[tx.code]._components.push(tx);
+              seen[tx.code].amount += tx.amount;
+            }
+          }
+          // For grouped repayments, synthesise a display type
+          const rowType = (g) => {
+            if (g._components.length === 1) return g.type;
+            const types = [...new Set(g._components.map(c => c.type))];
+            if (types.every(t => ['principal','interest','penalty','monitoring'].includes(t))) return 'repayment';
+            return 'repayment';
+          };
+
+          return (
+            <>
+              <h3 className="text-sm font-semibold mb-2">
+                Transaction Ledger ({grouped.length} entries)
+              </h3>
+              {grouped.length === 0 ? (
+                <div className="border rounded-lg py-10 text-center text-sm text-muted-foreground">
+                  No transactions recorded yet.
+                </div>
+              ) : (
+                <div className="border rounded-lg overflow-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/50 border-b sticky top-0">
+                      <tr>
+                        <th className="px-3 py-2 text-left">Date</th>
+                        <th className="px-3 py-2 text-left">Reference</th>
+                        <th className="px-3 py-2 text-left">Type</th>
+                        <th className="px-3 py-2 text-left">Narrative</th>
+                        <th className="px-3 py-2 text-right text-blue-600">Disbursed</th>
+                        <th className="px-3 py-2 text-right text-emerald-600">Repaid / Accrued</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {grouped.map((g) => {
+                        const displayType = rowType(g);
+                        const isCredit = displayType === 'disbursement';
+                        const isRepayment = g._components.length > 1;
+                        const breakdown = isRepayment
+                          ? g._components.map(c => `${TYPE_LABELS[c.type] ?? c.type}: ${fmt(c.amount)}`).join(' · ')
+                          : g.narrative;
+                        return (
+                          <tr key={g.code} className="border-b hover:bg-muted/20">
+                            <td className="px-3 py-1.5 text-muted-foreground whitespace-nowrap">
+                              {new Date(g.date).toLocaleDateString()}
+                            </td>
+                            <td className="px-3 py-1.5 font-mono">{g.code}</td>
+                            <td className="px-3 py-1.5">
+                              <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-medium ${
+                                isRepayment ? 'bg-emerald-100 text-emerald-800' : (TYPE_BADGE[displayType] ?? 'bg-gray-100 text-gray-700')
+                              }`}>
+                                {isRepayment ? 'Loan Repayment' : (TYPE_LABELS[displayType] ?? displayType)}
+                              </span>
+                            </td>
+                            <td className="px-3 py-1.5 text-muted-foreground">{breakdown}</td>
+                            <td className="px-3 py-1.5 text-right font-medium">
+                              {isCredit ? (
+                                <span className="flex items-center justify-end gap-1 text-blue-700">
+                                  <TrendingUp className="w-3 h-3" />{fmt(g.amount)}
+                                </span>
+                              ) : '—'}
+                            </td>
+                            <td className="px-3 py-1.5 text-right font-medium">
+                              {!isCredit ? (
+                                <span className="flex items-center justify-end gap-1 text-emerald-700">
+                                  <TrendingDown className="w-3 h-3" />{fmt(g.amount)}
+                                </span>
+                              ) : '—'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot className="bg-muted/40 border-t">
+                      <tr>
+                        <td colSpan={4} className="px-3 py-2 font-semibold text-right">Totals</td>
+                        <td className="px-3 py-2 text-right font-bold text-blue-700">
+                          {fmt(transactions.filter(t => t.type === 'disbursement').reduce((s, t) => s + t.amount, 0))}
+                        </td>
+                        <td className="px-3 py-2 text-right font-bold text-emerald-700">
+                          {fmt(transactions.filter(t => t.type !== 'disbursement').reduce((s, t) => s + t.amount, 0))}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
     </div>
   );

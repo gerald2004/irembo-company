@@ -181,7 +181,7 @@ export function AppSidebar({ ...props }) {
           title: "System Settings",
           url: "#",
           icon: Settings2,
-          permissionCodes: [100148, 100149, 100150],
+          permissionCodes: [100148, 100149, 100150, 100266],
           items: [
             {
               title: "General Config",
@@ -198,6 +198,11 @@ export function AppSidebar({ ...props }) {
               title: "System Notification Triggers",
               url: "system-notification-triggers",
               permissionCodes: [100150],
+            },
+            {
+              title: "Loan Notifications Admin",
+              url: "loan-notifications-admin",
+              permissionCodes: [100266],
             },
           ],
         },

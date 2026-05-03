@@ -432,6 +432,7 @@ export function LoanScheduleTable({
           isOpen={showRepaymentDialog}
           onClose={handleRepaymentCloseDialog}
           refetch={refetch}
+          isGroupLoan={loansData?.client?.client_type === "group"}
         />
       )}
 

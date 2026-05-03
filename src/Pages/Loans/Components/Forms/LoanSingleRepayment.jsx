@@ -33,7 +33,7 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 
-const LoanSingleRepayment = ({ isOpen, onClose, refetch }) => {
+const LoanSingleRepayment = ({ isOpen, onClose, refetch, isGroupLoan = false }) => {
   const axiosPrivate = useAxiosPrivate();
   const { loanid: loanid } = useParams(); // ✅ Get loanid from params
 
@@ -158,28 +158,30 @@ const LoanSingleRepayment = ({ isOpen, onClose, refetch }) => {
                   <p className="text-red-500 text-sm">{errors.amount.message}</p>
                 )}
               </div>
-              <div>
-                <Label htmlFor="savings_amount" className="flex items-center gap-1.5">
-                  <PiggyBank className="w-3.5 h-3.5 text-green-600" />
-                  Compulsory Savings (optional)
-                </Label>
-                <Input
-                  id="savings_amount"
-                  type="number"
-                  step="0.01"
-                  placeholder="Leave blank to use setting default (e.g. 2000)"
-                  {...register("savings_amount", {
-                    min: { value: 0, message: "Cannot be negative" },
-                  })}
-                />
-                {errors.savings_amount && (
-                  <p className="text-red-500 text-sm">{errors.savings_amount.message}</p>
-                )}
-                <p className="text-xs text-muted-foreground mt-1">
-                  Deducted alongside the repayment and credited to the group savings account.
-                  Leave blank to apply the configured default amount.
-                </p>
-              </div>
+              {isGroupLoan && (
+                <div>
+                  <Label htmlFor="savings_amount" className="flex items-center gap-1.5">
+                    <PiggyBank className="w-3.5 h-3.5 text-green-600" />
+                    Compulsory Savings (optional)
+                  </Label>
+                  <Input
+                    id="savings_amount"
+                    type="number"
+                    step="0.01"
+                    placeholder="Leave blank to use setting default (e.g. 2000)"
+                    {...register("savings_amount", {
+                      min: { value: 0, message: "Cannot be negative" },
+                    })}
+                  />
+                  {errors.savings_amount && (
+                    <p className="text-red-500 text-sm">{errors.savings_amount.message}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Deducted alongside the repayment and credited to the group savings account.
+                    Leave blank to apply the configured default amount.
+                  </p>
+                </div>
+              )}
             </fieldset>
           )}
 
