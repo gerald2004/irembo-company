@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -30,6 +31,7 @@ import {
   Loader2,
   ShieldCheck,
   CreditCard,
+  HeartPulse,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -111,6 +113,67 @@ function Kpi({ title, value, hint, icon, children, className }) {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+/* ── Health gauge — SVG semicircle ── */
+function HealthGauge({ score = 0, label = "" }) {
+  const r            = 80;
+  const circumference = Math.PI * r;
+  const clamped      = Math.max(0, Math.min(100, score));
+  const offset       = circumference * (1 - clamped / 100);
+  const color =
+    score >= 80 ? "#16a34a" :
+    score >= 60 ? "#2563eb" :
+    score >= 40 ? "#d97706" :
+    "#dc2626";
+  return (
+    <div className="flex flex-col items-center">
+      <svg viewBox="0 0 200 110" className="w-44">
+        <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="hsl(var(--muted))" strokeWidth={14} strokeLinecap="round" />
+        <path
+          d="M 20 100 A 80 80 0 0 1 180 100"
+          fill="none" stroke={color} strokeWidth={14} strokeLinecap="round"
+          strokeDasharray={circumference} strokeDashoffset={offset}
+          style={{ transition: "stroke-dashoffset 0.7s ease" }}
+        />
+        <text x={100} y={86} textAnchor="middle" fontSize={30} fontWeight="bold" fill={color}>{score}</text>
+        <text x={100} y={103} textAnchor="middle" fontSize={12} fill="hsl(var(--muted-foreground))">{label}</text>
+      </svg>
+      <div className="flex justify-between w-44 -mt-1 px-3">
+        <span className="text-[11px] text-muted-foreground">0</span>
+        <span className="text-[11px] text-muted-foreground">100</span>
+      </div>
+    </div>
+  );
+}
+
+/* ── Single rated percentage bar ── */
+function RatingBar({ label, value = 0, weight, hint }) {
+  const color =
+    value >= 80 ? "bg-green-500" :
+    value >= 60 ? "bg-blue-500" :
+    value >= 40 ? "bg-amber-500" :
+    "bg-red-500";
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium">{label}</span>
+        <div className="flex items-center gap-2">
+          {weight && <span className="text-[10px] text-muted-foreground">{weight}% weight</span>}
+          <span className={`text-sm font-bold ${value >= 80 ? "text-green-600" : value >= 60 ? "text-blue-600" : value >= 40 ? "text-amber-600" : "text-red-600"}`}>
+            {value}%
+          </span>
+        </div>
+      </div>
+      <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full ${color} transition-all duration-700`}
+          style={{ width: `${value}%` }}
+        />
+      </div>
+      {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
+    </div>
   );
 }
 
@@ -198,6 +261,7 @@ export default function ClientAccountIntelligence({ clientId, windowDays = 90 })
     alerts = [],
     shares = {},
     internal_transfers = {},
+    health_meter: health = {},
   } = data || {};
 
   const netCumulative = useMemo(() => {
@@ -358,6 +422,50 @@ export default function ClientAccountIntelligence({ clientId, windowDays = 90 })
                   icon={<ShieldCheck className="h-4 w-4" />}
                 />
               </div>
+
+              {/* Health Meter */}
+              <Card className="shadow-sm">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <HeartPulse className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-sm font-semibold">Client Health Meter</CardTitle>
+                  </div>
+                  <CardDescription className="text-xs">
+                    Composite score across on-time payments, savings culture, portfolio quality &amp; repayment activity
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col md:flex-row items-center gap-8">
+                    <HealthGauge score={health?.score ?? 0} label={health?.label ?? "—"} />
+                    <div className="flex-1 w-full space-y-4">
+                      <RatingBar
+                        label="On-time Payment Rate"
+                        value={health?.on_time_rate ?? 0}
+                        weight={40}
+                        hint={`${health?.paid_on_time ?? 0} of ${health?.total_past_due ?? 0} past-due schedules paid on time · ${health?.missed_payments ?? 0} missed`}
+                      />
+                      <RatingBar
+                        label="Savings Culture"
+                        value={health?.savings_culture ?? 0}
+                        weight={25}
+                        hint="% of active months with at least one deposit"
+                      />
+                      <RatingBar
+                        label="Portfolio Quality"
+                        value={health?.portfolio_quality ?? 0}
+                        weight={20}
+                        hint="100% minus arrears ratio — how much of outstanding is current"
+                      />
+                      <RatingBar
+                        label="Repayment Activity"
+                        value={health?.repayment_activity ?? 0}
+                        weight={15}
+                        hint="Repayments made in the selected window vs current exposure"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Exposure & DPD */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

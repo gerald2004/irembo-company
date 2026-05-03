@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import Datatable from "@/Pages/Components/Datatable";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,277 +25,260 @@ import { toast } from "@/hooks/use-toast";
 import fileDownload from "js-file-download";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
 import ReverseStatementTransaction from "../Forms/ReverseStatementTransaction";
+import { RotateCcw } from "lucide-react";
+
+const STATUS_CLASS = {
+  completed: "bg-green-100 text-green-800 border-green-200",
+  reversed:  "bg-gray-100 text-gray-600 border-gray-200",
+  pending:   "bg-yellow-100 text-yellow-800 border-yellow-200",
+};
+
+const REVERSIBLE_TYPES = new Set([
+  "Deposit", "Withdrawal", "Account Charge",
+  "Loan Disbursement", "Loan Repayment", "Loan Application Charge",
+  "Compulsory Savings (Frozen)",
+]);
+
+const isReversible = (row) =>
+  REVERSIBLE_TYPES.has(row.transaction_type) && row.status !== "reversed";
 
 const AccountStatementTable = () => {
-  const { client_id: clientAccountId } = useParams(); // ✅ Get client_account_id from URL
+  const { client_id: clientAccountId } = useParams();
   const axiosPrivate = useAxiosPrivate();
   const navigate = useNavigate();
-  const tableRef = useRef(null); // ✅ Reference for the table
+  const tableRef = useRef(null);
 
-  const [filters, setFilters] = useState({
-    startDate: "",
-    endDate: "",
-  });
+  const [filters, setFilters]           = useState({ startDate: "", endDate: "" });
+  const [reverseModal, setReverseModal] = useState(null);
+  const [selectedCount, setSelectedCount] = useState(0);
   const { auth } = useAuth();
   const roles = auth?.roles;
-  // ✅ Fetch Transactions for the Account
-  const {
-    data = [],
-    isLoading,
-    refetch,
-    isRefetching,
-    isError,
-  } = useQuery({
+
+  const { data = [], isLoading, refetch, isRefetching, isError } = useQuery({
     queryKey: ["transactions", clientAccountId, filters],
     queryFn: async () => {
       const controller = new AbortController();
-
-      const fetchURL = `/clients/accounts/statement/${clientAccountId}`;
       try {
-        const response = await axiosPrivate.get(fetchURL, {
+        const response = await axiosPrivate.get(`/clients/accounts/statement/${clientAccountId}`, {
           signal: controller.signal,
-          params: {
-            startDate: filters.startDate,
-            endDate: filters.endDate,
-          },
+          params: { startDate: filters.startDate, endDate: filters.endDate },
         });
         return response?.data?.data ?? [];
       } catch (error) {
-        if (error?.response?.status === 401) {
-          navigate("/", { state: { from: location }, replace: true });
-        }
+        if (error?.response?.status === 401) navigate("/", { state: { from: location }, replace: true });
         throw error;
       }
     },
     keepPreviousData: true,
   });
 
-  const handleFilterChange = (data) => {
-    setFilters(data);
-    refetch();
-  };
-  const [transactionId, setTransactionId] = useState([]);
-  const [openModal, setOpenModal] = useState(false);
+  const handleFilterChange = (d) => { setFilters(d); refetch(); };
 
-  const handleReverseTransactionOpen = (data) => {
-    setOpenModal(true);
-    setTransactionId(data);
-  };
+  const canReverse = hasPermission(roles, 100041);
 
-  const handleReverseTransactionClose = () => {
-    setOpenModal(false);
-    setTransactionId([]);
-  };
+  const getSelectedReversibleIds = useCallback(() => {
+    const table = tableRef.current;
+    if (!table) return [];
+    return table.getSelectedRowModel().rows
+      .filter((r) => isReversible(r.original))
+      .map((r) => r.original.statement_id);
+  }, []);
+
+  const handleBulkReverse = useCallback(() => {
+    const ids = getSelectedReversibleIds();
+    if (ids.length === 0) return;
+    setReverseModal({ mode: "bulk", transactionIds: ids });
+  }, [getSelectedReversibleIds]);
+
+  const handleCloseModal = useCallback(() => {
+    setReverseModal(null);
+    // clear selection after reversal
+    tableRef.current?.resetRowSelection?.();
+    setSelectedCount(0);
+  }, []);
 
   const columns = [
     {
       id: "select",
       header: ({ table }) => (
         <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
+          onCheckedChange={(value) => {
+            table.toggleAllPageRowsSelected(!!value);
+            // count update is handled in cell re-renders via row.getIsSelected()
+            setTimeout(() => setSelectedCount(table.getSelectedRowModel().rows.length), 0);
+          }}
           aria-label="Select all"
         />
       ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      ),
+      cell: ({ row }) => {
+        const reversible = isReversible(row.original);
+        if (!reversible) return null;
+        return (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => {
+              row.toggleSelected(!!value);
+              setTimeout(() => setSelectedCount(tableRef.current?.getSelectedRowModel().rows.length ?? 0), 0);
+            }}
+            aria-label="Select row"
+          />
+        );
+      },
     },
     {
       accessorKey: "transaction_code",
-      header: "Transaction Code",
-      cell: ({ row }) => <p>{row.original.transaction_code}</p>,
+      header: "Code",
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.transaction_code}</span>,
     },
     {
       accessorKey: "transaction_type",
-      header: "Transaction Type",
-      cell: ({ row }) => (
-        <p className="capitalize">{row.original.transaction_type}</p>
-      ),
+      header: "Type",
+      cell: ({ row }) => <span className="capitalize text-sm">{row.original.transaction_type}</span>,
     },
     {
       accessorKey: "description",
       header: "Description",
-      cell: ({ row }) => <p>{row.original.description}</p>,
+      cell: ({ row }) => <span className="text-xs text-muted-foreground max-w-xs truncate block">{row.original.description}</span>,
     },
     {
       accessorKey: "debit_amount",
       header: "Debit",
       cell: ({ row }) =>
         row.original.debit_credit === "Debit" ? (
-          <p>{parseFloat(row.original.amount).toLocaleString()}</p>
-        ) : (
-          "-"
-        ),
+          <span className="font-mono text-red-600">{parseFloat(row.original.amount).toLocaleString()}</span>
+        ) : "—",
     },
     {
       accessorKey: "credit_amount",
       header: "Credit",
       cell: ({ row }) =>
         row.original.debit_credit === "Credit" ? (
-          <p>{parseFloat(row.original.amount).toLocaleString()}</p>
-        ) : (
-          "-"
-        ),
+          <span className="font-mono text-emerald-600">{parseFloat(row.original.amount).toLocaleString()}</span>
+        ) : "—",
     },
     {
       accessorKey: "running_balance",
-      header: "Running Balance",
+      header: "Balance",
       cell: ({ row }) => (
-        <p>{parseFloat(row.original.running_balance).toLocaleString()}</p>
+        <span className="font-mono font-medium">{parseFloat(row.original.running_balance).toLocaleString()}</span>
       ),
     },
     {
       accessorKey: "transaction_date",
       header: "Date",
-      cell: ({ row }) => formatDateTimestamp(row.original.transaction_date),
+      cell: ({ row }) => <span className="text-xs whitespace-nowrap">{formatDateTimestamp(row.original.transaction_date)}</span>,
     },
-
     {
+      id: "status",
+      header: "Status",
+      cell: ({ row }) => {
+        const s = row.original.status ?? "completed";
+        return (
+          <Badge className={`capitalize text-xs border ${STATUS_CLASS[s] ?? "bg-muted text-muted-foreground"}`}>
+            {s}
+          </Badge>
+        );
+      },
+    },
+    ...(canReverse ? [{
       id: "actions",
       header: "Actions",
-      cell: ({ row }) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              ...
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {hasPermission(roles, 100041) && (
-              <DropdownMenuItem
-                onClick={() =>
-                  handleReverseTransactionOpen(row.original.statement_id)
-                }
-              >
-                Reverse Transaction
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
-    },
+      cell: ({ row }) => {
+        const reversible = isReversible(row.original);
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">...</Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {reversible ? (
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive text-xs"
+                  onClick={() => setReverseModal({ mode: "single", transactionId: row.original.statement_id })}
+                >
+                  <RotateCcw className="w-3 h-3 mr-1.5" /> Reverse
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem disabled className="text-muted-foreground text-xs">
+                  Cannot reverse
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
+    }] : []),
   ];
 
   const [isDownloading, setIsDownloading] = useState(false);
 
   const onDownload = async (type) => {
     if (!tableRef.current) {
-      toast({
-        title: "Table not ready",
-        variant: "destructive",
-        description: "Cannot find the table instance.",
-      });
+      toast({ title: "Table not ready", variant: "destructive" });
       return;
     }
-
     const exportData = prepareDataForExport(tableRef.current, data);
-    const controller = new AbortController();
-
     const dataDownload = {
       transactions: exportData,
       clientData: { client_account_id: clientAccountId },
       dates: {
-        start_date: formatDateTimestamp(
-          getValidDate(filters.startDate, auth?.fiscalYear?.start_date)
-        ),
-        end_date: formatDateTimestamp(
-          getValidDate(filters.endDate, new Date())
-        ),
+        start_date: formatDateTimestamp(getValidDate(filters.startDate, auth?.fiscalYear?.start_date)),
+        end_date:   formatDateTimestamp(getValidDate(filters.endDate, new Date())),
       },
     };
-
     try {
       setIsDownloading(true);
-      let response;
-      if (type === "pdf") {
-        response = await axiosPrivate.post(
-          `/export/account-statement/pdf`, // <-- Your endpoint
-          { data: dataDownload },
-          {
-            responseType: "blob",
-            signal: controller.signal,
-          }
-        );
-      }
-
-      if (type === "xlsx") {
-        response = await axiosPrivate.post(
-          `/export/account-statement/excel`, // <-- Your endpoint
-          { data: dataDownload },
-          {
-            responseType: "blob",
-            signal: controller.signal,
-          }
-        );
-      }
-
-      const unix = Math.round(+new Date() / 1000);
-      const fileType = type === "pdf" ? "pdf" : "xlsx";
-      const downloadTitle = `Account-Statement-${unix}.${fileType}`;
-
-      fileDownload(response.data, downloadTitle);
-
-      toast({
-        title: `Download successful`,
-        variant: "success",
-        description: `Your ${fileType.toUpperCase()} file has been downloaded.`,
-      });
-      setIsDownloading(false);
-    } catch (error) {
-      console.log(error);
-      toast({
-        title: "Uh oh! Something went wrong.",
-        variant: "destructive",
-        description: "Failed to download file.",
-      });
+      const response = await axiosPrivate.post(
+        type === "pdf" ? "/export/account-statement/pdf" : "/export/account-statement/excel",
+        { data: dataDownload },
+        { responseType: "blob" }
+      );
+      const ext = type === "pdf" ? "pdf" : "xlsx";
+      fileDownload(response.data, `Account-Statement-${Math.round(+new Date() / 1000)}.${ext}`);
+      toast({ title: "Download successful", variant: "success" });
+    } catch {
+      toast({ title: "Download failed", variant: "destructive" });
+    } finally {
       setIsDownloading(false);
     }
   };
 
   return (
     <div className="space-y-4">
-      {/* ✅ Filters */}
-      <div className="flex items-center justify-center space-x-2">
+      {/* Filters + exports */}
+      <div className="flex flex-wrap items-center gap-2">
         {hasPermission(roles, 100050) && (
-          <ClientStatementQuery
-            onFilterChange={handleFilterChange}
-            isRefetching={isRefetching}
-            refetch={refetch}
-          />
+          <ClientStatementQuery onFilterChange={handleFilterChange} isRefetching={isRefetching} refetch={refetch} />
         )}
         {hasPermission(roles, 100157) && (
           <>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onDownload("pdf")}
-              disabled={isDownloading}
-            >
-              Export PDF
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onDownload("xlsx")}
-              disabled={isDownloading}
-            >
-              Export Excel
-            </Button>
+            <Button size="sm" variant="outline" onClick={() => onDownload("pdf")} disabled={isDownloading}>Export PDF</Button>
+            <Button size="sm" variant="outline" onClick={() => onDownload("xlsx")} disabled={isDownloading}>Export Excel</Button>
           </>
         )}
       </div>
 
-      {/* ✅ Transaction Table */}
+      {/* Bulk action bar */}
+      {canReverse && selectedCount > 0 && (
+        <div className="flex items-center gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-2">
+          <span className="text-sm font-medium text-destructive">
+            {selectedCount} transaction{selectedCount !== 1 ? "s" : ""} selected
+          </span>
+          <Button size="sm" variant="destructive" className="h-7" onClick={handleBulkReverse}>
+            <RotateCcw className="w-3 h-3 mr-1.5" /> Reverse Selected
+          </Button>
+          <Button
+            size="sm" variant="outline" className="h-7"
+            onClick={() => { tableRef.current?.resetRowSelection?.(); setSelectedCount(0); }}
+          >
+            Clear
+          </Button>
+        </div>
+      )}
+
       <Datatable
         ref={tableRef}
         columns={columns}
@@ -305,12 +289,15 @@ const AccountStatementTable = () => {
         isError={isError}
         colSpan={5}
       />
-      {openModal && (
+
+      {reverseModal && (
         <ReverseStatementTransaction
-          transactionId={transactionId}
-          isOpen={openModal}
+          isOpen
+          onClose={handleCloseModal}
           refetch={refetch}
-          onClose={handleReverseTransactionClose}
+          mode={reverseModal.mode}
+          transactionId={reverseModal.transactionId}
+          transactionIds={reverseModal.transactionIds}
         />
       )}
     </div>

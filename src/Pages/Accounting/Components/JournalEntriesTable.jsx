@@ -8,6 +8,10 @@ import {
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -16,10 +20,6 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { ChevronDown, RefreshCw, RotateCcw } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +48,8 @@ export function JournalEntriesTable() {
   const [pagination,    setPagination]    = useState({ pageIndex: 0, pageSize: 10 });
   const [isModalOpen,   setIsModalOpen]   = useState(false);
   const [reverseTarget, setReverseTarget] = useState(null);
+  const [reversePin,    setReversePin]    = useState("");
+  const [reversePinErr, setReversePinErr] = useState("");
   const [isDownloading, setIsDownloading] = useState(false);
 
   const debouncedFilter = useDebounce(globalFilter, 600);
@@ -75,18 +77,15 @@ export function JournalEntriesTable() {
   });
 
   const reverseMutation = useMutation({
-    mutationFn: (jeId) =>
-      axiosPrivate.post(`/accounting/journals/${jeId}/reverse`),
+    mutationFn: ({ jeId, pincode }) =>
+      axiosPrivate.post(`/accounting/journals/${jeId}/reverse`, { user_pincode: pincode }),
     onSuccess: () => {
       toast({ title: "Journal entry reversed", description: "A reversal entry has been created." });
       queryClient.invalidateQueries({ queryKey: ["journal-entries-data"] });
+      setReverseTarget(null);
     },
     onError: (err) => {
-      toast({
-        title: "Reversal failed",
-        description: err?.response?.data?.messages?.[0] ?? "Could not reverse this entry.",
-        variant: "destructive",
-      });
+      setReversePinErr(err?.response?.data?.messages?.[0] ?? "Could not reverse this entry.");
     },
   });
 
@@ -435,31 +434,55 @@ export function JournalEntriesTable() {
         />
       )}
 
-      {/* ── Reverse confirmation ── */}
-      <AlertDialog open={!!reverseTarget} onOpenChange={(o) => !o && setReverseTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Reverse journal entry?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will create a new reversal entry that cancels{" "}
+      {/* ── Reverse confirmation (PIN required) ── */}
+      <Dialog
+        open={!!reverseTarget}
+        onOpenChange={(o) => { if (!o) { setReverseTarget(null); setReversePin(""); setReversePinErr(""); } }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Reverse journal entry?</DialogTitle>
+            <DialogDescription>
+              A reversal entry will be created that cancels{" "}
               <strong>{reverseTarget?.transaction_code}</strong>. The original entry will be
-              marked as <em>reversed</em>. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                reverseMutation.mutate(reverseTarget.journal_entry_id);
-                setReverseTarget(null);
-              }}
+              marked as <em>reversed</em>. Enter your PIN to confirm.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="je-reversal-pin">Your PIN</Label>
+              <Input
+                id="je-reversal-pin"
+                type="password"
+                placeholder="Enter PIN"
+                value={reversePin}
+                onChange={(e) => { setReversePin(e.target.value); setReversePinErr(""); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && reversePin.trim()) {
+                    reverseMutation.mutate({ jeId: reverseTarget.journal_entry_id, pincode: reversePin });
+                  }
+                }}
+                autoFocus
+              />
+              {reversePinErr && <p className="text-xs text-destructive">{reversePinErr}</p>}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setReverseTarget(null); setReversePin(""); setReversePinErr(""); }} disabled={reverseMutation.isPending}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={reverseMutation.isPending || !reversePin.trim()}
+              onClick={() => reverseMutation.mutate({ jeId: reverseTarget.journal_entry_id, pincode: reversePin })}
             >
-              Reverse Entry
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              {reverseMutation.isPending
+                ? <><RefreshCw className="w-3.5 h-3.5 animate-spin mr-1.5" />Reversing…</>
+                : <><RotateCcw className="w-3.5 h-3.5 mr-1.5" />Confirm Reversal</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

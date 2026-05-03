@@ -14,6 +14,7 @@ import {
   Activity,
   CalendarClock,
   TrendingUp,
+  HeartPulse,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -86,6 +87,54 @@ function Tip({ active, label, payload, currency = "" }) {
   );
 }
 
+/* Health gauge — SVG semicircle */
+function HealthGauge({ score = 0, label = "" }) {
+  const r            = 80;
+  const circumference = Math.PI * r; // half-circle arc length ≈ 251.3
+  const offset       = circumference * (1 - Math.max(0, Math.min(100, score)) / 100);
+  const color =
+    score >= 80 ? "#16a34a" :
+    score >= 60 ? "#2563eb" :
+    score >= 40 ? "#d97706" :
+    "#dc2626";
+
+  return (
+    <div className="flex flex-col items-center">
+      <svg viewBox="0 0 200 110" className="w-48">
+        {/* track */}
+        <path
+          d="M 20 100 A 80 80 0 0 1 180 100"
+          fill="none"
+          stroke="hsl(var(--muted))"
+          strokeWidth={14}
+          strokeLinecap="round"
+        />
+        {/* fill */}
+        <path
+          d="M 20 100 A 80 80 0 0 1 180 100"
+          fill="none"
+          stroke={color}
+          strokeWidth={14}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          style={{ transition: "stroke-dashoffset 0.7s ease" }}
+        />
+        <text x={100} y={88} textAnchor="middle" fontSize={28} fontWeight="bold" fill={color}>
+          {score}
+        </text>
+        <text x={100} y={104} textAnchor="middle" fontSize={12} fill="hsl(var(--muted-foreground))">
+          {label}
+        </text>
+      </svg>
+      <div className="flex justify-between w-48 -mt-1 px-3">
+        <span className="text-xs text-muted-foreground">0</span>
+        <span className="text-xs text-muted-foreground">100</span>
+      </div>
+    </div>
+  );
+}
+
 /* KPI Card helper */
 function Kpi({ title, value, hint, icon, children }) {
   return (
@@ -122,7 +171,7 @@ export default function LoanIntelligenceDashboard({ loanId, windowDays = 90 }) {
   });
 
   /* Derivations */
-  const { kpis = {}, series = {}, alerts = [] } = data || {};
+  const { kpis = {}, series = {}, alerts = [], health_meter: health = {} } = data || {};
   const risk = Math.round(kpis?.risk_score || 0);
   const riskTone =
     risk >= 75
@@ -258,6 +307,51 @@ export default function LoanIntelligenceDashboard({ loanId, windowDays = 90 }) {
           icon={<TrendingUp className="h-4 w-4" />}
         />
       </div>
+
+      {/* Health Meter */}
+      <Card className="shadow-sm">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <HeartPulse className="h-4 w-4 text-muted-foreground" />
+            <CardTitle>Loan Health Meter</CardTitle>
+          </div>
+          <CardDescription>
+            On-time payments · savings culture · risk adjustment
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col md:flex-row items-center gap-8">
+            <HealthGauge score={health?.score ?? 0} label={health?.label ?? "—"} />
+            <div className="grid grid-cols-2 gap-4 flex-1 w-full">
+              <div className="rounded-lg border p-3 space-y-1">
+                <p className="text-xs text-muted-foreground">On-time Rate</p>
+                <p className="text-xl font-bold">{health?.on_time_rate ?? 0}%</p>
+                <Progress value={health?.on_time_rate ?? 0} className="h-1.5" />
+              </div>
+              <div className="rounded-lg border p-3 space-y-1">
+                <p className="text-xs text-muted-foreground">Savings Culture</p>
+                <p className="text-xl font-bold">{health?.savings_culture ?? 0}%</p>
+                <Progress value={health?.savings_culture ?? 0} className="h-1.5" />
+              </div>
+              <div className="rounded-lg border p-3 space-y-1">
+                <p className="text-xs text-muted-foreground">Paid On Time</p>
+                <p className="text-xl font-bold">
+                  {health?.paid_on_time ?? 0}
+                  <span className="text-sm font-normal text-muted-foreground"> / {health?.total_past_due ?? 0}</span>
+                </p>
+                <p className="text-xs text-muted-foreground">past-due schedules</p>
+              </div>
+              <div className="rounded-lg border p-3 space-y-1">
+                <p className="text-xs text-muted-foreground">Missed Payments</p>
+                <p className={cn("text-xl font-bold", (health?.missed_payments ?? 0) > 0 ? "text-destructive" : "text-green-600")}>
+                  {health?.missed_payments ?? 0}
+                </p>
+                <p className="text-xs text-muted-foreground">missed schedules</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Exposure + Trajectory */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">

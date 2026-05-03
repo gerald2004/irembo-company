@@ -17,6 +17,7 @@ import LoanAdjustmentDialog from "../Forms/LoanAdjustmentDialog";
 import LoanGeneralAdjustmentDialog from "../Forms/LoanGeneralAdjustmentDialog";
 import LoanRolloverDialog from "../Forms/LoanRolloverDialog";
 import LoanRescheduleDialog from "../Forms/LoanRescheduleDialog";
+import LoanTopUpDialog from "../Forms/LoanTopUpDialog";
 import LoanSingleRepayment from "../Forms/LoanSingleRepayment";
 import {
   formatDateTimestamp,
@@ -62,6 +63,10 @@ export function LoanScheduleTable({
   const fmt = (v) => n(v).toLocaleString();
   // optional: tame floating point drift
   const round2 = (x) => Math.round((n(x) + Number.EPSILON) * 100) / 100;
+
+  const outstandingPrincipal = (data ?? [])
+    .filter(s => s.loan_schedule_delete_status === "active" && s.loan_schedule_payment_status !== "paid")
+    .reduce((sum, s) => sum + (n(s.loan_schedule_principal) - n(s.loan_schedule_principal_paid)), 0);
 
   const processedData =
     data?.map((loan) => {
@@ -313,6 +318,10 @@ export function LoanScheduleTable({
   const handleRescheduleOpenDialog = () => setShowRescheduleDialog(true);
   const handleRescheduleCloseDialog = () => setShowRescheduleDialog(false);
 
+  const [showTopUpDialog, setShowTopUpDialog] = useState(false);
+  const handleTopUpOpenDialog = () => setShowTopUpDialog(true);
+  const handleTopUpCloseDialog = () => setShowTopUpDialog(false);
+
   const [showRepaymentDialog, setShowRepaymentDialog] = useState(false);
   const handleRepaymentOpenDialog = () => setShowRepaymentDialog(true);
   const handleRepaymentCloseDialog = () => setShowRepaymentDialog(false);
@@ -373,6 +382,11 @@ export function LoanScheduleTable({
             {hasPermission(roles, 100079) && (
               <Button size="sm" onClick={handleRolloverOpenDialog}>
                 Rollover
+              </Button>
+            )}
+            {hasPermission(roles, 100276) && (
+              <Button size="sm" variant="outline" onClick={handleTopUpOpenDialog}>
+                Top Up
               </Button>
             )}
             {hasPermission(roles, 100080) && (
@@ -468,6 +482,15 @@ export function LoanScheduleTable({
           refetch={refetch}
           isOpen={showRescheduleDialog}
           onClose={handleRescheduleCloseDialog}
+        />
+      )}
+
+      {hasPermission(roles, 100276) && showTopUpDialog && (
+        <LoanTopUpDialog
+          refetch={refetch}
+          isOpen={showTopUpDialog}
+          onClose={handleTopUpCloseDialog}
+          outstandingPrincipal={outstandingPrincipal}
         />
       )}
     </>

@@ -40,18 +40,25 @@ const Datatable = forwardRef(({
 }, ref) => {
   const [globalFilter, setGlobalFilter] = useState("");
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 7 });
+  const [rowSelection, setRowSelection] = useState({});
 
   const table = useReactTable({
     data,
     columns,
+    enableRowSelection: true,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     state: {
       globalFilter,
       pagination,
+      rowSelection,
     },
-    onPaginationChange: setPagination,
+    onPaginationChange: (updater) => {
+      setPagination(updater);
+      setRowSelection({}); // clear selection on page change
+    },
+    onRowSelectionChange: setRowSelection,
     onGlobalFilterChange: setGlobalFilter,
     globalFilterFn: (row, columnId, filterValue) => {
       return String(row.getValue(columnId))
