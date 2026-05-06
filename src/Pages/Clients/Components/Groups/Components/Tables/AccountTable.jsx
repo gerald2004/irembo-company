@@ -34,6 +34,7 @@ export function AccountsTable() {
   const [isModalWithdrawOpen, setIsModalWithdrawOpen] = useState(false);
   const [isModalTransferOpen, setIsModalTransferOpen] = useState(false);
   const [isModalChargeOpen, setIsModalChargeOpen] = useState(false);
+  const [chargeAccountMeta, setChargeAccountMeta] = useState(null);
   const handleOpenModalDeposit = (id) => {
     setIsModalDepositOpen(true);
     setAccountId(id);
@@ -60,13 +61,15 @@ export function AccountsTable() {
     setAccountId([]);
   };
 
-  const handleOpenModalCharge = (id) => {
+  const handleOpenModalCharge = (id, meta) => {
     setIsModalChargeOpen(true);
     setAccountId(id);
+    setChargeAccountMeta(meta ?? null);
   };
   const handleCloseModalCharge = () => {
     setIsModalChargeOpen(false);
     setAccountId([]);
+    setChargeAccountMeta(null);
   };
   const { auth } = useAuth();
   const roles = auth?.roles;
@@ -261,7 +264,10 @@ export function AccountsTable() {
             {hasPermission(roles, 100048) && (
               <DropdownMenuItem
                 onClick={() =>
-                  handleOpenModalCharge(row.original.client_account_id)
+                  handleOpenModalCharge(row.original.client_account_id, {
+                    productTitle: row.original.product_title,
+                    balance:      row.original.actual_balance ?? row.original.available_balance,
+                  })
                 }
               >
                 Account Charge
@@ -383,6 +389,7 @@ export function AccountsTable() {
           onClose={handleCloseModalCharge}
           refetch={refetch}
           accountId={accountId}
+          accountMeta={chargeAccountMeta}
         />
       )}
       {openReceiptDialog && receiptData && (

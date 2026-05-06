@@ -40,6 +40,9 @@ import { formatDateTimestamp } from "@/lib/utils";
 import { useDebounce } from "@/lib/utils";
 import fileDownload from "js-file-download";
 import { toast } from "@/hooks/use-toast";
+import { FixedDepositLogModal } from "./FixedDepositLogModal";
+import { UnitTrustMovementDialog } from "./UnitTrustMovementDialog";
+
 export function FixedDepositTable() {
   const navigate = useNavigate();
   const [sorting, setSorting] = useState([]);
@@ -48,6 +51,63 @@ export function FixedDepositTable() {
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 7 });
   const axiosPrivate = useAxiosPrivate();
   const [showDialog, setShowDialog] = useState(false);
+
+  const [selectedId, setSelectedId] = useState(null);
+  const [selectedStatus, setSelectedStatus] = useState(null);
+  const [selectedAccountId, setSelectedAccountId] = useState(null);
+  const [selectedClientId, setSelectedClientId] = useState(null);
+  const [showActionDialog, setShowActionDialog] = useState(false);
+
+  const [logModal, setLogModal] = useState({ open: false, fdId: null, fdCode: "" });
+  const [movModal, setMovModal] = useState({ open: false, fdId: null, fdCode: "", type: "deposit", balance: 0, clientId: null, clientAccountId: null });
+
+  const openLog = (row) => setLogModal({ open: true, fdId: row.fixed_deposit_transaction_id, fdCode: row.fixed_deposit_transaction_code });
+  const closeLog = () => setLogModal((s) => ({ ...s, open: false }));
+
+  const openMov = (row, type) => setMovModal({
+    open: true,
+    fdId:            row.fixed_deposit_transaction_id,
+    fdCode:          row.fixed_deposit_transaction_code,
+    type,
+    balance:         row.fixed_deposit_transaction_current_balance ?? 0,
+    clientId:        row.client_id,
+    clientAccountId: row.client_account_id,
+  });
+  const closeMov = () => setMovModal((s) => ({ ...s, open: false }));
+
+  const handleOpenActionDialog = (id, status, accountId, clientId) => {
+    setSelectedId(id);
+    setSelectedStatus(status);
+    setSelectedAccountId(accountId);
+    setSelectedClientId(clientId);
+    setShowActionDialog(true);
+  };
+
+  const handleCloseActionDialog = () => {
+    setSelectedId(null);
+    setSelectedStatus(null);
+    setSelectedAccountId(null);
+    setSelectedClientId(null);
+    setShowActionDialog(false);
+  };
+
+  const handleTransfer = async () => {
+    try {
+      await axiosPrivate.put(`accounting/fixed/deposits`, {
+        status: selectedStatus,
+        transaction_id: selectedId,
+        client_account_id: selectedAccountId,
+        client_id: selectedClientId,
+      });
+      toast({ title: "Success", description: "Fixed deposit updated." });
+      refetch();
+    } catch (error) {
+      const msg = error?.response?.data?.messages || "No server response";
+      toast({ title: "Error", variant: "destructive", description: Array.isArray(msg) ? msg.join(", ") : msg });
+    } finally {
+      handleCloseActionDialog();
+    }
+  };
 
   const {
     data = [],
@@ -171,7 +231,17 @@ export function FixedDepositTable() {
       accessorKey: "fixed_deposit_transaction_end_date",
       header: "End Date",
       cell: ({ row }) =>
-        formatDateTimestamp(row.original.fixed_deposit_transaction_end_date),
+        row.original.fixed_deposit_transaction_end_date
+          ? formatDateTimestamp(row.original.fixed_deposit_transaction_end_date)
+          : <span className="text-muted-foreground text-xs">Open-ended</span>,
+    },
+    {
+      id: "fixed_deposit_transaction_current_balance",
+      header: "Balance",
+      cell: ({ row }) =>
+        row.original.product_type === "unit_trust"
+          ? <span className="font-semibold text-green-700">{parseFloat(row.original.fixed_deposit_transaction_current_balance ?? 0).toLocaleString()}</span>
+          : <span className="text-muted-foreground text-xs">—</span>,
     },
     {
       id: "fixed_deposit_transaction_status",
@@ -197,10 +267,44 @@ export function FixedDepositTable() {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => openLog(row.original)}>
+              View Accrual Log
+            </DropdownMenuItem>
+            {row.original.fixed_deposit_transaction_transfer_status === "ongoing" && (
+              <>
+                {row.original.product_type === "unit_trust" ? (
+                  <>
+                    <DropdownMenuItem className="text-green-700" onClick={() => openMov(row.original, "deposit")}>
+                      Deposit Funds
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="text-amber-600" onClick={() => openMov(row.original, "withdrawal")}>
+                      Withdraw Funds
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={() => handleOpenActionDialog(row.original.fixed_deposit_transaction_id, "terminate", row.original.client_account_id, row.original.client_id)}
+                    >
+                      Close Account
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <>
+                    <DropdownMenuItem onClick={() => handleOpenActionDialog(row.original.fixed_deposit_transaction_id, "complete", row.original.client_account_id, row.original.client_id)}>
+                      Complete (Matured)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="text-amber-600" onClick={() => handleOpenActionDialog(row.original.fixed_deposit_transaction_id, "early_withdrawal", row.original.client_account_id, row.original.client_id)}>
+                      Early Withdrawal
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive" onClick={() => handleOpenActionDialog(row.original.fixed_deposit_transaction_id, "terminate", row.original.client_account_id, row.original.client_id)}>
+                      Terminate (No Interest)
+                    </DropdownMenuItem>
+                  </>
+                )}
+                <DropdownMenuSeparator />
+              </>
+            )}
             <DropdownMenuItem onClick={() => onDownload(row.original)}>
-              {isDownloading
-                ? "Downloading Please Wait"
-                : "Download Certificate"}
+              {isDownloading ? "Downloading Please Wait" : "Download Certificate"}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -530,6 +634,28 @@ export function FixedDepositTable() {
           Next
         </Button>
       </div>
+      {showActionDialog && (
+        <AlertModal
+          showDialog={showActionDialog}
+          setShowDialog={handleCloseActionDialog}
+          title={
+            selectedStatus === "early_withdrawal"
+              ? "Early Withdrawal — Prorated Interest"
+              : selectedStatus === "complete"
+              ? "Complete Fixed Deposit"
+              : "Terminate — No Interest Returned"
+          }
+          message={
+            selectedStatus === "early_withdrawal"
+              ? "The client will receive the principal plus interest prorated to today's date."
+              : selectedStatus === "complete"
+              ? "The client will receive the full principal and contracted interest."
+              : "The client will only receive the original principal. No interest will be paid."
+          }
+          method={handleTransfer}
+          buttonName="Confirm"
+        />
+      )}
       {showDialog && (
         <AlertModal
           showDialog={showDialog}
@@ -537,10 +663,27 @@ export function FixedDepositTable() {
           title="Alert"
           message="This action is not permitted."
           method={() => setShowDialog(false)}
-          // buttonName="Close"
-          // modalSize="325px"
         />
       )}
+
+      <FixedDepositLogModal
+        isOpen={logModal.open}
+        onClose={closeLog}
+        fdId={logModal.fdId}
+        fdCode={logModal.fdCode}
+      />
+
+      <UnitTrustMovementDialog
+        isOpen={movModal.open}
+        onClose={closeMov}
+        refetch={refetch}
+        fdId={movModal.fdId}
+        fdCode={movModal.fdCode}
+        clientId={movModal.clientId}
+        clientAccountId={movModal.clientAccountId}
+        currentBalance={movModal.balance}
+        movementType={movModal.type}
+      />
     </div>
   );
 }

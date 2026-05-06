@@ -189,6 +189,11 @@ export function AppSidebar({ ...props }) {
               permissionCodes: [100148],
             },
             {
+              title: "Mobile App Config",
+              url: "mobile-app-config",
+              permissionCodes: [100148],
+            },
+            {
               title: "Roles",
               url: "system-roles",
               permissionCodes: [100149],
@@ -673,6 +678,12 @@ export function AppSidebar({ ...props }) {
           url: "hr-reports",
           icon: ClipboardList,
           permissionCodes: [100257, 100194, 100174],
+        },
+        {
+          name: "Business Performance Report",
+          url: "business-performance-report",
+          icon: BarChart3,
+          permissionCodes: [100127, 100205],
         },
       ],
     },

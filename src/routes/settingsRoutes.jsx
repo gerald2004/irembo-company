@@ -14,6 +14,7 @@ import TransactionChannels from "@/Pages/Settings/Business/TransactionChannels";
 import PayrollSettings from "@/Pages/Settings/Business/PayrollSettings";
 import NotificationSettings from "@/Pages/Settings/Business/NotificationSettings";
 import CompulsorySavingsSettings from "@/Pages/Settings/Business/CompulsorySavingsSettings";
+import MobileAppConfig from "@/Pages/Settings/Business/MobileAppConfig";
 
 import SystemNotifcationsTriggers from "@/Pages/Settings/System/SystemNotifcationsTriggers";
 import Roles from "@/Pages/Settings/System/Roles";
@@ -100,6 +101,11 @@ const settingsRoutes = [
   {
     path: "/general-config",
     element: <GeneralConfigurationTriggers />,
+    roles: [100148],
+  },
+  {
+    path: "/mobile-app-config",
+    element: <MobileAppConfig />,
     roles: [100148],
   },
   {

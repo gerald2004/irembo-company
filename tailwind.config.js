@@ -16,7 +16,7 @@ export default {
   		},
   		fontFamily: {
   			sans: [
-  				'Nunito',
+  				'Outfit',
   				'sans-serif'
   			]
   		},

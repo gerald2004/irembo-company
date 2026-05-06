@@ -154,6 +154,22 @@ export function FixedDepositSettingsTable() {
       ),
     },
     {
+      accessorKey: "type",
+      header: "Product Type",
+      cell: ({ row }) => (
+        <Badge
+          variant="outline"
+          className={
+            row.original.type === "unit_trust"
+              ? "border-purple-300 text-purple-700 bg-purple-50"
+              : "border-blue-300 text-blue-700 bg-blue-50"
+          }
+        >
+          {row.original.type === "unit_trust" ? "Unit Trust" : "Normal"}
+        </Badge>
+      ),
+    },
+    {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => (

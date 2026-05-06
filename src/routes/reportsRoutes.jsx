@@ -74,6 +74,7 @@ import HRReports from "@/Pages/Reports/HRReports";
 import LoanOfficerPerformanceReport from "@/Pages/Reports/Components/Blocks/HR/LoanOfficerPerformanceReport";
 import AttendanceReport from "@/Pages/Reports/Components/Blocks/HR/AttendanceReport";
 import PayrollReport from "@/Pages/Reports/Components/Blocks/HR/PayrollReport";
+import BusinessPerformanceReport from "@/Pages/Reports/BusinessPerformanceReport";
 
 const reportsRoutes = [
   { path: "/daily-reports", element: <DailyReport />, roles: [100204, 100126] },
@@ -162,6 +163,9 @@ const reportsRoutes = [
   { path: "/hr-reports/loan-officer-performance",       element: <LoanOfficerPerformanceReport />, roles: [100258, 100194] },
   { path: "/hr-reports/attendance",                     element: <AttendanceReport />,             roles: [100259, 100194] },
   { path: "/hr-reports/payroll",                        element: <PayrollReport />,                roles: [100260, 100194] },
+
+  // Business Performance Report
+  { path: "/business-performance-report",               element: <BusinessPerformanceReport />,    roles: [100127, 100205] },
 ];
 
 export default reportsRoutes;

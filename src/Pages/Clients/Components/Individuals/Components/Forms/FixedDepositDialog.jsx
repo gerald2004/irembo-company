@@ -76,10 +76,15 @@ const FixedDepositDialog = ({ isOpen, onClose, refetch }) => {
     control,
     trigger,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm();
 
   const [step, setStep] = useState(1);
+
+  const selectedSettingId = watch("setting_id");
+  const selectedProduct = data?.find((item) => String(item.id) === String(selectedSettingId));
+  const isUnitTrust = selectedProduct?.type === "unit_trust";
 
   const validateStep = async () => {
     const valid = await trigger();
@@ -90,11 +95,19 @@ const FixedDepositDialog = ({ isOpen, onClose, refetch }) => {
 
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
 
+  const toYmd = (v) => {
+    if (!v) return null;
+    const d = new Date(v);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+
   const onSubmit = async (data) => {
     const controller = new AbortController();
     try {
       const payload = {
         ...data,
+        start_date: toYmd(data.start_date),
+        end_date: toYmd(data.end_date),
         client_id: clientId,
         client_account_id: accountId,
       };
@@ -270,50 +283,48 @@ const FixedDepositDialog = ({ isOpen, onClose, refetch }) => {
                 )}
               </div>
 
-              {/* End Date */}
-              <div>
-                <Label htmlFor="end_date">End Date</Label>
-                <Controller
-                  name="end_date"
-                  control={control}
-                  rules={{ required: "End date is required" }}
-                  render={({ field }) => {
-                    const parsedDate = field.value
-                      ? new Date(field.value)
-                      : null;
-                    return (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant={"outline"}
-                            className="w-full pl-3 text-left font-normal"
-                          >
-                            {parsedDate
-                              ? parsedDate.toLocaleDateString()
-                              : "Pick a date"}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={parsedDate}
-                            onSelect={field.onChange}
-                            disabled={(date) => date < new Date("2000-01-01")}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    );
-                  }}
-                />
+              {/* End Date — hidden for unit trust */}
+              {!isUnitTrust && (
+                <div>
+                  <Label htmlFor="end_date">End Date</Label>
+                  <Controller
+                    name="end_date"
+                    control={control}
+                    rules={{ required: isUnitTrust ? false : "End date is required" }}
+                    render={({ field }) => {
+                      const parsedDate = field.value ? new Date(field.value) : null;
+                      return (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="w-full pl-3 text-left font-normal">
+                              {parsedDate ? parsedDate.toLocaleDateString() : "Pick a date"}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={parsedDate}
+                              onSelect={field.onChange}
+                              disabled={(date) => date < new Date("2000-01-01")}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      );
+                    }}
+                  />
+                  {errors.end_date && (
+                    <p className="text-red-500 text-sm">{errors.end_date.message}</p>
+                  )}
+                </div>
+              )}
 
-                {errors.end_date && (
-                  <p className="text-red-500 text-sm">
-                    {errors.end_date.message}
-                  </p>
-                )}
-              </div>
+              {isUnitTrust && (
+                <div className="flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 p-3 text-sm text-purple-700 col-span-1 md:col-span-2">
+                  <span className="font-medium">Unit Trust product selected</span> — no fixed end date. Deposits and withdrawals can be made at any time.
+                </div>
+              )}
             </fieldset>
           )}
 

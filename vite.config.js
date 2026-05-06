@@ -13,8 +13,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "logo912.png", "logo912.png"],
       manifest: {
-        name: "Furaha Banking Management Information System",
-        short_name: "Furaha Banking",
+        name: "Algosys Core Banking System",
+        short_name: "Algosys",
         theme_color: "#000",
         icons: [
           {

@@ -89,6 +89,17 @@ function SettingFormDialog({ open, onClose, editing }) {
 
   const selectedGroupId = watch("group_client_id");
 
+  // Load accounts for the selected group
+  const { data: groupAccounts = [], isLoading: loadingAccounts } = useQuery({
+    queryKey: ["group-accounts-for-setting", selectedGroupId],
+    queryFn: async () => {
+      if (!selectedGroupId) return [];
+      const res = await ax.get(`/accounts/attached/accounts/${selectedGroupId}`);
+      return res.data?.data?.accounts ?? [];
+    },
+    enabled: !!selectedGroupId,
+  });
+
   const onSubmit = async (data) => {
     try {
       const payload = {
@@ -139,7 +150,10 @@ function SettingFormDialog({ open, onClose, editing }) {
             <Label>Group</Label>
             <Select
               defaultValue={String(editing?.group_client_id ?? "")}
-              onValueChange={(v) => setValue("group_client_id", v)}
+              onValueChange={(v) => {
+                setValue("group_client_id", v);
+                setValue("group_account_id", ""); // reset account when group changes
+              }}
               disabled={loadingGroups}
             >
               <SelectTrigger>
@@ -155,16 +169,44 @@ function SettingFormDialog({ open, onClose, editing }) {
             </Select>
           </div>
 
-          {/* Group savings account ID */}
+          {/* Group savings account — loaded from the selected group */}
           <div>
-            <Label>Group Savings Account ID</Label>
-            <Input
-              type="number"
-              placeholder="client_account_id of the group savings account"
-              {...register("group_account_id")}
-            />
+            <Label>Group Savings Account</Label>
+            {!selectedGroupId ? (
+              <p className="text-xs text-muted-foreground border rounded-md px-3 py-2 bg-muted/30 mt-1">
+                Select a group above to load its savings accounts.
+              </p>
+            ) : loadingAccounts ? (
+              <p className="text-xs text-muted-foreground border rounded-md px-3 py-2 bg-muted/30 mt-1 animate-pulse">
+                Loading accounts…
+              </p>
+            ) : groupAccounts.length === 0 ? (
+              <p className="text-xs text-muted-foreground border rounded-md px-3 py-2 bg-amber-50 border-amber-200 mt-1">
+                No savings accounts found for this group.
+              </p>
+            ) : (
+              <Select
+                defaultValue={editing?.group_account_id ? String(editing.group_account_id) : ""}
+                onValueChange={(v) => setValue("group_account_id", v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select savings account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {groupAccounts.map((acc) => (
+                    <SelectItem key={acc.client_account_id} value={String(acc.client_account_id)}>
+                      {acc.product_title}
+                      {" — "}
+                      <span className="tabular-nums text-muted-foreground">
+                        UGX {Number(acc.actual_balance ?? acc.available_balance ?? 0).toLocaleString()}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <p className="text-xs text-muted-foreground mt-1">
-              Recurring collections are credited to this account.
+              Recurring compulsory savings are credited to this account on each repayment.
             </p>
           </div>
 

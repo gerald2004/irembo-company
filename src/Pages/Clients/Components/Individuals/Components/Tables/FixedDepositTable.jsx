@@ -20,20 +20,38 @@ import { formatDateTimestamp, hasPermission } from "@/lib/utils";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import fileDownload from "js-file-download";
+import { FixedDepositLogModal } from "@/Pages/Accounting/Components/FixedDepositLogModal";
+import { UnitTrustMovementDialog } from "@/Pages/Accounting/Components/UnitTrustMovementDialog";
 const FixedDepositTable = () => {
   const { client_id: clientAccountId, id: clientId } = useParams(); // ✅ Get client_account_id from URL
   const axiosPrivate = useAxiosPrivate();
   const navigate = useNavigate();
   const [selectedId, setSelectedId] = useState(null);
   const [selectedStatus, setSelectedStatus] = useState(null);
-
+  const [selectedAccountId, setSelectedAccountId] = useState(null);
   const [showDialog, setShowDialog] = useState(false);
+
+  const [logModal, setLogModal]   = useState({ open: false, fdId: null, fdCode: "" });
+  const [movModal, setMovModal]   = useState({ open: false, fdId: null, fdCode: "", type: "deposit", balance: 0 });
+
+  const openLog = (row) => setLogModal({ open: true, fdId: row.fixed_deposit_transaction_id, fdCode: row.fixed_deposit_transaction_code });
+  const closeLog = () => setLogModal({ open: false, fdId: null, fdCode: "" });
+
+  const openMov = (row, type) => setMovModal({
+    open: true,
+    fdId:    row.fixed_deposit_transaction_id,
+    fdCode:  row.fixed_deposit_transaction_code,
+    type,
+    balance: row.fixed_deposit_transaction_current_balance ?? 0,
+  });
+  const closeMov = () => setMovModal((s) => ({ ...s, open: false }));
   const { auth } = useAuth();
   const roles = auth?.roles;
 
-  const handleOpenDeleteDialog = (id, status) => {
+  const handleOpenDeleteDialog = (id, status, accountId) => {
     setSelectedId(id);
     setSelectedStatus(status);
+    setSelectedAccountId(accountId ?? clientAccountId);
     setShowDialog(true);
   };
 
@@ -168,39 +186,52 @@ const FixedDepositTable = () => {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => openLog(row.original)}>
+              View Accrual Log
+            </DropdownMenuItem>
             {hasPermission(roles, 100053) && (
               <>
-                {["ongoing"].includes(
-                  row.original.fixed_deposit_transaction_transfer_status
-                ) && (
+                {row.original.fixed_deposit_transaction_transfer_status === "ongoing" && (
                   <>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        handleOpenDeleteDialog(
-                          row.original.fixed_deposit_transaction_id,
-                          "complete"
-                        );
-                      }}
-                    >
-                      Complete
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        handleOpenDeleteDialog(
-                          row.original.fixed_deposit_transaction_id,
-                          "terminate"
-                        );
-                      }}
-                    >
-                      Terminate
+                    {row.original.product_type === "unit_trust" ? (
+                      <>
+                        <DropdownMenuItem onClick={() => openMov(row.original, "deposit")} className="text-green-700">
+                          Deposit Funds
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openMov(row.original, "withdrawal")} className="text-amber-600">
+                          Withdraw Funds
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleOpenDeleteDialog(row.original.fixed_deposit_transaction_id, "terminate")}
+                          className="text-destructive"
+                        >
+                          Close Account
+                        </DropdownMenuItem>
+                      </>
+                    ) : (
+                      <>
+                        <DropdownMenuItem onClick={() => handleOpenDeleteDialog(row.original.fixed_deposit_transaction_id, "complete")}>
+                          Complete (Matured)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleOpenDeleteDialog(row.original.fixed_deposit_transaction_id, "early_withdrawal")}
+                          className="text-amber-600"
+                        >
+                          Early Withdrawal
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleOpenDeleteDialog(row.original.fixed_deposit_transaction_id, "terminate")}
+                          className="text-destructive"
+                        >
+                          Terminate (No Interest)
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    <DropdownMenuItem onClick={() => onDownload(row.original)}>
+                      {isDownloading ? "Downloading…" : "Download Certificate"}
                     </DropdownMenuItem>
                   </>
                 )}
-                <DropdownMenuItem onClick={() => onDownload(row.original)}>
-                  {isDownloading
-                    ? "Downloading Please Wait"
-                    : "Download Certificate"}
-                </DropdownMenuItem>
               </>
             )}
           </DropdownMenuContent>
@@ -316,11 +347,42 @@ const [isDownloading, setIsDownloading] = useState(false);
       <AlertModal
         showDialog={showDialog}
         setShowDialog={handleCloseDeleteDialog}
-        title="Are you sure?"
-        message="Do you want to perform this action?"
+        title={
+          selectedStatus === "early_withdrawal"
+            ? "Early Withdrawal — Prorated Interest"
+            : selectedStatus === "complete"
+            ? "Complete Fixed Deposit"
+            : "Terminate — No Interest Returned"
+        }
+        message={
+          selectedStatus === "early_withdrawal"
+            ? "The client will receive the principal plus interest prorated to today's date."
+            : selectedStatus === "complete"
+            ? "The client will receive the full principal and contracted interest."
+            : "The client will only receive the original principal. No interest will be paid."
+        }
         method={handleTransfer}
         buttonName="Ok"
         selectedId={selectedId}
+      />
+
+      <FixedDepositLogModal
+        isOpen={logModal.open}
+        onClose={closeLog}
+        fdId={logModal.fdId}
+        fdCode={logModal.fdCode}
+      />
+
+      <UnitTrustMovementDialog
+        isOpen={movModal.open}
+        onClose={closeMov}
+        refetch={refetch}
+        fdId={movModal.fdId}
+        fdCode={movModal.fdCode}
+        clientId={clientId}
+        clientAccountId={clientAccountId}
+        currentBalance={movModal.balance}
+        movementType={movModal.type}
       />
     </div>
   );

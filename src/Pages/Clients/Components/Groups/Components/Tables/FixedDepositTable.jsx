@@ -20,16 +20,33 @@ import { formatDateTimestamp, hasPermission } from "@/lib/utils";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import fileDownload from "js-file-download";
+import { FixedDepositLogModal } from "@/Pages/Accounting/Components/FixedDepositLogModal";
+import { UnitTrustMovementDialog } from "@/Pages/Accounting/Components/UnitTrustMovementDialog";
+
 const FixedDepositTable = () => {
-  const { client_id: clientAccountId, id: clientId } = useParams(); // ✅ Get client_account_id from URL
+  const { client_id: clientAccountId, id: clientId } = useParams();
   const axiosPrivate = useAxiosPrivate();
   const navigate = useNavigate();
   const [selectedId, setSelectedId] = useState(null);
   const [selectedStatus, setSelectedStatus] = useState(null);
-
   const [showDialog, setShowDialog] = useState(false);
   const { auth } = useAuth();
   const roles = auth?.roles;
+
+  const [logModal, setLogModal] = useState({ open: false, fdId: null, fdCode: "" });
+  const [movModal, setMovModal] = useState({ open: false, fdId: null, fdCode: "", type: "deposit", balance: 0 });
+
+  const openLog = (row) => setLogModal({ open: true, fdId: row.fixed_deposit_transaction_id, fdCode: row.fixed_deposit_transaction_code });
+  const closeLog = () => setLogModal({ open: false, fdId: null, fdCode: "" });
+
+  const openMov = (row, type) => setMovModal({
+    open: true,
+    fdId:    row.fixed_deposit_transaction_id,
+    fdCode:  row.fixed_deposit_transaction_code,
+    type,
+    balance: row.fixed_deposit_transaction_current_balance ?? 0,
+  });
+  const closeMov = () => setMovModal((s) => ({ ...s, open: false }));
 
   const handleOpenDeleteDialog = (id, status) => {
     setSelectedId(id);
@@ -42,7 +59,7 @@ const FixedDepositTable = () => {
     setSelectedStatus(null);
     setShowDialog(false);
   };
-  // ✅ Fetch Fixed Deposit Transactions
+
   const {
     data = [],
     isLoading,
@@ -53,10 +70,8 @@ const FixedDepositTable = () => {
     queryKey: ["fixedDeposits", clientAccountId],
     queryFn: async () => {
       const controller = new AbortController();
-
-      const fetchURL = `/accounting/fixed/deposits/${clientAccountId}`;
       try {
-        const response = await axiosPrivate.get(fetchURL, {
+        const response = await axiosPrivate.get(`/accounting/fixed/deposits/${clientAccountId}`, {
           signal: controller.signal,
         });
         return response?.data?.data?.fixed_deposits ?? [];
@@ -70,15 +85,45 @@ const FixedDepositTable = () => {
     keepPreviousData: true,
   });
 
+  const [isDownloading, setIsDownloading] = useState(false);
+  const onDownload = async (data) => {
+    const controller = new AbortController();
+    const dataDownload = {
+      transaction: {
+        code: data?.fixed_deposit_transaction_code,
+        start: data?.fixed_deposit_transaction_start_date,
+        account_name: data?.account_name,
+        account_number: data?.account_number,
+        amount: data?.fixed_deposit_transaction_amount,
+        interest: data?.fixed_deposit_setting?.fixed_deposit_setting_interest,
+        end: data?.fixed_deposit_transaction_end_date,
+        amount_to_receive:
+          parseFloat(data?.fixed_deposit_transaction_amount) +
+          parseFloat(data?.fixed_deposit_transaction_return_amount),
+      },
+    };
+    try {
+      setIsDownloading(true);
+      const response = await axiosPrivate.post(
+        `/export/certificate/fixed-deposit/pdf`,
+        { data: dataDownload },
+        { responseType: "blob", signal: controller.signal }
+      );
+      fileDownload(response.data, `Fixed-Deposit-Certificate.pdf`);
+      toast({ title: "Download successful", variant: "success" });
+      setIsDownloading(false);
+    } catch {
+      toast({ title: "Uh oh! Something went wrong.", variant: "destructive", description: "Failed to download file." });
+      setIsDownloading(false);
+    }
+  };
+
   const columns = [
     {
       id: "select",
       header: ({ table }) => (
         <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
+          checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
         />
@@ -100,59 +145,47 @@ const FixedDepositTable = () => {
       accessorKey: "fixed_deposit_setting.fixed_deposit_setting_title",
       header: "Deposit Product",
       cell: ({ row }) => (
-        <p>{row.original.fixed_deposit_setting.fixed_deposit_setting_title}</p>
+        <div>
+          <p>{row.original.fixed_deposit_setting?.fixed_deposit_setting_title}</p>
+          {row.original.product_type === "unit_trust" && (
+            <Badge variant="outline" className="text-xs border-purple-300 text-purple-700 bg-purple-50 mt-0.5">
+              Unit Trust
+            </Badge>
+          )}
+        </div>
       ),
     },
     {
       accessorKey: "fixed_deposit_transaction_amount",
       header: "Deposit Amount",
-      cell: ({ row }) => (
-        <p>
-          {parseFloat(
-            row.original.fixed_deposit_transaction_amount
-          ).toLocaleString()}
-        </p>
-      ),
+      cell: ({ row }) => <p>{parseFloat(row.original.fixed_deposit_transaction_amount).toLocaleString()}</p>,
     },
     {
-      accessorKey: "fixed_deposit_transaction_return_amount",
-      header: "Return Interest",
-      cell: ({ row }) => (
-        <p>
-          {parseFloat(
-            row.original.fixed_deposit_transaction_return_amount
-          ).toLocaleString()}
-        </p>
-      ),
+      accessorKey: "fixed_deposit_transaction_current_balance",
+      header: "Current Balance",
+      cell: ({ row }) =>
+        row.original.product_type === "unit_trust"
+          ? <p className="font-semibold text-green-700">{parseFloat(row.original.fixed_deposit_transaction_current_balance ?? 0).toLocaleString()}</p>
+          : <span className="text-muted-foreground text-xs">—</span>,
     },
     {
       accessorKey: "fixed_deposit_transaction_start_date",
       header: "Start Date",
-      cell: ({ row }) =>
-        formatDateTimestamp(row.original.fixed_deposit_transaction_start_date),
+      cell: ({ row }) => formatDateTimestamp(row.original.fixed_deposit_transaction_start_date),
     },
     {
       accessorKey: "fixed_deposit_transaction_end_date",
       header: "End Date",
       cell: ({ row }) =>
-        formatDateTimestamp(row.original.fixed_deposit_transaction_end_date),
-    },
-    {
-      accessorKey: "fixed_deposit_transaction_status",
-      header: "Status",
-      cell: ({ row }) => (
-        <Badge className={"capitalize"}>
-          {row.original.fixed_deposit_transaction_status}
-        </Badge>
-      ),
+        row.original.fixed_deposit_transaction_end_date
+          ? formatDateTimestamp(row.original.fixed_deposit_transaction_end_date)
+          : <span className="text-muted-foreground text-xs">Open-ended</span>,
     },
     {
       accessorKey: "fixed_deposit_transaction_transfer_status",
-      header: "Transfer Status",
+      header: "Status",
       cell: ({ row }) => (
-        <Badge className={"capitalize"}>
-          {row.original.fixed_deposit_transaction_transfer_status}
-        </Badge>
+        <Badge className="capitalize">{row.original.fixed_deposit_transaction_transfer_status}</Badge>
       ),
     },
     {
@@ -161,45 +194,52 @@ const FixedDepositTable = () => {
       cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              ...
-            </Button>
+            <Button variant="ghost" className="h-8 w-8 p-0">...</Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {hasPermission(roles, 100053) && (
+            <DropdownMenuItem onClick={() => openLog(row.original)}>
+              View Accrual Log
+            </DropdownMenuItem>
+            {hasPermission(roles, 100053) && row.original.fixed_deposit_transaction_transfer_status === "ongoing" && (
               <>
-                {["ongoing"].includes(
-                  row.original.fixed_deposit_transaction_transfer_status
-                ) && (
+                {row.original.product_type === "unit_trust" ? (
                   <>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        handleOpenDeleteDialog(
-                          row.original.fixed_deposit_transaction_id,
-                          "complete"
-                        );
-                      }}
-                    >
-                      Complete
+                    <DropdownMenuItem onClick={() => openMov(row.original, "deposit")} className="text-green-700">
+                      Deposit Funds
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => openMov(row.original, "withdrawal")} className="text-amber-600">
+                      Withdraw Funds
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      onClick={() => {
-                        handleOpenDeleteDialog(
-                          row.original.fixed_deposit_transaction_id,
-                          "terminate"
-                        );
-                      }}
+                      onClick={() => handleOpenDeleteDialog(row.original.fixed_deposit_transaction_id, "terminate")}
+                      className="text-destructive"
                     >
-                      Terminate
+                      Close Account
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <>
+                    <DropdownMenuItem onClick={() => handleOpenDeleteDialog(row.original.fixed_deposit_transaction_id, "complete")}>
+                      Complete (Matured)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleOpenDeleteDialog(row.original.fixed_deposit_transaction_id, "early_withdrawal")}
+                      className="text-amber-600"
+                    >
+                      Early Withdrawal
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleOpenDeleteDialog(row.original.fixed_deposit_transaction_id, "terminate")}
+                      className="text-destructive"
+                    >
+                      Terminate (No Interest)
                     </DropdownMenuItem>
                   </>
                 )}
                 <DropdownMenuItem onClick={() => onDownload(row.original)}>
-                  {isDownloading
-                    ? "Downloading Please Wait"
-                    : "Download Certificate"}
+                  {isDownloading ? "Downloading…" : "Download Certificate"}
                 </DropdownMenuItem>
               </>
             )}
@@ -208,92 +248,29 @@ const FixedDepositTable = () => {
       ),
     },
   ];
-const [isDownloading, setIsDownloading] = useState(false);
-  const onDownload = async (data) => {
-    const controller = new AbortController();
-    const dataDownload = {
-      transaction: {
-        code: data?.fixed_deposit_transaction_code,
-        start: data?.fixed_deposit_transaction_start_date,
-        account_name: data?.account_name,
-        account_number: data?.account_number,
-        amount: data?.fixed_deposit_transaction_amount,
-        interest: data?.fixed_deposit_setting?.fixed_deposit_setting_interest,
-        end: data?.fixed_deposit_transaction_end_date,
-        amount_to_receive:
-          parseFloat(data?.fixed_deposit_transaction_amount) +
-          parseFloat(data?.fixed_deposit_transaction_return_amount),
-      },
-    };    
-    try {
-      setIsDownloading(true);
-      let response;
-
-      response = await axiosPrivate.post(
-        `/export/certificate/fixed-deposit/pdf`, // <-- Your endpoint
-        { data: dataDownload },
-        {
-          responseType: "blob",
-          signal: controller.signal,
-        }
-      );
-
-      const downloadTitle = `Fixed-Deposit-Certificate.pdf`;
-
-      fileDownload(response.data, downloadTitle);
-
-      toast({
-        title: `Download successful`,
-        variant: "success",
-        description: `Your file has been downloaded.`,
-      });
-      setIsDownloading(false);
-    } catch (error) {
-      console.log(error);
-      toast({
-        title: "Uh oh! Something went wrong.",
-        variant: "destructive",
-        description: "Failed to download file.",
-      });
-      setIsDownloading(false);
-    }
-  };
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
+
   const handleTransfer = async () => {
-  const controller = new AbortController();
+    const controller = new AbortController();
     try {
-      const data = {
+      const response = await axiosPrivate.put("accounting/fixed/deposits", {
         status: selectedStatus,
         transaction_id: selectedId,
         client_account_id: clientAccountId,
         client_id: clientId,
-      };
-      const response = await axiosPrivate.put(
-        `accounting/fixed/deposits`,
-        data,
-        { signal: controller.signal }
-      );
-      toast({
-        title: "Success",
-        description: response.data.messages,
-      });
+      }, { signal: controller.signal });
+      toast({ title: "Success", description: response.data.messages });
       refetch();
     } catch (error) {
-      const errorMessage =
-        error?.response?.data?.messages || "No server response";
-      toast({
-        title: "Uh oh! Something went wrong.",
-        variant: "destructive",
-        description: errorMessage,
-      });
+      toast({ title: "Uh oh! Something went wrong.", variant: "destructive", description: error?.response?.data?.messages || "No server response" });
     }
   };
+
   return (
     <div className="space-y-4">
-      {/* ✅ Transaction Table */}
       <Datatable
         columns={columns}
         data={data}
@@ -306,21 +283,44 @@ const [isDownloading, setIsDownloading] = useState(false);
         buttonMethod={hasPermission(roles, 100051) ? handleOpenModal : ""}
       />
       {isModalOpen && hasPermission(roles, 100051) && (
-        <FixedDepositDialog
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          refetch={refetch}
-        />
+        <FixedDepositDialog isOpen={isModalOpen} onClose={handleCloseModal} refetch={refetch} />
       )}
 
       <AlertModal
         showDialog={showDialog}
         setShowDialog={handleCloseDeleteDialog}
-        title="Are you sure?"
-        message="Do you want to perform this action?"
+        title={
+          selectedStatus === "early_withdrawal" ? "Early Withdrawal — Prorated Interest"
+          : selectedStatus === "complete" ? "Complete Fixed Deposit"
+          : "Terminate — No Interest Returned"
+        }
+        message={
+          selectedStatus === "early_withdrawal" ? "The client will receive the principal plus interest prorated to today's date."
+          : selectedStatus === "complete" ? "The client will receive the full principal and contracted interest."
+          : "The client will only receive the original principal. No interest will be paid."
+        }
         method={handleTransfer}
         buttonName="Ok"
         selectedId={selectedId}
+      />
+
+      <FixedDepositLogModal
+        isOpen={logModal.open}
+        onClose={closeLog}
+        fdId={logModal.fdId}
+        fdCode={logModal.fdCode}
+      />
+
+      <UnitTrustMovementDialog
+        isOpen={movModal.open}
+        onClose={closeMov}
+        refetch={refetch}
+        fdId={movModal.fdId}
+        fdCode={movModal.fdCode}
+        clientId={clientId}
+        clientAccountId={clientAccountId}
+        currentBalance={movModal.balance}
+        movementType={movModal.type}
       />
     </div>
   );

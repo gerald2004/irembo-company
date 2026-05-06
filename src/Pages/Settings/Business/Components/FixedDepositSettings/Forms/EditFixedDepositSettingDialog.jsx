@@ -156,6 +156,30 @@ const EditFixedDepositSettingDialog = ({
               )}
             </div>
 
+            {/* Product Type */}
+            <div>
+              <Label htmlFor="type">Product Type</Label>
+              <Select
+                defaultValue={defaultValues?.type ?? "normal"}
+                onValueChange={(val) =>
+                  setValue("type", val, { shouldValidate: true })
+                }
+              >
+                <SelectTrigger
+                  {...register("type", { required: "Product type is required" })}
+                >
+                  <SelectValue placeholder="Select Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="normal">Normal (Term Deposit)</SelectItem>
+                  <SelectItem value="unit_trust">Unit Trust (Open-Ended)</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.type && (
+                <p className="text-red-500 text-sm">{errors.type.message}</p>
+              )}
+            </div>
+
             {/* Calculation Mode */}
             <div>
               <Label htmlFor="calculation_mode">Calculation Mode</Label>

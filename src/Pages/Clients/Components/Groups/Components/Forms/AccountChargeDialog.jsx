@@ -35,7 +35,7 @@ import { useParams } from "react-router-dom";
 import { AccountCombobox } from "@/Pages/Components/AccountCombobox";
 import { useQuery } from "@tanstack/react-query";
 
-const AccountChargeDialog = ({ isOpen, onClose, refetch, accountId }) => {
+const AccountChargeDialog = ({ isOpen, onClose, refetch, accountId, accountMeta }) => {
   const axiosPrivate = useAxiosPrivate();
   const {
     register,
@@ -155,6 +155,22 @@ const AccountChargeDialog = ({ isOpen, onClose, refetch, accountId }) => {
           ))}
         </div>
         <Progress value={(step / 2) * 100} className="my-1" />
+
+        {/* Charged account info */}
+        {accountMeta && (
+          <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-0.5">Charging account</p>
+            <p className="font-semibold">{accountMeta.productTitle ?? "Savings Account"}</p>
+            {accountMeta.balance != null && (
+              <p className="text-xs text-muted-foreground">
+                Balance:{" "}
+                <span className="font-semibold text-foreground">
+                  {Number(accountMeta.balance).toLocaleString()}
+                </span>
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
