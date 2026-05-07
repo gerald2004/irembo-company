@@ -47,6 +47,7 @@ import {
   Shield,
   ShieldCheck,
   BarChart3,
+  Building2,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -469,6 +470,24 @@ export function AppSidebar({ ...props }) {
         },
       ],
     },
+    branch_staff: {
+      title: "Branch & Staff",
+      permissionCodes: [100143, 100174],
+      items: [
+        {
+          name: "Branch Management",
+          url: "branch-management",
+          icon: Building2,
+          permissionCodes: [100143],
+        },
+        {
+          name: "Staff Management",
+          url: "staff-management",
+          icon: PersonStanding,
+          permissionCodes: [100174],
+        },
+      ],
+    },
     bulk_studio: {
       title: "Bulk Studio",
       permissionCodes: [100125],
@@ -708,24 +727,19 @@ export function AppSidebar({ ...props }) {
   }, {});
 
   const handleBranchSwitched = ({ branch_id, branch_name }) => {
-    // 1) update auth in memory
-    setAuth((prev) => {
-      const next = {
-        ...prev,
-        current_branch_id: Number(branch_id),
-        user: {
-          ...prev?.user,
-          branch_id: Number(branch_id),
-          branch_name,
-        },
-      };
-      try {
-        window.location.reload(); // 2) persist if you hydrate from LS
-      } catch {
-        // no worries
-      }
-      return next;
-    });
+    setAuth((prev) => ({
+      ...prev,
+      current_branch_id: branch_id != null ? Number(branch_id) : null,
+      user: {
+        ...prev?.user,
+        branch_id: branch_id != null ? Number(branch_id) : null,
+        branch_name: branch_name ?? prev?.user?.branch_name,
+      },
+    }));
+    // Only reload when switching to a specific branch; "All Branches" is local-only
+    if (branch_id != null) {
+      window.location.reload();
+    }
   };
 
 
@@ -772,6 +786,9 @@ export function AppSidebar({ ...props }) {
         )}
         {filteredSidebar.human_resource && (
           <NavSingle data={filteredSidebar.human_resource} />
+        )}
+        {filteredSidebar.branch_staff && (
+          <NavSingle data={filteredSidebar.branch_staff} />
         )}
         {filteredSidebar.customer_care && (
           <NavSingle data={filteredSidebar.customer_care} />

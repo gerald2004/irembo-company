@@ -23,6 +23,7 @@ import {
   ArrowLeft, ArrowRight, CheckCircle, X, Info, LockKeyhole, Receipt,
 } from "lucide-react";
 import ChargesReviewStep from "@/Pages/Components/ChargesReviewStep";
+import { LinkedChannelPicker } from "@/components/linked-channel-picker";
 
 const TOTAL_STEPS = 3;
 
@@ -37,6 +38,8 @@ const DepositTransactionDialog = ({ isOpen, onClose, refetch, accountId, handleO
   const [skipFeeIds, setSkipFeeIds] = useState([]);
   const [feeOverrides, setFeeOverrides] = useState({});
   const [selectedMemberId, setSelectedMemberId] = useState("none");
+  const [selectedChannel, setSelectedChannel] = useState(null);
+  const [channelError, setChannelError] = useState("");
 
   const watchedAmount = parseFloat(watch("deposit_transaction_amount")) || 0;
 
@@ -56,6 +59,11 @@ const DepositTransactionDialog = ({ isOpen, onClose, refetch, accountId, handleO
   }, []);
 
   const validateStep = async () => {
+    if (step === 1 && !selectedChannel) {
+      setChannelError("Please select a payment channel");
+      return;
+    }
+    setChannelError("");
     const valid = await trigger();
     if (valid) setStep((p) => Math.min(p + 1, TOTAL_STEPS));
   };
@@ -66,18 +74,25 @@ const DepositTransactionDialog = ({ isOpen, onClose, refetch, accountId, handleO
     setSkipFeeIds([]);
     setFeeOverrides({});
     setSelectedMemberId("none");
+    setSelectedChannel(null);
+    setChannelError("");
     onClose();
   };
 
   const onSubmit = async (data) => {
+    if (!selectedChannel) {
+      setChannelError("Please select a payment channel");
+      return;
+    }
     try {
       const payload = {
         ...data,
         client_id: clientId,
         client_account_id: accountId,
+        deposit_transaction_method: selectedChannel.type,
+        deposit_transaction_account_id: String(selectedChannel.linked_account_id),
         skip_fee_ids: skipFeeIds,
         fee_overrides: feeOverrides,
-        // Tells the backend to also track this deposit in the member's sub-account
         ...(selectedMemberId && selectedMemberId !== "none" ? { member_id: Number(selectedMemberId) } : {}),
       };
       const response = await axiosPrivate.post("/accounting/savings/deposits", payload);
@@ -88,6 +103,8 @@ const DepositTransactionDialog = ({ isOpen, onClose, refetch, accountId, handleO
       setSkipFeeIds([]);
       setFeeOverrides({});
       setSelectedMemberId("none");
+      setSelectedChannel(null);
+      setChannelError("");
       refetch();
       onClose();
     } catch (error) {
@@ -131,66 +148,57 @@ const DepositTransactionDialog = ({ isOpen, onClose, refetch, accountId, handleO
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {step === 1 && (
-            <fieldset className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="deposit_transaction_amount">Deposit Amount</Label>
-                <Input id="deposit_transaction_amount" type="number" step="0.01" placeholder="Enter amount"
-                  {...register("deposit_transaction_amount", { required: "Amount is required" })} />
-                {errors.deposit_transaction_amount && <p className="text-red-500 text-sm">{errors.deposit_transaction_amount.message}</p>}
-              </div>
-              <div>
-                <Label>Deposit Method</Label>
-                <Controller name="deposit_transaction_method" control={control} rules={{ required: "Method is required" }}
-                  render={({ field }) => (
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <SelectTrigger className="w-full"><SelectValue placeholder="Select method" /></SelectTrigger>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="deposit_transaction_amount">Deposit Amount</Label>
+                  <Input id="deposit_transaction_amount" type="number" step="0.01" placeholder="Enter amount"
+                    {...register("deposit_transaction_amount", { required: "Amount is required" })} />
+                  {errors.deposit_transaction_amount && <p className="text-red-500 text-sm">{errors.deposit_transaction_amount.message}</p>}
+                </div>
+                <div>
+                  <Label htmlFor="deposit_transaction_notary">Notary</Label>
+                  <Input id="deposit_transaction_notary" defaultValue="Savings" placeholder="Deposit Notary"
+                    {...register("deposit_transaction_notary", { required: "Notary is required" })} />
+                  {errors.deposit_transaction_notary && <p className="text-red-500 text-sm">{errors.deposit_transaction_notary.message}</p>}
+                </div>
+                <div className="md:col-span-2">
+                  <Label htmlFor="deposit_transaction_notes">Notes (Optional)</Label>
+                  <Input id="deposit_transaction_notes" placeholder="Optional note" {...register("deposit_transaction_notes")} />
+                </div>
+
+                {allMembers.length > 0 && (
+                  <div className="md:col-span-2">
+                    <Label>Depositing Member (Optional)</Label>
+                    <Select value={selectedMemberId || "none"} onValueChange={setSelectedMemberId}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select member contributing this deposit" />
+                      </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="cash">Cash</SelectItem>
-                        <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                        <SelectItem value="mobile_money">Mobile Money</SelectItem>
+                        <SelectItem value="none">— Group deposit (no specific member) —</SelectItem>
+                        {allMembers.map((m) => (
+                          <SelectItem key={m.member_id} value={String(m.member_id)}>
+                            {m.member?.client_firstname} {m.member?.client_lastname}
+                            {m.member?.client_account_number ? ` (${m.member.client_account_number})` : ""}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
-                  )} />
-                {errors.deposit_transaction_method && <p className="text-red-500 text-sm">{errors.deposit_transaction_method.message}</p>}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      If selected, this deposit is also recorded in the member&apos;s individual savings statement.
+                    </p>
+                  </div>
+                )}
               </div>
               <div>
-                <Label htmlFor="deposit_transaction_notary">Notary</Label>
-                <Input id="deposit_transaction_notary" defaultValue="Savings" placeholder="Deposit Notary"
-                  {...register("deposit_transaction_notary", { required: "Notary is required" })} />
-                {errors.deposit_transaction_notary && <p className="text-red-500 text-sm">{errors.deposit_transaction_notary.message}</p>}
+                <Label className="mb-1.5 block">Payment Channel</Label>
+                <LinkedChannelPicker
+                  value={selectedChannel}
+                  onChange={(acc) => { setSelectedChannel(acc); setChannelError(""); }}
+                  error={channelError}
+                />
               </div>
-              <div>
-                <Label htmlFor="deposit_transaction_notes">Notes (Optional)</Label>
-                <Input id="deposit_transaction_notes" placeholder="Optional note" {...register("deposit_transaction_notes")} />
-              </div>
-
-              {/* Member selector: records which individual is making the group deposit */}
-              {allMembers.length > 0 && (
-                <div className="md:col-span-2">
-                  <Label>Depositing Member (Optional)</Label>
-                  <Select
-                    value={selectedMemberId || "none"}
-                    onValueChange={setSelectedMemberId}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select member contributing this deposit" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">— Group deposit (no specific member) —</SelectItem>
-                      {allMembers.map((m) => (
-                        <SelectItem key={m.member_id} value={String(m.member_id)}>
-                          {m.member?.client_firstname} {m.member?.client_lastname}
-                          {m.member?.client_account_number ? ` (${m.member.client_account_number})` : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    If selected, this deposit is also recorded in the member&apos;s individual savings statement.
-                  </p>
-                </div>
-              )}
-            </fieldset>
+            </div>
           )}
 
           {step === 2 && (

@@ -16,12 +16,10 @@ import { toast } from "@/hooks/use-toast";
 import { useParams } from "react-router-dom";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
   ArrowLeft, ArrowRight, CheckCircle, X, Info, LockKeyhole, Receipt,
 } from "lucide-react";
 import ChargesReviewStep from "@/Pages/Components/ChargesReviewStep";
+import { LinkedChannelPicker } from "@/components/linked-channel-picker";
 
 const TOTAL_STEPS = 3;
 
@@ -35,22 +33,39 @@ const WithdrawTransactionDialog = ({ isOpen, onClose, refetch, accountId, handle
   const [step, setStep] = useState(1);
   const [skipFeeIds, setSkipFeeIds] = useState([]);
   const [feeOverrides, setFeeOverrides] = useState({});
+  const [selectedChannel, setSelectedChannel] = useState(null);
+  const [channelError, setChannelError] = useState("");
 
   const watchedAmount = parseFloat(watch("withdraw_transaction_amount")) || 0;
 
   const validateStep = async () => {
+    if (step === 1 && !selectedChannel) {
+      setChannelError("Please select a payment channel");
+      return;
+    }
+    setChannelError("");
     const valid = await trigger();
     if (valid) setStep((p) => Math.min(p + 1, TOTAL_STEPS));
   };
 
-  const handleClose = () => { reset(); setStep(1); setSkipFeeIds([]); setFeeOverrides({}); onClose(); };
+  const handleClose = () => {
+    reset(); setStep(1); setSkipFeeIds([]); setFeeOverrides({});
+    setSelectedChannel(null); setChannelError("");
+    onClose();
+  };
 
   const onSubmit = async (data) => {
+    if (!selectedChannel) {
+      setChannelError("Please select a payment channel");
+      return;
+    }
     try {
       const payload = {
         ...data,
         client_id: clientId,
         client_account_id: accountId,
+        withdraw_transaction_method: selectedChannel.type,
+        withdraw_transaction_account_id: String(selectedChannel.linked_account_id),
         skip_fee_ids: skipFeeIds,
         fee_overrides: feeOverrides,
       };
@@ -58,6 +73,7 @@ const WithdrawTransactionDialog = ({ isOpen, onClose, refetch, accountId, handle
       toast({ title: "Success", description: response.data.messages });
       if (handleOpenReceiptDialog) handleOpenReceiptDialog(response.data.data, "withdraws");
       reset(); setStep(1); setSkipFeeIds([]); setFeeOverrides({});
+      setSelectedChannel(null); setChannelError("");
       refetch(); onClose();
     } catch (error) {
       toast({
@@ -100,39 +116,34 @@ const WithdrawTransactionDialog = ({ isOpen, onClose, refetch, accountId, handle
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {step === 1 && (
-            <fieldset className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="withdraw_transaction_amount">Withdraw Amount</Label>
-                <Input id="withdraw_transaction_amount" type="number" step="0.01" placeholder="Enter amount"
-                  {...register("withdraw_transaction_amount", { required: "Amount is required" })} />
-                {errors.withdraw_transaction_amount && <p className="text-red-500 text-sm">{errors.withdraw_transaction_amount.message}</p>}
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="withdraw_transaction_amount">Withdraw Amount</Label>
+                  <Input id="withdraw_transaction_amount" type="number" step="0.01" placeholder="Enter amount"
+                    {...register("withdraw_transaction_amount", { required: "Amount is required" })} />
+                  {errors.withdraw_transaction_amount && <p className="text-red-500 text-sm">{errors.withdraw_transaction_amount.message}</p>}
+                </div>
+                <div>
+                  <Label htmlFor="withdraw_transaction_notary">Notary</Label>
+                  <Input id="withdraw_transaction_notary" defaultValue="Withdrawal" placeholder="Withdraw Notary"
+                    {...register("withdraw_transaction_notary", { required: "Notary is required" })} />
+                  {errors.withdraw_transaction_notary && <p className="text-red-500 text-sm">{errors.withdraw_transaction_notary.message}</p>}
+                </div>
+                <div className="md:col-span-2">
+                  <Label htmlFor="withdraw_transaction_notes">Notes (Optional)</Label>
+                  <Input id="withdraw_transaction_notes" placeholder="Optional note" {...register("withdraw_transaction_notes")} />
+                </div>
               </div>
               <div>
-                <Label>Withdraw Method</Label>
-                <Controller name="withdraw_transaction_method" control={control} rules={{ required: "Method is required" }}
-                  render={({ field }) => (
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <SelectTrigger className="w-full"><SelectValue placeholder="Select method" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="cash">Cash</SelectItem>
-                        <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                        <SelectItem value="mobile_money">Mobile Money</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )} />
-                {errors.withdraw_transaction_method && <p className="text-red-500 text-sm">{errors.withdraw_transaction_method.message}</p>}
+                <Label className="mb-1.5 block">Payment Channel</Label>
+                <LinkedChannelPicker
+                  value={selectedChannel}
+                  onChange={(acc) => { setSelectedChannel(acc); setChannelError(""); }}
+                  error={channelError}
+                />
               </div>
-              <div>
-                <Label htmlFor="withdraw_transaction_notary">Notary</Label>
-                <Input id="withdraw_transaction_notary" defaultValue="Withdrawal" placeholder="Withdraw Notary"
-                  {...register("withdraw_transaction_notary", { required: "Notary is required" })} />
-                {errors.withdraw_transaction_notary && <p className="text-red-500 text-sm">{errors.withdraw_transaction_notary.message}</p>}
-              </div>
-              <div>
-                <Label htmlFor="withdraw_transaction_notes">Notes (Optional)</Label>
-                <Input id="withdraw_transaction_notes" placeholder="Optional note" {...register("withdraw_transaction_notes")} />
-              </div>
-            </fieldset>
+            </div>
           )}
 
           {step === 2 && (

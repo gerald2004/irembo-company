@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm, Controller } from "react-hook-form";
+import { LinkedChannelPicker } from "@/components/linked-channel-picker";
 import { useParams } from "react-router-dom";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,13 +20,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   InputOTP,
   InputOTPGroup,
@@ -86,17 +80,19 @@ const MemberTransactionDialog = ({
   const {
     register,
     handleSubmit,
-    control,
     trigger,
     watch,
     reset,
+    control,
     formState: { errors, isSubmitting },
   } = useForm();
 
   const amountField = isDeposit ? "deposit_transaction_amount" : "withdraw_transaction_amount";
-  const methodField = isDeposit ? "deposit_transaction_method" : "withdraw_transaction_method";
   const notaryField = isDeposit ? "deposit_transaction_notary" : "withdraw_transaction_notary";
   const notesField  = isDeposit ? "deposit_transaction_notes"  : "withdraw_transaction_notes";
+
+  const [selectedChannel, setSelectedChannel] = useState(null);
+  const [channelError, setChannelError]       = useState("");
 
   const watchedAmount = parseFloat(watch(amountField)) || 0;
 
@@ -105,22 +101,37 @@ const MemberTransactionDialog = ({
     setStep(1);
     setSkipFeeIds([]);
     setFeeOverrides({});
+    setSelectedChannel(null);
+    setChannelError("");
     onClose();
   };
 
   const validateStep = async () => {
+    if (step === 1 && !selectedChannel) {
+      setChannelError("Please select a payment channel");
+      return;
+    }
+    setChannelError("");
     const valid = await trigger();
     if (valid) setStep((p) => Math.min(p + 1, TOTAL_STEPS));
   };
 
   const onSubmit = async (data) => {
+    if (!selectedChannel) {
+      setChannelError("Please select a payment channel");
+      return;
+    }
     try {
+      const methodKey  = isDeposit ? "deposit_transaction_method"     : "withdraw_transaction_method";
+      const accountKey = isDeposit ? "deposit_transaction_account_id" : "withdraw_transaction_account_id";
       const payload = {
         ...data,
         client_id: memberId,
         client_account_id: accountId,
         member_id: memberId,
         group_id: groupId,
+        [methodKey]:  selectedChannel.type,
+        [accountKey]: String(selectedChannel.linked_account_id),
         skip_fee_ids: skipFeeIds,
         fee_overrides: feeOverrides,
       };
@@ -206,28 +217,15 @@ const MemberTransactionDialog = ({
                 )}
               </div>
 
-              <div>
-                <Label>{isDeposit ? "Deposit" : "Withdraw"} Method</Label>
-                <Controller
-                  name={methodField}
-                  control={control}
-                  rules={{ required: "Method is required" }}
-                  render={({ field }) => (
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select method" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="cash">Cash</SelectItem>
-                        <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                        <SelectItem value="mobile_money">Mobile Money</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {errors[methodField] && (
-                  <p className="text-red-500 text-sm">{errors[methodField].message}</p>
-                )}
+              <div className="md:col-span-2">
+                <Label>Payment Channel</Label>
+                <div className="mt-1.5">
+                  <LinkedChannelPicker
+                    value={selectedChannel}
+                    onChange={(acc) => { setSelectedChannel(acc); setChannelError(""); }}
+                    error={channelError}
+                  />
+                </div>
               </div>
 
               <div>
@@ -318,7 +316,8 @@ const MemberTransactionDialog = ({
 // ── Product section (collapsible) ─────────────────────────────────────────────
 const ProductSection = ({ entry, onTransaction, groupId }) => {
   const [open, setOpen] = useState(true);
-  const { product, total_balance, members } = entry;
+  const { product, total_member_balance, members } = entry;
+  const displayBalance = total_member_balance ?? 0;
 
   return (
     <div className="border rounded-lg overflow-hidden">
@@ -342,7 +341,7 @@ const ProductSection = ({ entry, onTransaction, groupId }) => {
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <TrendingUp className="w-3.5 h-3.5" />
-          <span className="font-medium text-foreground">UGX {fmt(total_balance)}</span>
+          <span className="font-medium text-foreground">UGX {fmt(displayBalance)}</span>
         </div>
       </button>
 
@@ -473,7 +472,7 @@ const GroupMemberSavings = () => {
   }
 
   const byProduct = data?.by_product ?? [];
-  const totalAll = byProduct.reduce((s, p) => s + (p.total_balance ?? 0), 0);
+  const totalAll = byProduct.reduce((s, p) => s + (p.total_member_balance ?? 0), 0);
 
   return (
     <div className="space-y-4 p-1">
