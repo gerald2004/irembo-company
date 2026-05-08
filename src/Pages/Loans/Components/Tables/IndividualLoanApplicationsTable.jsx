@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -32,7 +32,14 @@ import {
 
 import jsPDF from "jspdf";
 import "jspdf-autotable";
-import { ChevronDown, MoreHorizontal } from "lucide-react";
+import { ChevronDown, MoreHorizontal, Filter } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import AlertModal from "@/components/AlertModal";
 import { Badge } from "@/components/ui/badge";
@@ -43,11 +50,15 @@ import useAuth from "@/MiddleWares/Hooks/useAuth";
 const loanStatusBadge = (status) => {
   const s = (status || "").toLowerCase();
   const cls = {
-    pending:     "bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-100",
-    processed:   "bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-100",
-    approved:    "bg-green-100 text-green-800 border-green-300 hover:bg-green-100",
-    disbursed:   "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-100",
-    overdue:     "bg-red-100 text-red-700 border-red-300 hover:bg-red-100",
+    pending:       "bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-100",
+    first_review:  "bg-sky-100 text-sky-800 border-sky-300 hover:bg-sky-100",
+    second_review: "bg-indigo-100 text-indigo-800 border-indigo-300 hover:bg-indigo-100",
+    final_review:  "bg-violet-100 text-violet-800 border-violet-300 hover:bg-violet-100",
+    processed:     "bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-100",
+    approved:      "bg-green-100 text-green-800 border-green-300 hover:bg-green-100",
+    disbursed:            "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-100",
+    pending_disbursement: "bg-orange-100 text-orange-800 border-orange-300 hover:bg-orange-100",
+    overdue:              "bg-red-100 text-red-700 border-red-300 hover:bg-red-100",
     rejected:    "bg-red-100 text-red-700 border-red-300 hover:bg-red-100",
     paid_off:    "bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-100",
     settled:     "bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-100",
@@ -70,6 +81,7 @@ export function IndividualLoansApplicationsTable({
   const [globalFilter, setGlobalFilter] = useState("");
   const debouncedGlobalFilter = useDebounce(globalFilter, 1000);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 7 });
+  const [statusFilter, setStatusFilter] = useState("");
   const axiosPrivate = useAxiosPrivate();
   const [showDialog, setShowDialog] = useState(false);
   const {auth : {roles}} = useAuth();
@@ -87,6 +99,7 @@ export function IndividualLoansApplicationsTable({
       debouncedGlobalFilter,
       sorting,
       extraFilters,
+      statusFilter,
     ],
     queryFn: async () => {
       const controller = new AbortController();
@@ -100,6 +113,7 @@ export function IndividualLoansApplicationsTable({
             globalFilter: debouncedGlobalFilter,
             sorting: JSON.stringify(sorting || []),
             type: clientType,
+            ...(statusFilter ? { status: statusFilter } : {}),
             ...extraFilters,
           },
           signal: controller.signal,
@@ -245,19 +259,23 @@ export function IndividualLoansApplicationsTable({
     },
   ];
 
+  useEffect(() => {
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+  }, [debouncedGlobalFilter]);
+
   const table = useReactTable({
     data: data?.data || [],
     rowCount: data?.meta?.totalRowCount,
     columns,
     manualPagination: true,
     manualSorting: true,
+    manualFiltering: true,
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     state: {
       sorting,
-      globalFilter,
       pagination,
     },
   });
@@ -343,13 +361,42 @@ export function IndividualLoansApplicationsTable({
 
   return (
     <div className="w-full">
-      <div className="flex items-center py-4 space-x-4">
+      <div className="flex items-center py-4 space-x-4 flex-wrap gap-y-2">
         <Input
           placeholder="Search clients..."
           value={globalFilter}
-          onChange={(event) => setGlobalFilter(event.target.value)}
+          onChange={(event) => {
+            setGlobalFilter(event.target.value);
+            setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+          }}
           className="max-w-sm"
         />
+
+        <Select
+          value={statusFilter || "_all"}
+          onValueChange={(v) => {
+            setStatusFilter(v === "_all" ? "" : v);
+            setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+          }}
+        >
+          <SelectTrigger className="w-[180px]">
+            <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+            <SelectValue placeholder="All statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_all">All statuses</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="first_review">First Review</SelectItem>
+            <SelectItem value="second_review">Second Review</SelectItem>
+            <SelectItem value="final_review">Final Review</SelectItem>
+            <SelectItem value="approved">Approved</SelectItem>
+            <SelectItem value="pending_disbursement">Pending Disbursement</SelectItem>
+            <SelectItem value="disbursed">Disbursed</SelectItem>
+            <SelectItem value="rejected">Rejected</SelectItem>
+            <SelectItem value="paid_off">Paid Off</SelectItem>
+            <SelectItem value="settled">Settled</SelectItem>
+          </SelectContent>
+        </Select>
 
         <Button
           variant="outline"

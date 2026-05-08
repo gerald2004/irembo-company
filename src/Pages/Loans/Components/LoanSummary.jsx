@@ -1,5 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -25,11 +26,15 @@ import useAuth from "@/MiddleWares/Hooks/useAuth";
 const loanStatusBadge = (status) => {
   const s = (status || "").toLowerCase();
   const cls = {
-    pending:     "bg-amber-100 text-amber-800 border-amber-300",
-    processed:   "bg-blue-100 text-blue-800 border-blue-300",
-    approved:    "bg-green-100 text-green-800 border-green-300",
-    disbursed:   "bg-emerald-100 text-emerald-800 border-emerald-300",
-    overdue:     "bg-red-100 text-red-700 border-red-300",
+    pending:       "bg-amber-100 text-amber-800 border-amber-300",
+    first_review:  "bg-sky-100 text-sky-800 border-sky-300",
+    second_review: "bg-indigo-100 text-indigo-800 border-indigo-300",
+    final_review:  "bg-violet-100 text-violet-800 border-violet-300",
+    processed:     "bg-blue-100 text-blue-800 border-blue-300",
+    approved:      "bg-green-100 text-green-800 border-green-300",
+    disbursed:             "bg-emerald-100 text-emerald-800 border-emerald-300",
+    pending_disbursement:  "bg-orange-100 text-orange-800 border-orange-300",
+    overdue:               "bg-red-100 text-red-700 border-red-300",
     rejected:    "bg-red-100 text-red-700 border-red-300",
     paid_off:    "bg-slate-100 text-slate-600 border-slate-300",
     settled:     "bg-slate-100 text-slate-600 border-slate-300",
@@ -50,6 +55,15 @@ const LoanSummary = ({ data, refetch, totals }) => {
   const {
     auth: { roles },
   } = useAuth();
+
+  // Fetch current user's loan workflow privileges
+  const { data: pendingData } = useQuery({
+    queryKey: ["loans-pending-privileges"],
+    queryFn: () => axiosPrivate.get("/dashboards/loans-pending").then((r) => r.data?.data),
+    staleTime: 60_000,
+  });
+  const myPrivileges = pendingData?.privileges ?? [];
+  const hasLoanPrivilege = (type) => myPrivileges.includes(type);
 
   // helpers
   const n = (v) => Number(v || 0);
@@ -126,13 +140,16 @@ const LoanSummary = ({ data, refetch, totals }) => {
     <>
       {/* Actions */}
       <div className="flex flex-wrap items-center gap-4 border p-6 rounded-lg shadow-sm">
+
+        {/* ── Submit to workflow (Loan Officer) ─────────────────────────── */}
         {data?.loan_application_status === "pending" &&
           hasPermission(roles, 100069) && (
             <Button size="sm" onClick={() => handleOpenDialog("process")}>
-              Process Loan
+              Submit for Review
             </Button>
           )}
 
+        {/* ── Legacy approve (no workflow configured) ───────────────────── */}
         {data?.loan_application_status === "processed" &&
           hasPermission(roles, 100070) && (
             <Button size="sm" onClick={() => handleOpenDialog("approve")}>
@@ -140,13 +157,50 @@ const LoanSummary = ({ data, refetch, totals }) => {
             </Button>
           )}
 
-        {data?.loan_application_status === "approved" &&
-          hasPermission(roles, 100072) && (
+        {/* ── First Approver actions ────────────────────────────────────── */}
+        {data?.loan_application_status === "first_review" &&
+          hasLoanPrivilege("first_approver") && (
             <>
-              <Button
-                size="sm"
-                onClick={() => handleOpenLoanDisburseModal("disburse")}
-              >
+              <Button size="sm" onClick={() => handleOpenDialog("first_approve")}>
+                First Approve
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => handleOpenDialog("send_back")}>
+                Send Back
+              </Button>
+            </>
+          )}
+
+        {/* ── Second Approver actions ───────────────────────────────────── */}
+        {data?.loan_application_status === "second_review" &&
+          hasLoanPrivilege("second_approver") && (
+            <>
+              <Button size="sm" onClick={() => handleOpenDialog("second_approve")}>
+                Second Approve
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => handleOpenDialog("send_back")}>
+                Send Back
+              </Button>
+            </>
+          )}
+
+        {/* ── Final Approver actions ────────────────────────────────────── */}
+        {data?.loan_application_status === "final_review" &&
+          hasLoanPrivilege("final_approver") && (
+            <>
+              <Button size="sm" onClick={() => handleOpenDialog("approve")}>
+                Final Approve
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => handleOpenDialog("send_back")}>
+                Send Back
+              </Button>
+            </>
+          )}
+
+        {/* ── Disburse (disbursement officer or legacy perm) ───────────── */}
+        {data?.loan_application_status === "approved" &&
+          (hasLoanPrivilege("disbursement_officer") || hasPermission(roles, 100072)) && (
+            <>
+              <Button size="sm" onClick={() => handleOpenLoanDisburseModal("disburse")}>
                 Disburse Loan
               </Button>
               {openLoanDisburseModal && (
@@ -161,16 +215,26 @@ const LoanSummary = ({ data, refetch, totals }) => {
             </>
           )}
 
-        {data?.loan_application_status === "rejected" && (
-          <span className="text-sm">
-            This loan was rejected. Check the loan history for details.
+        {data?.loan_application_status === "pending_disbursement" && (
+          <span className="text-sm text-orange-800 bg-orange-50 border border-orange-200 rounded px-3 py-2">
+            Disbursement awaiting manager approval — check the QMS Pending Actions queue.
           </span>
         )}
 
-        {(data?.loan_application_status === "pending" ||
-          data?.loan_application_status === "approved" ||
-          data?.loan_application_status === "processed") &&
-          hasPermission(roles, 100071) && (
+        {data?.loan_application_status === "rejected" && (
+          <span className="text-sm text-red-700">
+            This loan was rejected. Check the approval history below for details.
+          </span>
+        )}
+
+        {/* ── Reject (any approver at current stage, or legacy perm) ───── */}
+        {["pending","processed","first_review","second_review","final_review","approved"].includes(
+          data?.loan_application_status
+        ) &&
+          (hasPermission(roles, 100071) ||
+            (data?.loan_application_status === "first_review"  && hasLoanPrivilege("first_approver"))  ||
+            (data?.loan_application_status === "second_review" && hasLoanPrivilege("second_approver")) ||
+            (data?.loan_application_status === "final_review"  && hasLoanPrivilege("final_approver"))) && (
             <Button
               size="sm"
               onClick={() => handleOpenDialog("reject")}
@@ -180,12 +244,13 @@ const LoanSummary = ({ data, refetch, totals }) => {
             </Button>
           )}
 
-        {(data?.loan_application_status === "pending" ||
-          data?.loan_application_status === "approved" ||
-          data?.loan_application_status === "processed") &&
+        {/* ── Update loan details ───────────────────────────────────────── */}
+        {["pending","processed","first_review","second_review","final_review","approved"].includes(
+          data?.loan_application_status
+        ) &&
           hasPermission(roles, 100167) && (
             <>
-              <Button size="sm" onClick={handleOpenLoanUpdateModal}>
+              <Button size="sm" variant="outline" onClick={handleOpenLoanUpdateModal}>
                 Update Loan Information
               </Button>
               {openLoanUpdateModal && (
@@ -306,6 +371,51 @@ const LoanSummary = ({ data, refetch, totals }) => {
           </span>
         </div>
       </div>
+
+      {/* Approval History Timeline */}
+      {data?.loan_history && data.loan_history.length > 0 && (
+        <>
+          <h6 className="text-bold text-center mt-6">Approval History</h6>
+          <div className="border rounded-lg shadow-sm p-4 space-y-3">
+            {[...data.loan_history].reverse().map((h, i) => {
+              const actionColors = {
+                submitted_for_review: "bg-sky-100 text-sky-800",
+                first_approved:       "bg-sky-200 text-sky-900",
+                second_approved:      "bg-indigo-100 text-indigo-800",
+                final_approved:       "bg-violet-100 text-violet-800",
+                sent_back:            "bg-amber-100 text-amber-800",
+                rejected:             "bg-red-100 text-red-800",
+                approved:             "bg-green-100 text-green-800",
+                processed:            "bg-blue-100 text-blue-800",
+                disbursed:            "bg-emerald-100 text-emerald-800",
+              };
+              const colorCls = actionColors[h.action_type] || "bg-gray-100 text-gray-700";
+              const actor = h.user
+                ? `${h.user.user_firstname} ${h.user.user_lastname}`
+                : `User #${h.user_id}`;
+              return (
+                <div key={h.history_id ?? i} className="flex gap-3 items-start text-sm">
+                  <div className={`shrink-0 rounded px-2 py-0.5 font-medium capitalize text-xs ${colorCls}`}>
+                    {(h.action_type ?? "").replace(/_/g, " ")}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="font-medium">{actor}</span>
+                    {h.action_reason && (
+                      <span className="text-muted-foreground ml-1">— {h.action_reason}</span>
+                    )}
+                    {h.action_notes && h.action_notes !== h.action_reason && (
+                      <div className="text-muted-foreground text-xs mt-0.5">{h.action_notes}</div>
+                    )}
+                  </div>
+                  <div className="shrink-0 text-muted-foreground text-xs whitespace-nowrap">
+                    {formatDateTimestamp(h.action_timestamp)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {/* Disbursement Summary */}
       {(data?.loan_application_status === "disbursed" ||
@@ -452,18 +562,14 @@ const LoanSummary = ({ data, refetch, totals }) => {
       )}
 
       {/* Action dialogs */}
-      {showDialog &&
-        hasPermission(
-          roles,
-          [100069, 100070, 100072, 100071, 100073, 100074]
-        ) && (
-          <LoanAction
-            isOpen={showDialog}
-            onClose={handleCloseDialog}
-            actionType={action}
-            refetch={refetch}
-          />
-        )}
+      {showDialog && (
+        <LoanAction
+          isOpen={showDialog}
+          onClose={handleCloseDialog}
+          actionType={action}
+          refetch={refetch}
+        />
+      )}
 
       {openLoanUpdateUserModal && (
         <EditLoanUser

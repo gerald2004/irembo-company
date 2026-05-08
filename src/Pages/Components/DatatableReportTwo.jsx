@@ -56,9 +56,17 @@ const DatatableReportTwo = forwardRef(
       onPaginationChange: setPagination,
       onGlobalFilterChange: setGlobalFilter,
       globalFilterFn: (row, columnId, filterValue) => {
-        return String(row.getValue(columnId))
-          .toLowerCase()
-          .includes(filterValue.toLowerCase());
+        const filter = filterValue.toLowerCase().trim();
+        if (!filter) return true;
+        const cell = String(row.getValue(columnId) ?? "").toLowerCase();
+        if (cell.includes(filter)) return true;
+        const o = row.original;
+        const fullName = [
+          o.client_firstname ?? o.firstname ?? o.first_name ?? "",
+          o.client_middlename ?? o.middlename ?? o.middle_name ?? "",
+          o.client_lastname ?? o.lastname ?? o.last_name ?? "",
+        ].map(s => s.trim()).filter(Boolean).join(" ").toLowerCase();
+        return fullName.includes(filter);
       },
     });
 

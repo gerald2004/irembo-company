@@ -4,6 +4,7 @@ import {
   BreadcrumbPage, BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
+import useBranchFilter from "@/MiddleWares/Hooks/useBranchFilter";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,7 +45,8 @@ const LoanPeriodicRepaymentReport = () => {
   const navigate = useNavigate();
 
   const [periodType, setPeriodType] = useState("monthly");
-  const [filters, setFilters] = useState({ startDate: "", endDate: "", branch_id: "" });
+  const { branchKey } = useBranchFilter();
+  const [filters, setFilters] = useState({ startDate: "", endDate: "", branch_id: String(branchKey ?? "") });
 
   // Merge incoming filter changes without wiping periodType
   const handleFilterChange = useCallback(

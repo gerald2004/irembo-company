@@ -26,12 +26,15 @@ import DashboardLoans from "./components/DashboardLoans";
 import DashboardMembership from "./components/DashboardMembership";
 import DashboardNotifications from "./components/DashboardNotifications";
 import DashboardFinancial from "./components/DashboardFinancial";
+import LoanApprovalWidget from "./components/LoanApprovalWidget";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
 import { hasPermission } from "@/lib/utils";
+import { useQueryClient } from "@tanstack/react-query";
 
 const Dashboard = () => {
   const { auth } = useAuth();
   const roles = auth?.roles;
+  const queryClient = useQueryClient();
 
   const fyStart = auth?.fiscalYear?.start_date;
   const [dateRange, setDateRange] = useState({
@@ -68,7 +71,13 @@ const Dashboard = () => {
             defaultValue={dateRange}
             onChange={(range) => range?.from && range?.to && setDateRange(range)}
           />
-          <Button size="sm" className="gap-1.5">
+          <Button
+            size="sm"
+            className="gap-1.5"
+            onClick={() => queryClient.invalidateQueries({
+              predicate: (q) => String(q.queryKey[0]).startsWith("dashboard-"),
+            })}
+          >
             <RefreshCw className="h-3.5 w-3.5" />
             Refresh
           </Button>
@@ -134,7 +143,12 @@ const Dashboard = () => {
         </TabsList>
 
         <TabsContent value="overview">
-          {hasPermission(roles, 100002) && <DashboardOverview />}
+          {hasPermission(roles, 100002) && (
+            <div className="space-y-6">
+              <LoanApprovalWidget />
+              <DashboardOverview />
+            </div>
+          )}
         </TabsContent>
         <TabsContent value="accounting">
           {hasPermission(roles, 100003) && <DashboardTransactions startDate={startDate} endDate={endDate} />}

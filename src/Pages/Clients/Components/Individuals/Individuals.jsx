@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -208,19 +208,23 @@ export function Individuals() {
     },
   ];
 
+  useEffect(() => {
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+  }, [debouncedGlobalFilter]);
+
   const table = useReactTable({
     data: data?.data || [],
     rowCount: data?.meta?.totalRowCount,
     columns,
     manualPagination: true,
     manualSorting: true,
+    manualFiltering: true,
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     state: {
       sorting,
-      globalFilter,
       pagination,
     },
   });
@@ -294,7 +298,10 @@ export function Individuals() {
         <Input
           placeholder="Search clients..."
           value={globalFilter}
-          onChange={(event) => setGlobalFilter(event.target.value)}
+          onChange={(event) => {
+            setGlobalFilter(event.target.value);
+            setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+          }}
           className="max-w-sm"
         />
         {hasPermission(roles, 100007) && (

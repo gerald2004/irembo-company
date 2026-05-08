@@ -64,9 +64,11 @@ import {
 import useAuth from "@/MiddleWares/Hooks/useAuth";
 import { NavSingle } from "./nav-single";
 import { hasPermission, sideBarfilterItems } from "@/lib/utils";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function AppSidebar({ ...props }) {
   const { auth, setAuth } = useAuth();
+  const queryClient = useQueryClient();
   const initials = `${auth?.user?.firstname?.[0] ?? ""}${
     auth?.user?.lastname?.[0] ?? ""
   }`.toUpperCase();
@@ -736,9 +738,13 @@ export function AppSidebar({ ...props }) {
         branch_name: branch_name ?? prev?.user?.branch_name,
       },
     }));
-    // Only reload when switching to a specific branch; "All Branches" is local-only
     if (branch_id != null) {
+      // Switching to a specific branch requires a JWT refresh (new branch_id in token)
       window.location.reload();
+    } else {
+      // "All Branches" — auth state is already updated; invalidate all queries so
+      // every page refetches with no branchId param (sacco-level data)
+      queryClient.invalidateQueries();
     }
   };
 
@@ -787,9 +793,9 @@ export function AppSidebar({ ...props }) {
         {filteredSidebar.human_resource && (
           <NavSingle data={filteredSidebar.human_resource} />
         )}
-        {filteredSidebar.branch_staff && (
+        {/* {filteredSidebar.branch_staff && (
           <NavSingle data={filteredSidebar.branch_staff} />
-        )}
+        )} */}
         {filteredSidebar.customer_care && (
           <NavSingle data={filteredSidebar.customer_care} />
         )}

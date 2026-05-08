@@ -4,6 +4,7 @@ import {
   BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
+import useBranchFilter from "@/MiddleWares/Hooks/useBranchFilter";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import DatatableReport from "@/Pages/Components/DatatableReport";
@@ -47,8 +48,9 @@ const DaySheet = () => {
   const navigate = useNavigate();
   const tableRef = useRef(null);
 
+  const { branchKey } = useBranchFilter();
   const [filters, setFilters] = useState({
-    startDate: "", endDate: "", branch_id: "", status: "all",
+    startDate: "", endDate: "", branch_id: String(branchKey ?? ""), status: "all",
   });
 
   const { data = {}, isLoading, refetch, isRefetching, isError } = useQuery({

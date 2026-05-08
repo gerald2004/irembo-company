@@ -13,15 +13,17 @@ import { formatDateTimestamp } from "@/lib/utils";
 import DatatableReportTwo from "@/Pages/Components/DatatableReportTwo";
 import { useState, useRef } from "react";
 import LoanGeneralReportQuery from "./Components/Blocks/Queries/LoanGeneralReportQuery";
+import useBranchFilter from "@/MiddleWares/Hooks/useBranchFilter";
 
 const AuditTrialReport = () => {
   const axiosPrivate = useAxiosPrivate();
   const navigate = useNavigate();
   const tableRef = useRef(null);
+  const { branchKey } = useBranchFilter();
   const [filters, setFilters] = useState({
     startDate: "",
     endDate: "",
-    branch_id: "",
+    branch_id: String(branchKey ?? ""),
     user_id: "",
   });
   const {

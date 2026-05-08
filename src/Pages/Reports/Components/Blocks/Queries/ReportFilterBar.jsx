@@ -8,6 +8,7 @@ import { CalendarDateRangePicker } from "@/components/date-range-picker";
 import { FileText, FileSpreadsheet, RefreshCw, RotateCcw } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
+import useBranchFilter from "@/MiddleWares/Hooks/useBranchFilter";
 import { useBranches } from "@/Queries/Settings/branches";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { toast } from "@/hooks/use-toast";
@@ -41,13 +42,14 @@ const ReportFilterBar = ({
   const { auth }       = useAuth();
   const axiosPrivate   = useAxiosPrivate();
   const { data: branches = [] } = useBranches();
+  const { branchKey }  = useBranchFilter();
 
   const fiscalStart = auth?.fiscalYear?.start_date
     ? new Date(auth.fiscalYear.start_date)
     : new Date(new Date().getFullYear(), 0, 1);
 
   const [dateRange,     setDateRange]     = useState({ from: fiscalStart, to: new Date() });
-  const [branch,        setBranch]        = useState("all");
+  const [branch,        setBranch]        = useState(branchKey != null ? String(branchKey) : "all");
   const [status,        setStatus]        = useState("completed");
   const [isDownloading, setIsDownloading] = useState(false);
 

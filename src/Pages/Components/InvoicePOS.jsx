@@ -24,7 +24,10 @@ import { useState } from "react";
 export default function InvoicePOS({ data, onClose, isOpen }) {
   const printRef = useRef(null);
   const [paperSize, setPaperSize] = useState("80mm");
-  const { sacco, transaction, client, title } = data;
+  const { sacco, transaction, client, title } = data ?? {};
+
+  const isReady = !!(transaction && transaction?.amount != null && parseFloat(transaction?.amount) > 0);
+
   const handlePrint = () => {
     if (!printRef.current) return;
 
@@ -124,66 +127,80 @@ export default function InvoicePOS({ data, onClose, isOpen }) {
           </Select>
         </div>
         {/* Printable area */}
-        <Card ref={printRef} className="border-0 shadow-none w-full">
-          <CardContent className="px-4 py-2 font-mono text-[11px] leading-snug text-center">
-            <div className="space-y-[2px]">
-              <p>
-                <strong>{sacco?.name}</strong>
-              </p>
-              <p>{sacco?.address}</p>
-              <p>{sacco?.email}</p>
-              <p>{sacco?.contact}</p>
-              <p>{sacco?.branchName}</p>
+        {!isReady ? (
+          <div className="flex flex-col items-center justify-center py-10 text-center gap-3 text-muted-foreground">
+            <Printer className="h-8 w-8 opacity-30" />
+            <p className="text-sm font-medium">Receipt is being prepared…</p>
+            <p className="text-xs">Please wait a moment, then try again.</p>
+            <Button variant="outline" size="sm" onClick={onClose}>Close</Button>
+          </div>
+        ) : (
+          <>
+            <Card ref={printRef} className="border-0 shadow-none w-full">
+              <CardContent className="px-4 py-2 font-mono text-[11px] leading-snug text-center">
+                <div className="space-y-[2px]">
+                  <p><strong>{sacco?.name}</strong></p>
+                  <p>{sacco?.address}</p>
+                  <p>{sacco?.email}</p>
+                  <p>{sacco?.contact}</p>
+                  {sacco?.branchName && <p>{sacco.branchName}</p>}
+                </div>
+
+                <hr className="my-2 border-dashed" />
+                {title}
+                <hr className="my-2 border-dashed" />
+
+                <div className="space-y-[2px]">
+                  {client?.accountNumber && <p>Account : {client.accountNumber}</p>}
+                  {client?.accountName && !client.accountName.includes("undefined") && (
+                    <p>Customer : {client.accountName}</p>
+                  )}
+                  {transaction.transactionId && <p>Txn No : {transaction.transactionId}</p>}
+                  {transaction.timestamp && <p>Date : {formatDateTimestamp(transaction.timestamp)}</p>}
+                  {transaction.user && !String(transaction.user).includes("undefined") && (
+                    <p>Teller : {transaction.user}</p>
+                  )}
+                </div>
+
+                <hr className="my-2 border-dashed" />
+
+                <div className="space-y-[2px]">
+                  <p className="flex justify-center gap-1">
+                    <span>Amount:</span>
+                    <span className="font-semibold">
+                      UGX {transaction.amount.toLocaleString()}
+                    </span>
+                  </p>
+                  <p className="capitalize">
+                    In words : {toWords(transaction.amount)} Shillings only
+                  </p>
+                  {transaction.notary && <p>Notary : {transaction.notary}</p>}
+                  {transaction.notes  && <p>Notes : {transaction.notes}</p>}
+                </div>
+
+                <hr className="my-2 border-dashed" />
+
+                <div className="text-center space-y-1">
+                  <p className="font-semibold">Thank you for banking with us.</p>
+                  <p>
+                    Powered by{" "}
+                    <span className="font-medium">
+                      {import.meta.env.VITE_APP_POWERED_BY}{" "}
+                      {import.meta.env.VITE_APP_COMPANY}
+                    </span>
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="p-4 print:hidden">
+              <Button onClick={handlePrint} className="w-full" size="sm">
+                <Printer className="mr-2 h-4 w-4" />
+                Print Receipt
+              </Button>
             </div>
-
-            <hr className="my-2 border-dashed" />
-            {title}
-            <hr className="my-2 border-dashed" />
-            <div className="space-y-[2px]">
-              <p>Account : {client?.accountNumber}</p>
-              <p>Customer : {client?.accountName}</p>
-              <p>Txn No : {transaction?.transactionId}</p>
-              <p>Date : {formatDateTimestamp(transaction?.timestamp)}</p>
-              <p>Teller : {transaction?.user}</p>
-            </div>
-
-            <hr className="my-2 border-dashed" />
-
-            <div className="space-y-[2px]">
-              <p className="flex justify-center">
-                <span>Amount: </span>
-                <span className="font-semibold">
-                  {transaction?.amount.toLocaleString()}
-                </span>
-              </p>
-              <p className="capitalize">
-                In words : {toWords(transaction?.amount)} Shillings
-              </p>
-              {transaction?.notary && <p>Notary : {transaction?.notary}</p>}
-              {transaction?.notes && <p>Notes : {transaction?.notes}</p>}
-            </div>
-
-            <hr className="my-2 border-dashed" />
-
-            <div className="text-center space-y-1">
-              <p className="font-semibold">Thank you for choosing us.</p>
-              <p>
-                Powered by{" "}
-                <span className="font-medium">
-                  {import.meta.env.VITE_APP_POWERED_BY}{" "}
-                  {import.meta.env.VITE_APP_COMPANY}
-                </span>
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="p-4 print:hidden">
-          <Button onClick={handlePrint} className="w-full" size="sm">
-            <Printer className="mr-2 h-4 w-4" />
-            Print
-          </Button>
-        </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

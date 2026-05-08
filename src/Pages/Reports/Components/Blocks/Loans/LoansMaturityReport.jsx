@@ -7,6 +7,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
+import useBranchFilter from "@/MiddleWares/Hooks/useBranchFilter";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import DatatableReportTwo from "@/Pages/Components/DatatableReportTwo";
@@ -29,8 +30,9 @@ const LoansMaturityReport = () => {
   const tableRef = useRef(null);
 
   // 🚫 No start/end dates here anymore
+  const { branchKey } = useBranchFilter();
   const [filters, setFilters] = useState({
-    branch_id: "",
+    branch_id: String(branchKey ?? ""),
     user_id: "",
     days: 30, // default window
   });

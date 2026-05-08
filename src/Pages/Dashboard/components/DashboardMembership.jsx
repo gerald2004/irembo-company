@@ -11,6 +11,7 @@ import {
   ResponsiveContainer, Legend, PieChart, Pie, Cell, AreaChart, Area,
 } from "recharts";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
+import useBranchFilter from "@/MiddleWares/Hooks/useBranchFilter";
 import StatCard from "./StatCard";
 
 const fmt = (n) => (n != null ? Number(n).toLocaleString() : "—");
@@ -21,14 +22,17 @@ const PIE_COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--cha
 const DashboardMembership = ({ startDate }) => {
   const axiosPrivate = useAxiosPrivate();
   const navigate     = useNavigate();
+  const { branchKey, branchParams } = useBranchFilter();
 
   const year = startDate ? new Date(startDate).getFullYear() : new Date().getFullYear();
 
   const { data = {}, isLoading } = useQuery({
-    queryKey: ["dashboard-membership-data", year],
+    queryKey: ["dashboard-membership-data", year, branchKey],
     queryFn: async () => {
       try {
-        const res = await axiosPrivate.get(`/dashboards/membership?year=${year}`);
+        const params = new URLSearchParams({ year });
+        if (branchParams.branchId != null) params.set("branchId", branchParams.branchId);
+        const res = await axiosPrivate.get(`/dashboards/membership?${params}`);
         return res.data.data ?? {};
       } catch (err) {
         if (err?.response?.status === 401) navigate("/", { replace: true });

@@ -34,6 +34,7 @@ import { FileText, FileSpreadsheet, RefreshCw, RotateCcw, SlidersHorizontal } fr
 import { formatDateTimestamp, getValidDate, prepareDataForExport } from "@/lib/utils";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
+import useBranchFilter from "@/MiddleWares/Hooks/useBranchFilter";
 import { useBranches } from "@/Queries/Settings/branches";
 import { useUsers } from "@/Queries/Settings/users";
 import { useQuery } from "@tanstack/react-query";
@@ -137,6 +138,7 @@ const LoanGeneralReportQuery = ({
   const { auth }     = useAuth();
   const axiosPrivate = useAxiosPrivate();
   const { control, handleSubmit, reset } = useForm();
+  const { branchKey } = useBranchFilter();
 
   const isSacco  = auth?.user?.data_privilege === "sacco";
   const isBranch = auth?.user?.data_privilege === "branch";
@@ -146,7 +148,7 @@ const LoanGeneralReportQuery = ({
     : new Date(new Date().getFullYear(), 0, 1);
 
   const [dateRange,             setDateRange]             = useState({ from: fiscalStart, to: new Date() });
-  const [selectedBranch,        setSelectedBranch]        = useState("all");
+  const [selectedBranch,        setSelectedBranch]        = useState(branchKey != null ? String(branchKey) : "all");
   const [selectedUser,          setSelectedUser]          = useState("all");
   const [selectedProduct,       setSelectedProduct]       = useState("all");
   const [selectedStatus,        setSelectedStatus]        = useState("all");

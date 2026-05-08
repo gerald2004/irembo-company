@@ -17,13 +17,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X, Shield, ShieldCheck, ShieldOff, Smartphone, MessageSquare, Mail, AlertTriangle } from "lucide-react";
+import { X, Shield, ShieldCheck, ShieldOff, Smartphone, MessageSquare, Mail, AlertTriangle, Trash2, Plus, GitBranch, CreditCard } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
@@ -358,6 +359,84 @@ const StaffDetails = () => {
   const addableBranches =
     (allBranches || []).filter((b) => !allowedIds.has(b.id)) || [];
 
+  // ── Loan Workflow Privileges ───────────────────────────────────────────────
+  const LOAN_PRIVILEGE_LABELS = {
+    loan_officer:         "Loan Officer",
+    first_approver:       "First Approver",
+    second_approver:      "Second Approver",
+    final_approver:       "Final Approver",
+    disbursement_officer: "Disbursement Officer",
+  };
+  const LOAN_PRIVILEGE_COLORS = {
+    loan_officer:         "bg-gray-100 text-gray-800 border-gray-300",
+    first_approver:       "bg-sky-100 text-sky-800 border-sky-300",
+    second_approver:      "bg-indigo-100 text-indigo-800 border-indigo-300",
+    final_approver:       "bg-violet-100 text-violet-800 border-violet-300",
+    disbursement_officer: "bg-emerald-100 text-emerald-800 border-emerald-300",
+  };
+
+  const queryClient = useQueryClient();
+
+  const { data: loanPrivileges = [] } = useQuery({
+    queryKey: ["staff-loan-privileges", params.id],
+    queryFn: () =>
+      axiosPrivate
+        .get(`/hr/loan-privileges?user_id=${params.id}`)
+        .then((r) => r.data?.data ?? []),
+    enabled: !!params.id,
+  });
+
+  const [lpForm, setLpForm] = useState({ privilege_types: [], branch_ids: [] });
+  const [lpLoading, setLpLoading] = useState(false);
+
+  const batchAddPrivileges = async () => {
+    if (!lpForm.privilege_types.length) return;
+    // empty branch_ids = sacco-wide (null); otherwise one record per branch
+    const branchValues = lpForm.branch_ids.length ? lpForm.branch_ids.map(Number) : [null];
+    const combinations = lpForm.privilege_types.flatMap((pt) =>
+      branchValues.map((bId) => ({ privilege_type: pt, branch_id: bId }))
+    );
+    setLpLoading(true);
+    try {
+      const results = await Promise.allSettled(
+        combinations.map(({ privilege_type, branch_id }) =>
+          axiosPrivate.post("/hr/loan-privileges", {
+            user_id: Number(params.id),
+            privilege_type,
+            branch_id,
+          })
+        )
+      );
+      const succeeded = results.filter((r) => r.status === "fulfilled").length;
+      const skipped   = results.length - succeeded;
+      toast({
+        title: `${succeeded} privilege(s) assigned${skipped ? `, ${skipped} already existed` : ""}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["staff-loan-privileges", params.id] });
+      setLpForm({ privilege_types: [], branch_ids: [] });
+    } catch (err) {
+      toast({ title: "Error", variant: "destructive", description: "Failed to assign privileges" });
+    } finally {
+      setLpLoading(false);
+    }
+  };
+
+  const toggleLoanPrivilege = useMutation({
+    mutationFn: (id) => axiosPrivate.patch(`/hr/loan-privileges/${id}`),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["staff-loan-privileges", params.id] }),
+    onError: () => toast({ title: "Failed to update", variant: "destructive" }),
+  });
+
+  const removeLoanPrivilege = useMutation({
+    mutationFn: (id) => axiosPrivate.delete(`/hr/loan-privileges/${id}`),
+    onSuccess: () => {
+      toast({ title: "Privilege removed" });
+      queryClient.invalidateQueries({ queryKey: ["staff-loan-privileges", params.id] });
+    },
+    onError: () => toast({ title: "Failed to remove", variant: "destructive" }),
+  });
+
   return (
     <>
       <Breadcrumb>
@@ -671,7 +750,7 @@ const StaffDetails = () => {
                   </Card>
                 </div>
 
-                {/* 2FA Security Settings */}
+                {/* 2FA + Loan Workflow Privileges */}
                 <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Card className="shadow-lg rounded-xl overflow-hidden">
                     <div className={`h-1 ${userData?.two_factor_enabled === "yes" ? "bg-emerald-500" : "bg-slate-300"}`} />
@@ -763,6 +842,147 @@ const StaffDetails = () => {
                           </div>
                         </div>
                       )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Loan Workflow Privileges — sits alongside 2FA */}
+                  <Card className="shadow-lg rounded-xl overflow-hidden">
+                    <div className="h-1 bg-violet-400" />
+                    <CardHeader className="p-4 pb-2">
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="w-5 h-5 text-violet-600" />
+                        <CardTitle className="text-base font-semibold">Loan Workflow Privileges</CardTitle>
+                      </div>
+                      <CardDescription className="text-xs mt-1">
+                        Control which loan approval stages this staff member can action.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-4 space-y-4">
+                      {/* Existing privileges list */}
+                      {loanPrivileges.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No loan privileges assigned yet.</p>
+                      ) : (
+                        <div className="divide-y rounded-lg border overflow-hidden">
+                          {loanPrivileges.map((priv) => (
+                            <div key={priv.privilege_id} className="flex items-center justify-between px-3 py-2.5 bg-background">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <span className={`text-xs font-medium px-2 py-0.5 rounded border ${LOAN_PRIVILEGE_COLORS[priv.privilege_type] ?? "bg-gray-100 text-gray-700 border-gray-300"}`}>
+                                  {LOAN_PRIVILEGE_LABELS[priv.privilege_type] ?? priv.privilege_type}
+                                </span>
+                                {priv.branch_name ? (
+                                  <span className="flex items-center gap-1 text-xs text-muted-foreground truncate">
+                                    <GitBranch className="h-3 w-3 shrink-0" />
+                                    {priv.branch_name}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">All branches</span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3 shrink-0 ml-3">
+                                <Switch
+                                  checked={!!priv.is_active}
+                                  onCheckedChange={() => toggleLoanPrivilege.mutate(priv.privilege_id)}
+                                  disabled={toggleLoanPrivilege.isPending}
+                                />
+                                <button
+                                  onClick={() => removeLoanPrivilege.mutate(priv.privilege_id)}
+                                  disabled={removeLoanPrivilege.isPending}
+                                  className="text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
+                                  title="Remove privilege"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Add privileges — multi-select toggle badges */}
+                      <div className="space-y-3 pt-1 border-t">
+                        <p className="text-xs font-medium text-muted-foreground">Select one or more to assign:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(LOAN_PRIVILEGE_LABELS).map(([val, label]) => {
+                            const alreadyHas = loanPrivileges.some((p) => p.privilege_type === val);
+                            const selected = lpForm.privilege_types.includes(val);
+                            return (
+                              <button
+                                key={val}
+                                disabled={alreadyHas}
+                                onClick={() =>
+                                  setLpForm((f) => ({
+                                    ...f,
+                                    privilege_types: selected
+                                      ? f.privilege_types.filter((t) => t !== val)
+                                      : [...f.privilege_types, val],
+                                  }))
+                                }
+                                className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-all ${
+                                  alreadyHas
+                                    ? `${LOAN_PRIVILEGE_COLORS[val]} opacity-50 cursor-not-allowed`
+                                    : selected
+                                    ? `${LOAN_PRIVILEGE_COLORS[val]} ring-2 ring-offset-1 ring-primary/50 cursor-pointer`
+                                    : "border-dashed border-muted-foreground/40 text-muted-foreground hover:border-primary/50 hover:text-foreground cursor-pointer"
+                                }`}
+                              >
+                                {selected && !alreadyHas && "✓ "}
+                                {label}
+                                {alreadyHas && " (assigned)"}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-muted-foreground">
+                            Branch scope — leave all unselected for sacco-wide access:
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {(allBranches ?? []).map((b) => {
+                              const selected = lpForm.branch_ids.includes(String(b.id));
+                              return (
+                                <button
+                                  key={b.id}
+                                  onClick={() =>
+                                    setLpForm((f) => ({
+                                      ...f,
+                                      branch_ids: selected
+                                        ? f.branch_ids.filter((id) => id !== String(b.id))
+                                        : [...f.branch_ids, String(b.id)],
+                                    }))
+                                  }
+                                  className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-all ${
+                                    selected
+                                      ? "bg-primary text-primary-foreground border-primary cursor-pointer"
+                                      : "border-dashed border-muted-foreground/40 text-muted-foreground hover:border-primary/50 hover:text-foreground cursor-pointer"
+                                  }`}
+                                >
+                                  {selected && "✓ "}
+                                  {b.name}
+                                </button>
+                              );
+                            })}
+                            {(allBranches ?? []).length === 0 && (
+                              <span className="text-xs text-muted-foreground italic">No branches configured</span>
+                            )}
+                          </div>
+                          {lpForm.branch_ids.length === 0 && (
+                            <p className="text-xs text-muted-foreground">No branch selected → will apply to all branches</p>
+                          )}
+                        </div>
+                        <Button
+                          size="sm"
+                          className="h-8 gap-1.5"
+                          disabled={!lpForm.privilege_types.length || lpLoading}
+                          onClick={batchAddPrivileges}
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          {lpLoading
+                            ? "Assigning…"
+                            : lpForm.privilege_types.length
+                            ? `Assign (${lpForm.privilege_types.length}${lpForm.branch_ids.length ? ` × ${lpForm.branch_ids.length} branch${lpForm.branch_ids.length > 1 ? "es" : ""}` : ", all branches"})`
+                            : "Assign"}
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 </div>

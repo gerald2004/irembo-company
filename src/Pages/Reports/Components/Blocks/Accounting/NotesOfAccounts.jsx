@@ -5,6 +5,7 @@ import {
   BreadcrumbPage, BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
+import useBranchFilter from "@/MiddleWares/Hooks/useBranchFilter";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import ReportFilterBar from "../Queries/ReportFilterBar";
@@ -19,7 +20,8 @@ const ACCOUNT_TYPES = ["assets", "liabilities", "equity", "income", "expenses"];
 const NotesOfAccounts = () => {
   const axiosPrivate = useAxiosPrivate();
   const navigate = useNavigate();
-  const [filters, setFilters] = useState({ startDate: "", endDate: "", branch_id: "" });
+  const { branchKey } = useBranchFilter();
+  const [filters, setFilters] = useState({ startDate: "", endDate: "", branch_id: String(branchKey ?? "") });
   const [accountType, setAccountType] = useState("");
 
   const { data = {}, isLoading, isRefetching, isError } = useQuery({

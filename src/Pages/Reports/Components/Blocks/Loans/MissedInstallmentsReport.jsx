@@ -5,6 +5,7 @@ import {
   BreadcrumbPage, BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
+import useBranchFilter from "@/MiddleWares/Hooks/useBranchFilter";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import LoanGeneralReportQuery from "../Queries/LoanGeneralReportQuery";
@@ -27,8 +28,9 @@ const MissedInstallmentsReport = () => {
   const navigate     = useNavigate();
   const tableRef     = useRef(null);
 
+  const { branchKey } = useBranchFilter();
   const [filters, setFilters] = useState({
-    startDate: "", endDate: "", branch_id: "", user_id: "",
+    startDate: "", endDate: "", branch_id: String(branchKey ?? ""), user_id: "",
     product_id: "", min_dpd: "",
   });
 

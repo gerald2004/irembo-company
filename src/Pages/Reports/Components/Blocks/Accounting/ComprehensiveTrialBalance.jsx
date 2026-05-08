@@ -5,6 +5,7 @@ import {
   BreadcrumbPage, BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
+import useBranchFilter from "@/MiddleWares/Hooks/useBranchFilter";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import ReportFilterBar from "../Queries/ReportFilterBar";
@@ -17,7 +18,8 @@ const fmt = (v) =>
 const ComprehensiveTrialBalance = () => {
   const axiosPrivate = useAxiosPrivate();
   const navigate = useNavigate();
-  const [filters, setFilters] = useState({ startDate: "", endDate: "", branch_id: "", status: "completed" });
+  const { branchKey } = useBranchFilter();
+  const [filters, setFilters] = useState({ startDate: "", endDate: "", branch_id: String(branchKey ?? ""), status: "completed" });
 
   const { data = {}, isLoading, isRefetching, isError } = useQuery({
     queryKey: ["comprehensive-trial-balance", filters],

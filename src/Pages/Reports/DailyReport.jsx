@@ -3,6 +3,7 @@ import {
   BreadcrumbPage, BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
+import useBranchFilter from "@/MiddleWares/Hooks/useBranchFilter";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,7 +46,8 @@ const Section = ({ title, children }) => (
 const DailyReport = () => {
   const axiosPrivate = useAxiosPrivate();
   const navigate = useNavigate();
-  const [filters, setFilters] = useState({ date: "", branch_id: "" });
+  const { branchKey } = useBranchFilter();
+  const [filters, setFilters] = useState({ date: "", branch_id: String(branchKey ?? "") });
 
   const { data: r = {}, isRefetching, refetch, isLoading } = useQuery({
     queryKey: ["daily-report", filters],

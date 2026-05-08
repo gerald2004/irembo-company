@@ -278,50 +278,36 @@ export function AccountsTable() {
   const [openReceiptDialog, setOpenReceiptDialog] = useState(false);
   
   const handleOpenReceiptDialog = (data, type) => {
+    const clientFirstname = data?.client?.client_firstname ?? "";
+    const clientLastname  = data?.client?.client_lastname  ?? "";
+    const clientName      = [clientFirstname, clientLastname].filter(Boolean).join(" ") || null;
+
+    const tellerFirstname = data?.user?.user_firstname ?? "";
+    const tellerLastname  = data?.user?.user_lastname  ?? "";
+    const tellerName      = [tellerFirstname, tellerLastname].filter(Boolean).join(" ") || null;
 
     const loadedData = {
       sacco: {
-        name: user?.sacco_name,
-        address: user?.sacco_address,
-        email: user?.sacco_email,
-        contact: user?.sacco_contact,
-        branch: user?.branch_name,
+        name:       user?.sacco_name,
+        address:    user?.sacco_address,
+        email:      user?.sacco_email,
+        contact:    user?.sacco_contact,
+        branchName: user?.branch_name,
       },
       client: {
-        accountNumber: data?.client?.client_account_number,
-        accountName: `${data?.client?.client_firstname} ${data?.client?.client_lastname}`,
+        accountNumber: data?.clientAccount?.client_account_number ?? data?.client?.client_account_number ?? null,
+        accountName:   clientName,
       },
       transaction: {
-        amount:
-          type === "savings"
-            ? data?.deposit_transaction_amount
-            : data?.withdraw_transaction_amount,
-        timestamp:
-          type === "savings"
-            ? data?.deposit_transaction_timestamp
-            : data?.withdraw_transaction_timestamp,
-        notes:
-          type === "savings"
-            ? data?.deposit_transaction_notes
-            : data?.withdraw_transaction_notes,
-        notary:
-          type === "savings"
-            ? data?.deposit_transaction_notary
-            : data?.withdraw_transaction_notary,
-        transactionId:
-          type === "savings"
-            ? data?.deposit_transaction_code
-            : data?.withdraw_transaction_code,
-        user: `${data?.user?.user_firstname} ${data?.user?.user_lastname}`,
+        amount:        type === "savings" ? data?.deposit_transaction_amount  : data?.withdraw_transaction_amount,
+        timestamp:     type === "savings" ? data?.deposit_transaction_timestamp : data?.withdraw_transaction_timestamp,
+        notes:         type === "savings" ? data?.deposit_transaction_notes   : data?.withdraw_transaction_notes,
+        notary:        type === "savings" ? data?.deposit_transaction_notary  : data?.withdraw_transaction_notary,
+        transactionId: type === "savings" ? data?.deposit_transaction_code    : data?.withdraw_transaction_code,
+        user:          tellerName,
       },
-      title:
-        type === "savings"
-          ? "Savings Receipt"
-          : type === "withdraws"
-          ? "Withdraws Receipt"
-          : "Receipt",
+      title: type === "savings" ? "Savings Receipt" : type === "withdraws" ? "Withdrawal Receipt" : "Receipt",
     };
-    // console.log(loadedData);
     setReceiptData(loadedData);
     setOpenReceiptDialog(true);
   }

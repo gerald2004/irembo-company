@@ -13,6 +13,7 @@ import {
   CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
+import useBranchFilter from "@/MiddleWares/Hooks/useBranchFilter";
 import StatCard from "./StatCard";
 
 const fmt  = (n)  => (n != null ? Number(n).toLocaleString() : "—");
@@ -48,14 +49,16 @@ function BreakdownBar({ items = [], colorClass = "bg-sky-500" }) {
 const DashboardTransactions = ({ startDate, endDate }) => {
   const axiosPrivate = useAxiosPrivate();
   const navigate     = useNavigate();
+  const { branchKey, branchParams } = useBranchFilter();
 
   const { data = {}, isLoading } = useQuery({
-    queryKey: ["dashboard-transactions-data", startDate, endDate],
+    queryKey: ["dashboard-transactions-data", startDate, endDate, branchKey],
     queryFn: async () => {
       try {
         const params = new URLSearchParams();
         if (startDate) params.set("startDate", startDate);
         if (endDate)   params.set("endDate",   endDate);
+        if (branchParams.branchId != null) params.set("branchId", branchParams.branchId);
         const res = await axiosPrivate.get(`/dashboards/transactions?${params}`);
         return res.data.data ?? {};
       } catch (err) {

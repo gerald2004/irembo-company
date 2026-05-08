@@ -14,6 +14,7 @@ import {
   PiggyBank, BarChart3, Target, ArrowUpRight, ArrowDownRight, Minus,
 } from "lucide-react";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
+import useBranchFilter from "@/MiddleWares/Hooks/useBranchFilter";
 import ReportFilterBar from "./Components/Blocks/Queries/ReportFilterBar";
 import ReportKpi from "./Components/ReportKpi";
 import { IncomeExpenses } from "@/Pages/Dashboard/components/others/IncomeExpenses";
@@ -88,7 +89,8 @@ const BusinessPerformanceReport = () => {
   const axios = useAxiosPrivate();
   const navigate = useNavigate();
 
-  const [filters, setFilters] = useState({ startDate: "", endDate: "", branch_id: "" });
+  const { branchKey } = useBranchFilter();
+  const [filters, setFilters] = useState({ startDate: "", endDate: "", branch_id: String(branchKey ?? "") });
 
   const { data, isLoading, isRefetching, isError } = useQuery({
     queryKey: ["business-performance-report", filters],

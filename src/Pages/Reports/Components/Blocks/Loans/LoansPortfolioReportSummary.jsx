@@ -4,6 +4,7 @@ import {
   BreadcrumbPage, BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
+import useBranchFilter from "@/MiddleWares/Hooks/useBranchFilter";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,7 +48,8 @@ const KpiCard = ({ title, value, sub, icon: Icon, color = "text-foreground", bg 
 const LoansPortfolioReportSummary = () => {
   const axiosPrivate = useAxiosPrivate();
   const navigate = useNavigate();
-  const [filters, setFilters] = useState({ startDate: "", endDate: "", branch_id: "" });
+  const { branchKey } = useBranchFilter();
+  const [filters, setFilters] = useState({ startDate: "", endDate: "", branch_id: String(branchKey ?? "") });
 
   const { data: raw = {}, isLoading, isRefetching, isError } = useQuery({
     queryKey: ["portfolio-loans-summary", filters],

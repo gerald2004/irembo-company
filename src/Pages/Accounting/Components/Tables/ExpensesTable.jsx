@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
@@ -333,6 +333,10 @@ export function ExpensesTable() {
       },
     }] : []),
   ];
+
+  useEffect(() => {
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+  }, [debouncedGlobalFilter]);
 
   const table = useReactTable({
     data: rows,

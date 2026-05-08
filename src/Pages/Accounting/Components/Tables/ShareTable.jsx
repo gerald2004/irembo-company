@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
@@ -107,12 +107,17 @@ export function ShareTable() {
     },
   ];
 
+  useEffect(() => {
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+  }, [debouncedGlobalFilter]);
+
   const table = useReactTable({
     data: data?.data || [],
     rowCount: data?.meta?.totalRowCount,
     columns,
     manualPagination: true,
     manualSorting: true,
+    manualFiltering: true,
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),

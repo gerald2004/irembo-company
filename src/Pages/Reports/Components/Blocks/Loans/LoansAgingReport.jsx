@@ -3,6 +3,7 @@ import {
   BreadcrumbPage, BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
+import useBranchFilter from "@/MiddleWares/Hooks/useBranchFilter";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import DatatableReport from "@/Pages/Components/DatatableReport";
@@ -22,7 +23,8 @@ const LoansAgingReport = () => {
   const location = useLocation();
   const tableRef = useRef(null);
 
-  const [filters, setFilters] = useState({ startDate: "", endDate: "", branch_id: "", user_id: "" });
+  const { branchKey } = useBranchFilter();
+  const [filters, setFilters] = useState({ startDate: "", endDate: "", branch_id: String(branchKey ?? ""), user_id: "" });
 
   const { data = [], isLoading, refetch, isRefetching, isError } = useQuery({
     queryKey: ["aging-loans", filters],

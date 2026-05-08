@@ -7,6 +7,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
+import useBranchFilter from "@/MiddleWares/Hooks/useBranchFilter";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import DatatableReport from "@/Pages/Components/DatatableReport";
@@ -19,10 +20,11 @@ const EmailReport = () => {
   const axiosPrivate = useAxiosPrivate();
   const navigate = useNavigate();
   const tableRef = useRef(null);
+  const { branchKey } = useBranchFilter();
   const [filters, setFilters] = useState({
     startDate: "",
     endDate: "",
-    branch_id: "",
+    branch_id: String(branchKey ?? ""),
     user_id: "",
   });
   const {

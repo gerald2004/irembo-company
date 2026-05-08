@@ -7,6 +7,7 @@ import {
   Layers, AlertTriangle, PercentIcon, CreditCard, PiggyBank,
 } from "lucide-react";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
+import useBranchFilter from "@/MiddleWares/Hooks/useBranchFilter";
 import StatCard from "./StatCard";
 import { IncomeExpenses } from "./others/IncomeExpenses";
 
@@ -44,14 +45,16 @@ function BreakdownList({ items = [], colorClass = "bg-primary" }) {
 const DashboardFinancial = ({ startDate, endDate }) => {
   const axiosPrivate = useAxiosPrivate();
   const navigate = useNavigate();
+  const { branchKey, branchParams } = useBranchFilter();
 
   const { data = {}, isLoading } = useQuery({
-    queryKey: ["dashboard-financial-data", startDate, endDate],
+    queryKey: ["dashboard-financial-data", startDate, endDate, branchKey],
     queryFn: async () => {
       try {
         const params = new URLSearchParams();
         if (startDate) params.set("startDate", startDate);
         if (endDate)   params.set("endDate",   endDate);
+        if (branchParams.branchId != null) params.set("branchId", branchParams.branchId);
         const res = await axiosPrivate.get(`/dashboards/financial-position?${params}`);
         return res.data.data ?? {};
       } catch (error) {

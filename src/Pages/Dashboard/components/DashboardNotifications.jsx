@@ -12,6 +12,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
+import useBranchFilter from "@/MiddleWares/Hooks/useBranchFilter";
 import StatCard from "./StatCard";
 
 const fmt = (n) => (n != null ? Number(n).toLocaleString() : "—");
@@ -47,12 +48,13 @@ const LEVEL_CONFIG = {
 const DashboardNotifications = () => {
   const axiosPrivate = useAxiosPrivate();
   const navigate     = useNavigate();
+  const { branchKey, branchParams } = useBranchFilter();
 
   const { data = {}, isLoading } = useQuery({
-    queryKey: ["dashboard-notifications-data"],
+    queryKey: ["dashboard-notifications-data", branchKey],
     queryFn: async () => {
       try {
-        const res = await axiosPrivate.get("/dashboards/notifications");
+        const res = await axiosPrivate.get("/dashboards/notifications", { params: branchParams });
         return res.data.data ?? {};
       } catch (err) {
         if (err?.response?.status === 401) navigate("/", { replace: true });

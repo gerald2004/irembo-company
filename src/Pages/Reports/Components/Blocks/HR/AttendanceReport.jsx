@@ -3,6 +3,7 @@ import {
   BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
+import useBranchFilter from "@/MiddleWares/Hooks/useBranchFilter";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import DatatableReport from "@/Pages/Components/DatatableReport";
@@ -49,10 +50,11 @@ const AttendanceReport = () => {
   const [dateRange, setDateRange] = useState({ from: fiscalStart, to: new Date() });
   const [selectedBranch, setSelectedBranch] = useState("all");
   const [selectedUser,   setSelectedUser]   = useState("all");
+  const { branchKey } = useBranchFilter();
   const [filters, setFilters] = useState({
     startDate: fiscalStart.toLocaleDateString("en-CA"),
     endDate: new Date().toLocaleDateString("en-CA"),
-    branch_id: "",
+    branch_id: String(branchKey ?? ""),
     user_id: "",
   });
 

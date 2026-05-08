@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -241,6 +241,10 @@ export function JournalEntriesTable() {
     },
   ];
 
+  useEffect(() => {
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+  }, [debouncedFilter]);
+
   const table = useReactTable({
     data:         data?.data || [],
     rowCount:     data?.meta?.totalRowCount,
@@ -261,7 +265,10 @@ export function JournalEntriesTable() {
         <Input
           placeholder="Search journal entries…"
           value={globalFilter}
-          onChange={(e) => setGlobalFilter(e.target.value)}
+          onChange={(e) => {
+            setGlobalFilter(e.target.value);
+            setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+          }}
           className="h-8 max-w-xs text-sm"
         />
 

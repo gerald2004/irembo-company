@@ -13,6 +13,7 @@ import {
   CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
+import useBranchFilter from "@/MiddleWares/Hooks/useBranchFilter";
 import StatCard from "./StatCard";
 
 const fmt = (n) => (n != null ? Number(n).toLocaleString() : "—");
@@ -30,12 +31,13 @@ function RiskBadge({ value, thresholds = [5, 10] }) {
 const DashboardOverview = () => {
   const axiosPrivate = useAxiosPrivate();
   const navigate = useNavigate();
+  const { branchKey, branchParams } = useBranchFilter();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["dashboard-overview-data"],
+    queryKey: ["dashboard-overview-data", branchKey],
     queryFn: async () => {
       try {
-        const res = await axiosPrivate.get("/dashboards/overview");
+        const res = await axiosPrivate.get("/dashboards/overview", { params: branchParams });
         return res.data.data;
       } catch (err) {
         if (err?.response?.status === 401) navigate("/", { replace: true });

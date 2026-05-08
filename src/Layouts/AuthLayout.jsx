@@ -94,8 +94,12 @@ const markNotificationRead = async (n) => {
     setNotificationItems((prev) => prev.filter((x) => x.id !== n.id));
     setNotifications((prev) => Math.max(0, prev - 1));
 
-    // optional deep link
-    if (n.entity_type === "loan") {
+    // deep link by entity type
+    if (n.entity_type === "loan_application") {
+      navigate(`/loans/${n.entity_id}`);
+    } else if (n.entity_type === "pending_approval") {
+      navigate(`/qms/pending`);
+    } else if (n.entity_type === "loan") {
       navigate(`/individual-loans/${n.entity_id}`);
     }
   } catch (err) {
