@@ -4,12 +4,6 @@ import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { toast } from "@/hooks/use-toast";
-import {
-  Card,
-  CardHeader,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Trash2,
@@ -19,6 +13,8 @@ import {
   BookText,
   FileChartColumn,
   Eye,
+  Download,
+  Loader2,
 } from "lucide-react";
 import AddDocuments from "../Forms/AddDocuments";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,249 +23,231 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogClose,
 } from "@/components/ui/dialog";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
 import { hasPermission } from "@/lib/utils";
-const ITEMS_PER_PAGE = 6; // Number of items per page
+
+const ITEMS_PER_PAGE = 6;
+const IMAGE_EXTS     = new Set(["jpg", "jpeg", "png", "gif", "webp"]);
+
+function getExt(url = "") {
+  return (url.split(".").pop() || "").toLowerCase();
+}
+
+function FileIcon({ url, className = "w-8 h-8" }) {
+  switch (getExt(url)) {
+    case "doc":
+    case "docx":  return <FileChartColumn className={`text-blue-600 ${className}`} />;
+    case "pdf":   return <BookText        className={`text-red-600  ${className}`} />;
+    case "txt":   return <FileText        className={`text-gray-600 ${className}`} />;
+    case "jpg":
+    case "jpeg":
+    case "png":
+    case "gif":
+    case "webp":  return <FileImage       className={`text-green-600 ${className}`} />;
+    default:      return <File            className={`text-gray-400 ${className}`} />;
+  }
+}
+
+function DocCard({ doc, onPreview, onDelete, canDelete, isDeleting }) {
+  const ext     = getExt(doc.document_url);
+  const isImage = IMAGE_EXTS.has(ext);
+  const [imgErr, setImgErr] = useState(false);
+  const filename = doc.document_url.split("/").pop();
+
+  return (
+    <div className="rounded-lg border bg-card shadow-sm overflow-hidden flex flex-col">
+      {/* Thumbnail / icon area */}
+      <div className="h-28 flex items-center justify-center bg-muted/40 overflow-hidden border-b">
+        {isImage && !imgErr ? (
+          <img
+            src={doc.document_url}
+            alt={doc.document_description || filename}
+            className="w-full h-full object-cover"
+            onError={() => setImgErr(true)}
+          />
+        ) : (
+          <FileIcon url={doc.document_url} className="w-10 h-10" />
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="flex-1 px-3 pt-2 pb-1 min-w-0">
+        <p className="text-xs font-medium truncate" title={doc.document_description}>
+          {doc.document_description || "No description"}
+        </p>
+        <p className="text-[10px] text-muted-foreground truncate mt-0.5" title={filename}>
+          {filename}
+        </p>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center justify-between gap-1 px-3 pb-3 pt-1">
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 text-xs gap-1 flex-1"
+          onClick={() => onPreview(doc)}
+        >
+          <Eye className="w-3.5 h-3.5" /> View
+        </Button>
+
+        {canDelete && (
+          <Button
+            variant="destructive"
+            size="sm"
+            className="h-7 text-xs gap-1 flex-1"
+            onClick={() => onDelete(doc.document_id)}
+            disabled={isDeleting}
+          >
+            {isDeleting ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Trash2 className="w-3.5 h-3.5" />
+            )}
+            {isDeleting ? "..." : "Delete"}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PreviewModal({ doc, onClose }) {
+  const ext      = getExt(doc.document_url);
+  const isImage  = IMAGE_EXTS.has(ext);
+  const isPdf    = ext === "pdf";
+  const filename = doc.document_url.split("/").pop();
+  const [imgErr, setImgErr] = useState(false);
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
+        <DialogHeader className="shrink-0">
+          <DialogTitle className="text-sm truncate pr-8" title={doc.document_description || filename}>
+            {doc.document_description || filename}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-auto flex items-center justify-center min-h-0 py-2">
+          {isPdf ? (
+            <iframe
+              src={doc.document_url}
+              className="w-full h-[60vh] border rounded"
+              title="PDF Preview"
+            />
+          ) : isImage && !imgErr ? (
+            <img
+              src={doc.document_url}
+              alt={doc.document_description || filename}
+              className="max-w-full max-h-[60vh] rounded shadow object-contain"
+              onError={() => setImgErr(true)}
+            />
+          ) : (
+            <div className="flex flex-col items-center gap-3 text-muted-foreground py-10">
+              <FileIcon url={doc.document_url} className="w-16 h-16" />
+              <p className="text-sm">{imgErr ? "Image could not be loaded." : "Preview not available for this file type."}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="shrink-0 flex justify-end pt-2 border-t">
+          <a href={doc.document_url} target="_blank" rel="noopener noreferrer" download>
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Download className="w-3.5 h-3.5" /> Download
+            </Button>
+          </a>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 const ClientDocuments = ({ isOpen, isClose }) => {
   const axiosPrivate = useAxiosPrivate();
   const { id: clientId } = useParams();
-  const queryClient = useQueryClient();
-  const [previewDoc, setPreviewDoc] = useState(null); // Stores selected document for preview
-  const [currentPage, setCurrentPage] = useState(1); // Pagination state
-  const { auth } = useAuth();
-  const roles = auth?.roles;
-  // ✅ Fetch All Documents Once
-  const {
-    data: documents,
-    isLoading,
-    isError,
-    error,
-    refetch,
-    isRefetching,
-  } = useQuery({
-    queryKey: ["clientDocuments", clientId],
-    _queryFn: async () => {
-      const controller = new AbortController();
+  const queryClient  = useQueryClient();
+  const [previewDoc, setPreviewDoc]   = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const { auth: { roles } } = useAuth();
 
-      const response = await axiosPrivate.get(
-        `/clients/documents/${clientId}`,
-        { signal: controller.signal }
-      );
+  const { data: documents = [], isLoading, isError, refetch, isRefetching } = useQuery({
+    queryKey: ["clientDocuments", clientId],
+    queryFn: async ({ signal }) => {
+      const response = await axiosPrivate.get(`/clients/documents/${clientId}`, { signal });
       return response.data.data.documents || [];
     },
-    get queryFn() {
-      return this._queryFn;
-    },
-    set queryFn(value) {
-      this._queryFn = value;
-    },
   });
 
-  // ✅ Delete Document Mutation
   const deleteMutation = useMutation({
-    mutationFn: async (docId) => {
-      const controller = new AbortController();
-      await axiosPrivate.delete(`/clients/${docId}/documents`, {
-        signal: controller.signal,
-      });
-      return docId;
-    },
+    mutationFn: (docId) => axiosPrivate.delete(`/clients/${docId}/documents`),
     onMutate: async (docId) => {
-      await queryClient.cancelQueries(["clientDocuments", clientId]);
-      const previousDocs = queryClient.getQueryData([
-        "clientDocuments",
-        clientId,
-      ]);
-
-      queryClient.setQueryData(["clientDocuments", clientId], (oldDocs) =>
-        oldDocs?.filter((doc) => doc.document_id !== docId)
+      await queryClient.cancelQueries({ queryKey: ["clientDocuments", clientId] });
+      const prev = queryClient.getQueryData(["clientDocuments", clientId]);
+      queryClient.setQueryData(["clientDocuments", clientId], (old) =>
+        old?.filter((d) => d.document_id !== docId)
       );
-
-      return { previousDocs };
+      return { prev };
     },
-    onError: (err, docId, context) => {
-      queryClient.setQueryData(
-        ["clientDocuments", clientId],
-        context.previousDocs
-      );
-      toast({
-        title: "Deletion Failed",
-        variant: "destructive",
-        description: "Could not delete document.",
-      });
+    onError: (_, __, context) => {
+      queryClient.setQueryData(["clientDocuments", clientId], context.prev);
+      toast({ title: "Deletion failed", variant: "destructive" });
     },
-    onSettled: () => {
-      queryClient.invalidateQueries(["clientDocuments", clientId]);
-    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["clientDocuments", clientId] }),
   });
 
-  // ✅ Determine file type based on extension
-  const getFileIcon = (filename) => {
-    const extension = filename.split(".").pop().toLowerCase();
-    switch (extension) {
-      case "doc":
-      case "docx":
-        return <FileChartColumn className="text-blue-600 w-8 h-8" />;
-      case "pdf":
-        return <BookText className="text-red-600 w-8 h-8" />;
-      case "txt":
-        return <FileText className="text-gray-600 w-8 h-8" />;
-      case "jpg":
-      case "jpeg":
-      case "png":
-      case "gif":
-        return <FileImage className="text-green-600 w-8 h-8" />;
-      default:
-        return <File className="text-gray-400 w-8 h-8" />;
-    }
-  };
-
-  // ✅ Function to Preview Document (Images & PDFs)
-  const handlePreview = (doc) => {
-    setPreviewDoc(doc);
-  };
-
-  // ✅ Paginate Documents
-  const totalPages = Math.ceil((documents?.length || 0) / ITEMS_PER_PAGE);
-  const paginatedDocuments = documents?.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
+  const totalPages = Math.max(1, Math.ceil(documents.length / ITEMS_PER_PAGE));
+  const paged      = documents.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  const canDelete  = hasPermission(roles, 100028);
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 p-4">
-        {/* ✅ Show Loading State */}
-        {(isLoading || isRefetching) && (
-          <>
-            <Skeleton className="h-[180px] w-[190px]" />
-            <Skeleton className="h-[180px] w-[190px]" />
-            <Skeleton className="h-[180px] w-[190px]" />
-            <Skeleton className="h-[180px] w-[190px]" />
-          </>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 p-4">
+        {(isLoading || isRefetching) &&
+          Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-[180px] rounded-lg" />
+          ))
+        }
+
+        {!isLoading && !isRefetching && isError && (
+          <p className="col-span-full text-center text-sm text-muted-foreground py-6">
+            Failed to load documents.
+          </p>
         )}
 
-        {/* ✅ Show Error State */}
-        {(isError || error) && (
-          <>
-            <div className="text-center col-span-full">No documents.</div>
-          </>
+        {!isLoading && !isRefetching && !isError && paged.length === 0 && (
+          <p className="col-span-full text-center text-sm text-muted-foreground py-6">
+            No documents uploaded yet.
+          </p>
         )}
 
-        {/* ✅ Show Documents */}
-        {!isLoading &&
-          !isRefetching &&
-          !isError &&
-          paginatedDocuments?.map((doc) => {
-            return (
-              <Card key={doc.document_id} className="relative shadow-md">
-                <CardHeader className="flex flex-col items-center">
-                  {getFileIcon(doc.document_url)}
-                  <p className="text-sm font-medium mt-2">
-                    {doc.document_description || "No description"}
-                  </p>
-                </CardHeader>
-                <CardContent className="text-center text-sm truncate">
-                  <a
-                    href={doc.document_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:underline"
-                  >
-                    {doc.document_url.split("/").pop()}
-                  </a>
-                </CardContent>
-                <CardFooter className="flex justify-between">
-                  {/* ✅ Preview Button */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-2"
-                    onClick={() => handlePreview(doc)}
-                  >
-                    <Eye className="w-4 h-4" /> Preview
-                  </Button>
-
-                  {hasPermission(roles, 100028) && (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="flex items-center gap-2"
-                      onClick={() => deleteMutation.mutate(doc.document_id)}
-                      disabled={deleteMutation.isLoading}
-                    >
-                      <Trash2 className="w-4 h-4" />{" "}
-                      {deleteMutation.isLoading ? "Deleting..." : "Delete"}
-                    </Button>
-                  )}
-                </CardFooter>
-              </Card>
-            );
-          })}
+        {!isLoading && !isRefetching && !isError &&
+          paged.map((doc) => (
+            <DocCard
+              key={doc.document_id}
+              doc={doc}
+              onPreview={setPreviewDoc}
+              onDelete={(id) => deleteMutation.mutate(id)}
+              canDelete={canDelete}
+              isDeleting={deleteMutation.isPending && deleteMutation.variables === doc.document_id}
+            />
+          ))
+        }
 
         <AddDocuments isOpen={isOpen} refetch={refetch} isClose={isClose} />
       </div>
 
-      {/* ✅ Pagination Controls */}
-      <div className="flex justify-center space-x-4 mt-6">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={currentPage === 1}
-          onClick={() => setCurrentPage((prev) => prev - 1)}
-        >
-          Previous
-        </Button>
-        <span className="flex items-center text-sm">
-          Page {currentPage} of {totalPages}
-        </span>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={currentPage === totalPages}
-          onClick={() => setCurrentPage((prev) => prev + 1)}
-        >
-          Next
-        </Button>
-      </div>
-
-      {/* ✅ Document Preview Modal (PDF & Images) */}
-      {previewDoc && (
-        <Dialog open={!!previewDoc} onOpenChange={() => setPreviewDoc(null)}>
-          <DialogContent className="max-w-[800]">
-            <DialogHeader>
-              <DialogTitle>Document Preview</DialogTitle>
-              <DialogClose asChild>
-                <button
-                  className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
-                  onClick={() => setPreviewDoc(null)}
-                >
-                  ×
-                </button>
-              </DialogClose>
-            </DialogHeader>
-
-            <div className="flex justify-center">
-              {previewDoc.document_url.endsWith(".pdf") ? (
-                <iframe
-                  src={previewDoc.document_url}
-                  className="w-full h-[500px] border rounded-md"
-                  title="PDF Preview"
-                />
-              ) : (
-                <img
-                  src={previewDoc.document_url}
-                  alt="Preview"
-                  className="max-w-full h-[500px] rounded-md shadow-md"
-                />
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
+      {documents.length > ITEMS_PER_PAGE && (
+        <div className="flex items-center justify-center gap-3 pb-4 text-sm">
+          <Button variant="outline" size="sm" disabled={currentPage === 1}
+            onClick={() => setCurrentPage((p) => p - 1)}>Previous</Button>
+          <span className="text-muted-foreground tabular-nums">{currentPage} / {totalPages}</span>
+          <Button variant="outline" size="sm" disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((p) => p + 1)}>Next</Button>
+        </div>
       )}
+
+      {previewDoc && <PreviewModal doc={previewDoc} onClose={() => setPreviewDoc(null)} />}
     </>
   );
 };

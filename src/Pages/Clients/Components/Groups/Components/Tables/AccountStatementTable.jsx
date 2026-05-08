@@ -183,6 +183,7 @@ const AccountStatementTable = () => {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => {
+        if (row.original.status === "reversed") return null;
         const reversible = isReversible(row.original);
         return (
           <DropdownMenu>

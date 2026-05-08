@@ -18,6 +18,7 @@ import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { toast } from "@/hooks/use-toast";
 import { useParams } from "react-router-dom";
 import { useState } from "react";
+import { Loader2, UploadCloud, FileCheck2 } from "lucide-react";
 
 const AddDocuments = ({ isOpen, isClose, refetch }) => {
   const axiosPrivate = useAxiosPrivate();
@@ -25,68 +26,48 @@ const AddDocuments = ({ isOpen, isClose, refetch }) => {
   const queryClient = useQueryClient();
   const [selectedFile, setSelectedFile] = useState(null);
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm();
+  const { register, handleSubmit, reset, formState: { errors } } = useForm();
 
-  // ✅ Mutation for submitting document
   const addDocumentMutation = useMutation({
-    mutationFn: async (formData) => {
-      const controller = new AbortController();
-      const response = await axiosPrivate.post(
-        `/clients/documents/${clientId}`,
-        formData,
-
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-          signal: controller.signal,
-        }
-      );
-      return response.data;
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Success",
-        description: data.messages,
-      });
-      queryClient.invalidateQueries(["clientDocuments", clientId]); // Refresh documents list
+    mutationFn: (formData) =>
+      axiosPrivate.post(`/clients/documents/${clientId}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      }),
+    onSuccess: (res) => {
+      toast({ title: "Document uploaded", description: res.data?.messages });
+      queryClient.invalidateQueries({ queryKey: ["clientDocuments", clientId] });
       reset();
       setSelectedFile(null);
+      refetch?.();
       isClose();
-      refetch();
     },
-    onError: (error) => {
-      const errorMessage =
-        error?.response?.data?.messages || "No server response";
+    onError: (err) => {
       toast({
-        title: "Error",
+        title: "Upload failed",
         variant: "destructive",
-        description: errorMessage,
+        description: err?.response?.data?.messages?.[0] ?? "Could not upload document.",
       });
     },
   });
 
-  // ✅ Handle Form Submission
+  const isPending = addDocumentMutation.isPending;
+
   const onSubmit = (data) => {
     if (!selectedFile) {
-      toast({
-        title: "File Required",
-        variant: "destructive",
-        description: "Please upload a document file.",
-      });
+      toast({ title: "File required", variant: "destructive", description: "Please select a file to upload." });
       return;
     }
-
     const formData = new FormData();
     formData.append("document_description", data.document_description);
     formData.append("document_file", selectedFile);
-
     addDocumentMutation.mutate(formData);
+  };
+
+  const formatBytes = (bytes) => {
+    if (!bytes) return "";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   return (
@@ -94,13 +75,12 @@ const AddDocuments = ({ isOpen, isClose, refetch }) => {
       <DialogContent className="sm:max-w-[400px]">
         <DialogHeader>
           <DialogTitle>Upload Document</DialogTitle>
-          <DialogDescription>
-            Add a new document for this client.
-          </DialogDescription>
+          <DialogDescription>Add a document for this client.</DialogDescription>
           <DialogClose asChild>
             <button
               className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
               onClick={isClose}
+              disabled={isPending}
             >
               ×
             </button>
@@ -108,48 +88,66 @@ const AddDocuments = ({ isOpen, isClose, refetch }) => {
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Document Description */}
-          <div>
-            <Label htmlFor="document_description">Document Description</Label>
-            <Textarea
-              id="document_description"
-              placeholder="Describe the document"
-              {...register("document_description", {
-                required: "Document description is required",
-              })}
-            />
-            {errors.document_description && (
-              <p className="text-red-500 text-sm">
-                {errors.document_description.message}
-              </p>
-            )}
-          </div>
+          <fieldset disabled={isPending} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="document_description">Description</Label>
+              <Textarea
+                id="document_description"
+                placeholder="e.g. National ID, Passport…"
+                rows={2}
+                {...register("document_description", { required: "Description is required" })}
+              />
+              {errors.document_description && (
+                <p className="text-xs text-destructive">{errors.document_description.message}</p>
+              )}
+            </div>
 
-          {/* File Upload */}
-          <div>
-            <Label htmlFor="document_file">Upload Document</Label>
-            <Input
-              id="document_file"
-              type="file"
-              accept=".pdf,.doc,.docx,.txt,.jpg,.png"
-              onChange={(e) => setSelectedFile(e.target.files[0])}
-            />
-            {selectedFile && (
-              <p className="text-sm text-green-600">
-                File selected: {selectedFile.name}
-              </p>
-            )}
-          </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="document_file">File</Label>
+              <label
+                htmlFor="document_file"
+                className={`flex flex-col items-center justify-center gap-2 w-full h-24 border-2 border-dashed rounded-lg cursor-pointer transition-colors
+                  ${selectedFile ? "border-primary/60 bg-primary/5" : "border-border hover:border-primary/40 bg-muted/30 hover:bg-muted/50"}`}
+              >
+                {selectedFile ? (
+                  <>
+                    <FileCheck2 className="w-6 h-6 text-primary" />
+                    <span className="text-xs text-center px-2 font-medium text-primary truncate max-w-full">
+                      {selectedFile.name}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">{formatBytes(selectedFile.size)}</span>
+                  </>
+                ) : (
+                  <>
+                    <UploadCloud className="w-6 h-6 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Click to select a file</span>
+                    <span className="text-[10px] text-muted-foreground">PDF, DOC, DOCX, JPG, PNG, TXT</span>
+                  </>
+                )}
+                <Input
+                  id="document_file"
+                  type="file"
+                  accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+                  className="hidden"
+                  onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+                />
+              </label>
+            </div>
+          </fieldset>
 
           <DialogFooter>
-            <Button
-              type="submit"
-              size={"sm"}
-              disabled={isSubmitting || addDocumentMutation.isLoading}
-            >
-              {isSubmitting || addDocumentMutation.isLoading
-                ? "Uploading..."
-                : "Upload Document"}
+            <Button type="submit" size="sm" disabled={isPending} className="gap-1.5 w-full sm:w-auto">
+              {isPending ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Uploading…
+                </>
+              ) : (
+                <>
+                  <UploadCloud className="w-3.5 h-3.5" />
+                  Upload Document
+                </>
+              )}
             </Button>
           </DialogFooter>
         </form>

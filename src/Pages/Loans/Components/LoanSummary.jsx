@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import LoanAction from "./Forms/LoanAction";
+import { LoanHistory } from "./Tables/LoanHistory";
 import UpdateLoanApplicationDialog from "./Forms/UpdateLoanApplicationDialog";
 import LoanDisbursementDialog from "./Forms/LoanDisbursementDialog";
 import {
@@ -374,47 +375,12 @@ const LoanSummary = ({ data, refetch, totals }) => {
 
       {/* Approval History Timeline */}
       {data?.loan_history && data.loan_history.length > 0 && (
-        <>
-          <h6 className="text-bold text-center mt-6">Approval History</h6>
-          <div className="border rounded-lg shadow-sm p-4 space-y-3">
-            {[...data.loan_history].reverse().map((h, i) => {
-              const actionColors = {
-                submitted_for_review: "bg-sky-100 text-sky-800",
-                first_approved:       "bg-sky-200 text-sky-900",
-                second_approved:      "bg-indigo-100 text-indigo-800",
-                final_approved:       "bg-violet-100 text-violet-800",
-                sent_back:            "bg-amber-100 text-amber-800",
-                rejected:             "bg-red-100 text-red-800",
-                approved:             "bg-green-100 text-green-800",
-                processed:            "bg-blue-100 text-blue-800",
-                disbursed:            "bg-emerald-100 text-emerald-800",
-              };
-              const colorCls = actionColors[h.action_type] || "bg-gray-100 text-gray-700";
-              const actor = h.user
-                ? `${h.user.user_firstname} ${h.user.user_lastname}`
-                : `User #${h.user_id}`;
-              return (
-                <div key={h.history_id ?? i} className="flex gap-3 items-start text-sm">
-                  <div className={`shrink-0 rounded px-2 py-0.5 font-medium capitalize text-xs ${colorCls}`}>
-                    {(h.action_type ?? "").replace(/_/g, " ")}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="font-medium">{actor}</span>
-                    {h.action_reason && (
-                      <span className="text-muted-foreground ml-1">— {h.action_reason}</span>
-                    )}
-                    {h.action_notes && h.action_notes !== h.action_reason && (
-                      <div className="text-muted-foreground text-xs mt-0.5">{h.action_notes}</div>
-                    )}
-                  </div>
-                  <div className="shrink-0 text-muted-foreground text-xs whitespace-nowrap">
-                    {formatDateTimestamp(h.action_timestamp)}
-                  </div>
-                </div>
-              );
-            })}
+        <div className="mt-6">
+          <h6 className="text-sm font-semibold text-center mb-3">Approval History</h6>
+          <div className="border rounded-lg shadow-sm p-4">
+            <LoanHistory data={data.loan_history} initialCount={3} />
           </div>
-        </>
+        </div>
       )}
 
       {/* Disbursement Summary */}
