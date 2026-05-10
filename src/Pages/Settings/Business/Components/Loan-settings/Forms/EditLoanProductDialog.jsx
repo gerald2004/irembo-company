@@ -61,6 +61,7 @@ const EditLoanProductDialog = ({ isOpen, onClose, refetch, defaultValues }) => {
       penalty_interval: "",
       penalty_mode: "",
       penalty_value: "",
+      penalty_basis: "principal",
 
       // Step 3
       penalty_offset_period: "",
@@ -105,6 +106,7 @@ const EditLoanProductDialog = ({ isOpen, onClose, refetch, defaultValues }) => {
       "penalty_grace_period_interval",
       defaultValues.penalty_grace_period_interval ?? ""
     );
+    setValue("penalty_basis", defaultValues.penalty_basis ?? "principal");
 
     // Monitoring: backend → UI
     const enabled =
@@ -427,6 +429,45 @@ const EditLoanProductDialog = ({ isOpen, onClose, refetch, defaultValues }) => {
                   </p>
                 )}
               </div>
+
+              {penaltyMode === "percentage" && (
+                <div className="md:col-span-2">
+                  <Label>Penalty Basis</Label>
+                  <Controller
+                    name="penalty_basis"
+                    control={control}
+                    rules={{
+                      validate: (v) =>
+                        penaltyMode === "percentage"
+                          ? !!v || "Penalty basis is required"
+                          : true,
+                    }}
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select what the % is applied to" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="principal">
+                            Principal Only
+                          </SelectItem>
+                          <SelectItem value="principal_interest">
+                            Principal + Interest
+                          </SelectItem>
+                          <SelectItem value="outstanding_total">
+                            Outstanding Total (Principal + Interest + Monitoring)
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.penalty_basis && (
+                    <p className="text-red-500 text-sm">
+                      {errors.penalty_basis.message}
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="md:col-span-2">
                 <Label htmlFor="penalty_value">

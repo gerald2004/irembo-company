@@ -48,7 +48,7 @@ const loanStatusBadge = (status) => {
   return <Badge variant="outline" className={`capitalize font-medium ${cls}`}>{status}</Badge>;
 };
 
-const LoanSummary = ({ data, refetch, totals }) => {
+const LoanSummary = ({ data, refetch, totals, onViewHistory }) => {
   const [showDialog, setShowDialog] = useState(false);
   const [action, setAction] = useState("");
   const axiosPrivate = useAxiosPrivate();
@@ -376,9 +376,19 @@ const LoanSummary = ({ data, refetch, totals }) => {
       {/* Approval History Timeline */}
       {data?.loan_history && data.loan_history.length > 0 && (
         <div className="mt-6">
-          <h6 className="text-sm font-semibold text-center mb-3">Approval History</h6>
+          <div className="flex items-center justify-between mb-3">
+            <h6 className="text-sm font-semibold">Approval History</h6>
+            {data.loan_history.length > 4 && onViewHistory && (
+              <button
+                onClick={onViewHistory}
+                className="text-xs text-primary hover:underline"
+              >
+                View full history →
+              </button>
+            )}
+          </div>
           <div className="border rounded-lg shadow-sm p-4">
-            <LoanHistory data={data.loan_history} initialCount={3} />
+            <LoanHistory data={data.loan_history} initialCount={4} capped />
           </div>
         </div>
       )}

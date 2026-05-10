@@ -135,7 +135,7 @@ function HistoryRow({ entry, isLast }) {
   );
 }
 
-export function LoanHistory({ data = [], initialCount = 3, isLoading, isError }) {
+export function LoanHistory({ data = [], initialCount = 3, capped = false, isLoading, isError }) {
   const sorted  = [...data].reverse();
   const PAGE    = 3;
   const [visible, setVisible] = useState(initialCount);
@@ -144,6 +144,7 @@ export function LoanHistory({ data = [], initialCount = 3, isLoading, isError })
   useEffect(() => { setVisible(initialCount); }, [data, initialCount]);
 
   useEffect(() => {
+    if (capped) return; // no infinite scroll in capped mode
     const el = sentinelRef.current;
     if (!el || visible >= sorted.length) return;
     const observer = new IntersectionObserver(
@@ -152,7 +153,7 @@ export function LoanHistory({ data = [], initialCount = 3, isLoading, isError })
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [visible, sorted.length]);
+  }, [capped, visible, sorted.length]);
 
   if (isLoading) {
     return (

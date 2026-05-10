@@ -65,6 +65,8 @@ const SingleLoan = () => {
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
 
+  const [activeTab, setActiveTab] = useState(null);
+
   const {
     auth: { roles },
   } = useAuth();
@@ -139,7 +141,7 @@ const SingleLoan = () => {
       <div className="flex-col md:flex">
         <div className="border-b" />
         <div className="flex-1 space-y-4 pt-2">
-          <Tabs defaultValue={defaultTab} className="space-y-4">
+          <Tabs value={activeTab ?? defaultTab} onValueChange={setActiveTab} className="space-y-4">
             <div className="flex justify-end">
               <TabsList className="overflow-x-auto scroll-smooth snap-x snap-start scrollbar-hide">
                 {hasPermission(roles, 100159) && (
@@ -211,6 +213,7 @@ const SingleLoan = () => {
                   data={data?.loan_application}
                   totals={data?.totals}
                   refetch={refetch}
+                  onViewHistory={() => setActiveTab("history")}
                 />
               )}
             </TabsContent>

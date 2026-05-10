@@ -18,13 +18,14 @@ import {
 import {
   Loader2, X, ExternalLink, CheckCircle2, AlertCircle,
   XCircle, User, Phone, Shield, Hash,
-  CalendarDays, Globe, AlertTriangle,
+  CalendarDays, AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const fmt = (n) => Number(n || 0).toLocaleString("en-UG");
+const toArray = (v) => (Array.isArray(v) ? v.filter(Boolean) : []);
 
 function normalisePhone(v) {
   const digits = (v ?? "").replace(/\D/g, "");
@@ -93,16 +94,14 @@ function ScoreFields({ form, set, entityType }) {
           <SelectContent>
             {entityType === 0 ? (
               <>
-                <SelectItem value="NIN">NIN (National ID)</SelectItem>
-                <SelectItem value="PASSPORT">Passport</SelectItem>
-                <SelectItem value="DRIVING_PERMIT">Driving Permit</SelectItem>
-                <SelectItem value="REFUGEE_ID">Refugee ID</SelectItem>
+                <SelectItem value="ii_country_id">NIN (National ID)</SelectItem>
+                <SelectItem value="ii_passport_number">Passport</SelectItem>
+                <SelectItem value="ii_drivers_license_permit_number">Driving Permit</SelectItem>
               </>
             ) : (
               <>
-                <SelectItem value="COMPANY_REG">Company Registration</SelectItem>
-                <SelectItem value="TIN">TIN</SelectItem>
-                <SelectItem value="NGO_REG">NGO Registration</SelectItem>
+                <SelectItem value="ii_company_reg">Company Registration</SelectItem>
+                <SelectItem value="ii_tin">TIN</SelectItem>
               </>
             )}
           </SelectContent>
@@ -151,9 +150,9 @@ function ReportFields({ form, set }) {
         <Select value={form.identification_type ?? ""} onValueChange={(v) => set("identification_type", v)}>
           <SelectTrigger><SelectValue placeholder="Select ID type" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="NIN">NIN (National ID)</SelectItem>
-            <SelectItem value="PASSPORT">Passport</SelectItem>
-            <SelectItem value="DRIVING_PERMIT">Driving Permit</SelectItem>
+            <SelectItem value="ii_country_id">NIN (National ID)</SelectItem>
+            <SelectItem value="ii_passport_number">Passport</SelectItem>
+            <SelectItem value="ii_drivers_license_permit_number">Driving Permit</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -302,111 +301,272 @@ function ScoreGauge({ score }) {
   );
 }
 
+function ltdColor(ltd) {
+  const l = String(ltd ?? "").toLowerCase();
+  if (l.includes("unlikely")) return "text-green-600";
+  if (l.includes("possible") || l.includes("likely")) return "text-amber-600";
+  return "text-red-600";
+}
+
 function ScoreResult({ data }) {
-  const score  = data?.score ?? data?.crb_score ?? data?.data?.score;
-  const grade  = data?.grade ?? data?.data?.grade;
+  // gnugrid: { message, status, count, data: { Enquiry, CRB, MNO } }
+  const scoreData = data?.data ?? {};
+  const crb       = scoreData.CRB ?? {};
+  const mno       = scoreData.MNO ?? {};
+  const enquiry   = scoreData.Enquiry ?? {};
 
-  const accounts   = data?.accounts   ?? data?.data?.accounts   ?? [];
-  const enquiries  = data?.enquiries  ?? data?.data?.enquiries  ?? [];
-  const derogatory = data?.derogatory_records ?? data?.data?.derogatory_records ?? [];
-  const narrative  = data?.narrative  ?? data?.data?.narrative;
+  const crbScore  = crb.Scoring?.Score != null ? Number(crb.Scoring.Score) : null;
+  const mnoScore  = mno.Scoring?.Score != null ? Number(mno.Scoring.Score) : null;
 
-  const activeAcc = accounts.filter((a) => (a.status ?? a.account_status)?.toLowerCase() === "active").length;
-  const closedAcc = accounts.filter((a) => (a.status ?? a.account_status)?.toLowerCase() !== "active").length;
+  const customerName   = crb.Customer?.Name ?? mno.Customer?.Name;
+  const customerDob    = crb.Customer?.Date_of_Birth ?? mno.Customer?.Date_of_Birth;
+  const customerGender = crb.Customer?.Gender ?? mno.Customer?.Gender;
+  const customerAge    = crb.Customer?.Age ?? mno.Customer?.Age;
+  const customerDisputed = crb.Customer?.Disputed;
+
+  const crbAccounts    = crb.Credit_Accounts ?? {};
+  const crbApps        = crb.Credit_Applications ?? {};
+  const crbAccountList = toArray(crbAccounts?.Accounts ?? crbAccounts?.accounts);
+  const crbCollMat     = toArray(crb.Collateral_Material);
+  const crbCollGuar    = toArray(crb.Collateral_Guarantor);
+  const bouncedCheques = toArray(crb.Bounced_Cheques);
+  const financialFraud = toArray(crb.Financial_Fraud);
+
+  const mnoAccounts = mno.Credit_Accounts ?? {};
+  const mnoIncome   = mno.Income_Proxy ?? {};
+  const mnoPhones   = toArray(mno.Customer?.Phone_Numbers);
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 text-green-600">
         <CheckCircle2 className="h-4 w-4" />
         <span className="text-sm font-medium">Credit score retrieved successfully</span>
-      </div>
-
-      {score != null && <ScoreGauge score={score} />}
-
-      <div className="grid grid-cols-2 gap-2">
-        {grade && (
-          <div className="bg-muted/40 rounded-lg p-3 text-center">
-            <p className="text-xs text-muted-foreground">Grade</p>
-            <p className="text-2xl font-bold">{grade}</p>
-          </div>
-        )}
-        {accounts.length > 0 && (
-          <div className="bg-muted/40 rounded-lg p-3 text-center">
-            <p className="text-xs text-muted-foreground">Accounts</p>
-            <p className="text-2xl font-bold">{accounts.length}</p>
-            <p className="text-xs text-muted-foreground">{activeAcc} active · {closedAcc} closed</p>
-          </div>
-        )}
-        {enquiries.length > 0 && (
-          <div className="bg-muted/40 rounded-lg p-3 text-center">
-            <p className="text-xs text-muted-foreground">Enquiries</p>
-            <p className="text-2xl font-bold">{enquiries.length}</p>
-          </div>
-        )}
-        {derogatory.length > 0 && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
-            <p className="text-xs text-red-600">Adverse Records</p>
-            <p className="text-2xl font-bold text-red-600">{derogatory.length}</p>
-          </div>
+        {enquiry.Reference && (
+          <span className="text-xs font-mono text-muted-foreground ml-auto">Ref: {enquiry.Reference}</span>
         )}
       </div>
 
-      {narrative && (
-        <div className="bg-muted/30 rounded-lg p-3 text-sm text-muted-foreground italic border-l-2 border-primary/40">
-          {narrative}
+      {/* Customer card */}
+      {customerName && (
+        <div className="bg-muted/30 rounded-xl border p-3 flex items-center gap-3">
+          <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center shrink-0">
+            <User className="w-5 h-5 text-muted-foreground opacity-50" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm">{customerName}</p>
+            <p className="text-xs text-muted-foreground">
+              {[customerGender, customerDob, customerAge != null && `Age ${customerAge}`].filter(Boolean).join(" · ")}
+            </p>
+          </div>
+          {customerDisputed === "YES" && (
+            <Badge variant="destructive" className="text-[10px] shrink-0">Disputed</Badge>
+          )}
         </div>
       )}
 
-      {accounts.length > 0 && (
+      {/* CRB Score */}
+      {crbScore != null && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">CRB Credit Score</p>
+          <ScoreGauge score={crbScore} />
+          <div className="grid grid-cols-3 gap-1.5">
+            {crb.Scoring?.Band && (
+              <div className="bg-muted/40 rounded p-2 text-center">
+                <p className="text-[10px] text-muted-foreground">Band</p>
+                <p className="font-bold">{crb.Scoring.Band}</p>
+              </div>
+            )}
+            {crb.Scoring?.Probability_of_Default_Percent != null && (
+              <div className="bg-muted/40 rounded p-2 text-center">
+                <p className="text-[10px] text-muted-foreground">Default Prob.</p>
+                <p className="font-bold">{crb.Scoring.Probability_of_Default_Percent}%</p>
+              </div>
+            )}
+            {crb.Scoring?.Likelihood_to_Default && (
+              <div className="bg-muted/40 rounded p-2 text-center">
+                <p className="text-[10px] text-muted-foreground">Likelihood</p>
+                <p className={cn("font-semibold text-[11px]", ltdColor(crb.Scoring.Likelihood_to_Default))}>
+                  {crb.Scoring.Likelihood_to_Default}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MNO Score */}
+      {mnoScore != null && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">MNO Score</p>
+          <ScoreGauge score={mnoScore} />
+          <div className="grid grid-cols-3 gap-1.5">
+            {mno.Scoring?.Band && (
+              <div className="bg-muted/40 rounded p-2 text-center">
+                <p className="text-[10px] text-muted-foreground">Band</p>
+                <p className="font-bold">{mno.Scoring.Band}</p>
+              </div>
+            )}
+            {mno.Scoring?.Probability_of_Default_Percent != null && (
+              <div className="bg-muted/40 rounded p-2 text-center">
+                <p className="text-[10px] text-muted-foreground">Default Prob.</p>
+                <p className="font-bold">{mno.Scoring.Probability_of_Default_Percent}%</p>
+              </div>
+            )}
+            {mno.Scoring?.Likelihood_to_Default && (
+              <div className="bg-muted/40 rounded p-2 text-center">
+                <p className="text-[10px] text-muted-foreground">Likelihood</p>
+                <p className={cn("font-semibold text-[11px]", ltdColor(mno.Scoring.Likelihood_to_Default))}>
+                  {mno.Scoring.Likelihood_to_Default}
+                </p>
+              </div>
+            )}
+          </div>
+          {(mnoIncome.Monthly_Turnover_Amount != null || mnoAccounts.Months_Active != null) && (
+            <div className="grid grid-cols-2 gap-1.5">
+              {mnoIncome.Monthly_Turnover_Amount != null && (
+                <div className="bg-muted/40 rounded p-2">
+                  <p className="text-[10px] text-muted-foreground">Monthly Turnover</p>
+                  <p className="font-semibold text-sm">UGX {fmt(mnoIncome.Monthly_Turnover_Amount)}</p>
+                </div>
+              )}
+              {mnoAccounts.Months_Active != null && (
+                <div className="bg-muted/40 rounded p-2">
+                  <p className="text-[10px] text-muted-foreground">Months Active</p>
+                  <p className="font-semibold text-sm">{mnoAccounts.Months_Active}</p>
+                </div>
+              )}
+            </div>
+          )}
+          {mnoPhones.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {mnoPhones.map((p, i) => (
+                <Badge key={i} variant={p.status === "Y" ? "default" : "secondary"} className="font-mono text-[10px]">
+                  <Phone className="w-2.5 h-2.5 mr-1" />{p.msisdn}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Credit Accounts */}
+      {(crbAccountList.length > 0 || crbAccounts.Total != null) && (
         <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Accounts</p>
-          <div className="border rounded-lg overflow-hidden">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="bg-muted/40 border-b">
-                  <th className="px-3 py-2 text-left text-muted-foreground">Type</th>
-                  <th className="px-3 py-2 text-left text-muted-foreground">Institution</th>
-                  <th className="px-3 py-2 text-right text-muted-foreground">Balance</th>
-                  <th className="px-3 py-2 text-center text-muted-foreground">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {accounts.slice(0, 8).map((a, i) => (
-                  <tr key={i} className="border-b last:border-0">
-                    <td className="px-3 py-2">{a.account_type ?? a.type ?? "—"}</td>
-                    <td className="px-3 py-2">{a.institution ?? a.lender ?? "—"}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{fmt(a.balance ?? a.outstanding_balance)}</td>
-                    <td className="px-3 py-2 text-center">
-                      <Badge
-                        variant={(a.status ?? a.account_status)?.toLowerCase() === "active" ? "default" : "secondary"}
-                        className="text-[10px]"
-                      >
-                        {a.status ?? a.account_status ?? "—"}
-                      </Badge>
-                    </td>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+            Credit Accounts
+            {crbAccounts.Total != null && <span className="text-foreground font-bold ml-1">{crbAccounts.Total}</span>}
+            {crbAccounts.Open != null && (
+              <span className="font-normal ml-1">· {crbAccounts.Open} open</span>
+            )}
+          </p>
+          {crbAccountList.length > 0 && (
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-muted/40 border-b">
+                    <th className="px-3 py-1.5 text-left text-muted-foreground font-medium">Type</th>
+                    <th className="px-3 py-1.5 text-right text-muted-foreground font-medium">Balance</th>
+                    <th className="px-3 py-1.5 text-center text-muted-foreground font-medium">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {crbAccountList.slice(0, 8).map((a, i) => (
+                    <tr key={i} className="border-b last:border-0 hover:bg-muted/20">
+                      <td className="px-3 py-1.5">{a.Account_Type ?? a.account_type ?? "—"}</td>
+                      <td className="px-3 py-1.5 text-right tabular-nums">{fmt(a.Balance ?? a.balance ?? 0)}</td>
+                      <td className="px-3 py-1.5 text-center">
+                        <Badge
+                          variant={(a.Status ?? a.status ?? "").toLowerCase() === "active" ? "default" : "secondary"}
+                          className="text-[9px]"
+                        >
+                          {a.Status ?? a.status ?? "—"}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Applications */}
+      {crbApps.Total != null && (
+        <div className="bg-muted/30 rounded-lg border p-3">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Credit Applications</p>
+          <div className="flex gap-6">
+            <div className="text-center">
+              <p className="text-lg font-bold">{crbApps.Total}</p>
+              <p className="text-[10px] text-muted-foreground">Total</p>
+            </div>
+            {crbApps.Approvals != null && (
+              <div className="text-center">
+                <p className="text-lg font-bold text-green-600">{crbApps.Approvals}</p>
+                <p className="text-[10px] text-muted-foreground">Approved</p>
+              </div>
+            )}
+            {crbApps.Declined != null && (
+              <div className="text-center">
+                <p className="text-lg font-bold text-red-600">{crbApps.Declined}</p>
+                <p className="text-[10px] text-muted-foreground">Declined</p>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {derogatory.length > 0 && (
+      {/* Collateral */}
+      {(crbCollMat.length > 0 || crbCollGuar.length > 0) && (
+        <div className="bg-muted/30 rounded-lg border p-3">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Collateral</p>
+          <div className="flex gap-6">
+            {crbCollMat.length > 0 && (
+              <div>
+                <p className="text-lg font-bold">{crbCollMat.length}</p>
+                <p className="text-[10px] text-muted-foreground">Material items</p>
+              </div>
+            )}
+            {crbCollGuar.length > 0 && (
+              <div>
+                <p className="text-lg font-bold">{crbCollGuar.length}</p>
+                <p className="text-[10px] text-muted-foreground">Guarantors</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Adverse records */}
+      {(bouncedCheques.length > 0 || financialFraud.length > 0) && (
         <div>
           <p className="text-xs font-semibold text-red-600 uppercase tracking-wide mb-2 flex items-center gap-1">
             <AlertTriangle className="w-3.5 h-3.5" /> Adverse Records
           </p>
-          <div className="space-y-2">
-            {derogatory.map((d, i) => (
-              <div key={i} className="border border-red-200 bg-red-50 rounded-lg p-3 text-xs">
-                <p className="font-medium text-red-800">{d.type ?? d.record_type ?? "Record"}</p>
-                {d.description && <p className="text-red-700 mt-0.5">{d.description}</p>}
-                {d.amount && <p className="text-red-700">Amount: UGX {fmt(d.amount)}</p>}
-                {d.date && <p className="text-muted-foreground">Date: {d.date}</p>}
-              </div>
-            ))}
-          </div>
+          {bouncedCheques.length > 0 && (
+            <div className="mb-2">
+              <p className="text-xs font-medium text-red-700 mb-1">Bounced Cheques ({bouncedCheques.length})</p>
+              {bouncedCheques.map((d, i) => (
+                <div key={i} className="border border-red-200 bg-red-50 rounded p-2 text-xs mb-1">
+                  <p className="font-medium text-red-800">{d.Cheque_Number ?? d.cheque_number ?? `Cheque ${i + 1}`}</p>
+                  {(d.Amount ?? d.amount) && <p>Amount: UGX {fmt(d.Amount ?? d.amount)}</p>}
+                  {(d.Date ?? d.date) && <p className="text-muted-foreground">{d.Date ?? d.date}</p>}
+                </div>
+              ))}
+            </div>
+          )}
+          {financialFraud.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-red-700 mb-1">Financial Fraud ({financialFraud.length})</p>
+              {financialFraud.map((d, i) => (
+                <div key={i} className="border border-red-200 bg-red-50 rounded p-2 text-xs mb-1">
+                  <p className="font-medium text-red-800">{d.Type ?? d.type ?? `Record ${i + 1}`}</p>
+                  {(d.Amount ?? d.amount) && <p>Amount: UGX {fmt(d.Amount ?? d.amount)}</p>}
+                  {(d.Date ?? d.date) && <p className="text-muted-foreground">{d.Date ?? d.date}</p>}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -414,99 +574,83 @@ function ScoreResult({ data }) {
 }
 
 function NinResult({ data }) {
-  // gnugrid returns various shapes — handle all common ones
-  const raw    = data?.data ?? data;
-  const person = raw?.person ?? raw?.individual ?? raw?.data ?? raw;
+  // gnugrid: { message, status, count, validation: { nin, name, date_of_birth, nin_status, status } }
+  const val = data?.validation ?? {};
 
-  const surname     = person?.surname     ?? person?.last_name    ?? person?.family_name ?? "";
-  const givenName   = person?.given_name  ?? person?.first_name   ?? person?.other_names ?? "";
-  const otherName   = person?.other_name  ?? person?.middle_name  ?? "";
-  const fullName    = [surname, givenName, otherName].filter(Boolean).join(" ") || "—";
-  const dob         = person?.date_of_birth ?? person?.dob ?? person?.birth_date;
-  const gender      = person?.gender ?? person?.sex;
-  const nationality = person?.nationality ?? person?.citizenship;
-  const nin         = person?.nin ?? raw?.nin ?? data?.nin;
-  const status      = raw?.status ?? data?.status ?? "Valid";
-  const photo       = person?.photo ?? person?.photo_base64 ?? person?.image;
-  const cardNumber  = person?.card_number ?? person?.id_number;
-  const district    = person?.district ?? person?.place_of_birth;
-  const address     = person?.address ?? person?.residence;
+  const fullName  = val.name ?? "—";
+  const dob       = val.date_of_birth;
+  const nin       = val.nin;
+  const ninStatus = val.nin_status;
+  const status    = val.status;
 
-  const isValid = String(status).toLowerCase() !== "invalid" && String(status).toLowerCase() !== "not found";
+  const isValid = String(ninStatus ?? "").toUpperCase() === "VALID"
+    || (String(status ?? "").toUpperCase() === "SUCCESSFUL" && String(ninStatus ?? "").toUpperCase() !== "INVALID");
 
   return (
     <div className="space-y-4">
       <div className={cn("flex items-center gap-2 text-sm font-medium", isValid ? "text-green-600" : "text-destructive")}>
         {isValid ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
         NIN {isValid ? "validated successfully" : "validation failed"}
-        <Badge variant={isValid ? "default" : "destructive"} className="text-xs ml-auto capitalize">{status}</Badge>
+        <Badge variant={isValid ? "default" : "destructive"} className="text-xs ml-auto">
+          {ninStatus ?? status ?? "—"}
+        </Badge>
       </div>
 
       <div className="flex gap-4 bg-muted/30 rounded-xl border p-4">
-        {photo ? (
-          <img
-            src={`data:image/jpeg;base64,${photo}`}
-            alt="ID photo"
-            className="w-20 h-24 object-cover rounded-lg border shrink-0"
-          />
-        ) : (
-          <div className="w-20 h-24 bg-muted rounded-lg flex items-center justify-center shrink-0 border">
-            <User className="w-8 h-8 text-muted-foreground opacity-50" />
-          </div>
-        )}
+        <div className="w-20 h-24 bg-muted rounded-lg flex items-center justify-center shrink-0 border">
+          <User className="w-8 h-8 text-muted-foreground opacity-50" />
+        </div>
         <div className="flex-1 min-w-0 space-y-0.5">
-          <p className="font-semibold text-base capitalize">{fullName.toLowerCase()}</p>
+          <p className="font-semibold text-base">{fullName}</p>
           {nin && <p className="text-xs font-mono text-muted-foreground">{nin}</p>}
-          {cardNumber && <p className="text-xs text-muted-foreground">Card: {cardNumber}</p>}
         </div>
       </div>
 
       <Separator />
 
       <div className="grid grid-cols-2 gap-x-4">
-        <InfoRow icon={CalendarDays} label="Date of Birth"  value={dob} />
-        <InfoRow icon={User}         label="Gender"         value={gender} />
-        <InfoRow icon={Globe}        label="Nationality"    value={nationality} />
-        <InfoRow icon={Hash}         label="District/Place" value={district} />
-        {address && <div className="col-span-2"><InfoRow icon={Hash} label="Address" value={address} /></div>}
+        <InfoRow icon={CalendarDays} label="Date of Birth" value={dob} />
+        <InfoRow icon={Hash}         label="NIN Status"    value={ninStatus} />
       </div>
     </div>
   );
 }
 
 function PhoneResult({ data }) {
-  const raw    = data?.data ?? data;
-  const status = raw?.status ?? raw?.verification_status ?? raw?.result;
-  const name   = raw?.subscriber_name ?? raw?.name;
-  const network = raw?.network ?? raw?.carrier ?? raw?.operator;
-  const phone  = raw?.phone_number ?? raw?.msisdn;
-  const score  = raw?.score ?? raw?.mno_score;
+  // gnugrid: { message, status, count, validation: { phonenumber, surname, firstname, middlename, phone_status, status, error_message } }
+  const val = data?.validation ?? {};
 
-  const isVerified = String(status ?? "").toLowerCase() === "verified"
-    || String(status ?? "").toLowerCase() === "valid"
-    || String(status ?? "").toLowerCase() === "success";
+  const surname    = val.surname ?? "";
+  const firstname  = val.firstname ?? "";
+  const middlename = val.middlename ?? "";
+  const fullName   = [firstname, middlename, surname].filter(Boolean).join(" ") || null;
+  const phone      = val.phonenumber;
+  const phoneStatus = val.phone_status;
+  const status     = val.status;
+  const errorMsg   = val.error_message;
+
+  const isFound = String(phoneStatus ?? "").toUpperCase() === "FOUND"
+    || String(status ?? "").toUpperCase() === "SUCCESSFUL";
 
   return (
     <div className="space-y-4">
-      <div className={cn("flex items-center gap-2 text-sm font-medium", isVerified ? "text-green-600" : "text-amber-600")}>
-        {isVerified ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-        Phone verification {isVerified ? "successful" : "returned results"}
+      <div className={cn("flex items-center gap-2 text-sm font-medium", isFound ? "text-green-600" : "text-amber-600")}>
+        {isFound ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+        Phone verification {isFound ? "successful" : "returned results"}
+        <Badge variant={isFound ? "default" : "secondary"} className="text-xs ml-auto capitalize">
+          {phoneStatus ?? status ?? "—"}
+        </Badge>
       </div>
 
       <div className="bg-muted/30 rounded-xl border p-4 space-y-2">
-        <InfoRow icon={Phone}      label="Phone Number"    value={phone} mono />
-        <InfoRow icon={User}       label="Subscriber Name" value={name} />
-        <InfoRow icon={Globe}      label="Network"         value={network} />
-        {status && (
-          <div className="flex items-center gap-2 pt-1">
-            <Badge variant={isVerified ? "default" : "secondary"} className="capitalize">{status}</Badge>
+        <InfoRow icon={Phone}  label="Phone Number"    value={phone} mono />
+        <InfoRow icon={User}   label="Subscriber Name" value={fullName} />
+        <InfoRow icon={Shield} label="Phone Status"    value={phoneStatus} />
+        {errorMsg && (
+          <div className="flex items-start gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded p-2 mt-1">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+            {errorMsg}
           </div>
-        )}
-        {score != null && (
-          <>
-            <Separator />
-            <ScoreGauge score={score} />
-          </>
         )}
       </div>
     </div>
@@ -554,23 +698,35 @@ function FcsResult({ data }) {
   );
 }
 
-function ReportResult({ data }) {
+function ReportResult({ data, enquiry }) {
   const raw    = data?.data ?? data;
   const pdfUrl = raw?.pdf_url ?? raw?.data?.pdf_url ?? raw?.report_url;
-  const enquiryRef = raw?.reference ?? raw?.enquiry?.reference;
+
+  const individual = enquiry?.formal?.individuals?.[0]
+    ?? enquiry?.informal?.individuals?.[0]
+    ?? {};
+  const name       = individual?.name;
+  const identifier = enquiry?.identifier;
+  const reference  = enquiry?.reference;
+  const timestamp  = enquiry?.timestamp?.split(" ")?.[0];
+  const entity     = enquiry?.entity;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 text-green-600 text-sm font-medium">
         <CheckCircle2 className="h-4 w-4" />
-        Full credit report generated
+        Credit report enquiry completed
       </div>
-      {enquiryRef && (
-        <div className="bg-muted/30 rounded-lg p-3">
-          <p className="text-xs text-muted-foreground">Enquiry Reference</p>
-          <p className="font-mono text-sm font-medium">{enquiryRef}</p>
-        </div>
-      )}
+
+      <div className="bg-muted/30 rounded-xl border p-3 space-y-0.5">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Enquiry Summary</p>
+        <InfoRow icon={User}         label="Individual"  value={name} />
+        <InfoRow icon={Hash}         label="Identifier"  value={identifier} mono />
+        <InfoRow icon={Hash}         label="Reference"   value={reference} mono />
+        <InfoRow icon={Hash}         label="Entity"      value={entity} />
+        <InfoRow icon={CalendarDays} label="Date"        value={timestamp} />
+      </div>
+
       {pdfUrl ? (
         <a href={pdfUrl} target="_blank" rel="noreferrer" className="block">
           <Button className="w-full gap-2">
@@ -578,9 +734,11 @@ function ReportResult({ data }) {
           </Button>
         </a>
       ) : (
-        <p className="text-sm text-muted-foreground bg-amber-50 border border-amber-200 rounded p-3">
-          PDF link is being generated. The report may take a few moments. Retry if not available.
-        </p>
+        <div className="bg-amber-50 border border-amber-200 rounded p-3 space-y-1">
+          <p className="text-sm text-amber-700 font-medium">PDF is being generated</p>
+          <p className="text-xs text-amber-600">The report may take a few moments to be ready.</p>
+          {reference && <p className="text-xs font-mono text-amber-700">Ref: {reference}</p>}
+        </div>
       )}
     </div>
   );
@@ -642,18 +800,22 @@ const ENDPOINT_MAP = {
   report:     "/credit-enquiry/request",
   nin:        "/credit-enquiry/nin-validation",
   nin_verify: "/credit-enquiry/nin-validation",
-  phone:      "/credit-score/crb",
+  phone:      "/credit-enquiry/phone-validation",
   fcs:        "/credit-enquiry/fcs-validation",
 };
 
 export default function CRBRunDialog({ isOpen, onClose, product, meta }) {
   const axiosPrivate = useAxiosPrivate();
   const [form, setForm] = useState({
-    entity_type:      meta.entityType,
-    client_consented: 0,
+    entity_type:         meta.entityType,
+    client_consented:    0,
+    identifier:          meta.prefillIdentifier ?? "",
+    phone_number:        meta.prefillPhone ?? "",
+    identification_type: meta.entityType === 1 ? "ii_company_reg" : "ii_country_id",
   });
-  const [result, setResult]     = useState(null);
-  const [pdfResult, setPdfResult] = useState(null);
+  const [result, setResult]         = useState(null);
+  const [pdfResult, setPdfResult]   = useState(null);
+  const [enquiry, setEnquiry]       = useState(null);
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -662,12 +824,10 @@ export default function CRBRunDialog({ isOpen, onClose, product, meta }) {
       const endpoint = ENDPOINT_MAP[meta.mode] ?? "/credit-score/lookup";
       const payload  = { ...form };
 
-      // normalise phone number
       if (payload.phone_number) {
         payload.phone_number = normalisePhone(payload.phone_number);
       }
 
-      // clean empties
       if (!payload.entity_type_category) delete payload.entity_type_category;
       if (!payload.reason && meta.mode !== "report") delete payload.reason;
 
@@ -677,10 +837,12 @@ export default function CRBRunDialog({ isOpen, onClose, product, meta }) {
     onSuccess: async (data) => {
       if (meta.mode === "report") {
         const enq          = data?.data?.enquiry ?? data?.data?.raw?.enquiry;
-        const enquiry_id   = enq?.id;
+        const enquiry_id   = enq?.id ?? data?.data?.enquiry_id;
         const individual_id = data?.data?.individual_id;
-        const reference    = enq?.reference;
-        const timestamp    = enq?.timestamp;
+        const reference    = enq?.reference ?? data?.data?.reference;
+        const timestamp    = enq?.timestamp ?? data?.data?.timestamp;
+
+        if (enq) setEnquiry(enq);
 
         if (enquiry_id && individual_id) {
           try {
@@ -709,9 +871,16 @@ export default function CRBRunDialog({ isOpen, onClose, product, meta }) {
   });
 
   const handleClose = () => {
-    setForm({ entity_type: meta.entityType, client_consented: 0 });
+    setForm({
+      entity_type:         meta.entityType,
+      client_consented:    0,
+      identifier:          meta.prefillIdentifier ?? "",
+      phone_number:        meta.prefillPhone ?? "",
+      identification_type: meta.entityType === 1 ? "ii_company_reg" : "ii_country_id",
+    });
     setResult(null);
     setPdfResult(null);
+    setEnquiry(null);
     onClose();
   };
 
@@ -752,7 +921,7 @@ export default function CRBRunDialog({ isOpen, onClose, product, meta }) {
           {displayResult ? (
             <>
               {meta.mode === "score" && <ScoreResult data={displayResult?.data} />}
-              {meta.mode === "report" && <ReportResult data={displayResult?.data} />}
+              {meta.mode === "report" && <ReportResult data={displayResult?.data} enquiry={enquiry} />}
               {(meta.mode === "nin" || meta.mode === "nin_verify") && <NinResult data={displayResult?.data} />}
               {meta.mode === "phone" && <PhoneResult data={displayResult?.data} />}
               {meta.mode === "fcs"   && <FcsResult   data={displayResult?.data} />}

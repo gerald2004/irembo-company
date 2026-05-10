@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import axios from "@/Config/Axios";
@@ -24,6 +24,7 @@ const Login = ({ className, ...props }) => {
   const { setAuth } = useAuth();
   const [disabled, setDisabled] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const submittingRef = useRef(false);
 
   const {
     register,
@@ -34,6 +35,8 @@ const Login = ({ className, ...props }) => {
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
   const onLoginAction = async (data) => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     try {
       setDisabled(true);
       data.otp_status = "yes";
@@ -71,6 +74,7 @@ const Login = ({ className, ...props }) => {
       });
       navigate("/verify", { replace: true });
     } catch (error) {
+      submittingRef.current = false;
       setDisabled(false);
       toast({
         title: "Uh oh! Something went wrong.",

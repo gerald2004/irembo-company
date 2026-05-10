@@ -352,6 +352,43 @@ const AddLoanProductDialog = ({ isOpen, onClose, refetch }) => {
                   </p>
                 )}
               </div>
+
+              {penaltyMode === "percentage" && (
+                <div className="md:col-span-2">
+                  <Label>Penalty Basis</Label>
+                  <Select
+                    onValueChange={(value) =>
+                      setValue("penalty_basis", value, { shouldValidate: true })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue
+                        placeholder="Select what the % is applied to"
+                        {...register("penalty_basis", {
+                          validate: (v) =>
+                            penaltyMode === "percentage"
+                              ? !!v || "Penalty basis is required"
+                              : true,
+                        })}
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="principal">Principal Only</SelectItem>
+                      <SelectItem value="principal_interest">
+                        Principal + Interest
+                      </SelectItem>
+                      <SelectItem value="outstanding_total">
+                        Outstanding Total (Principal + Interest + Monitoring)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.penalty_basis && (
+                    <p className="text-red-500 text-sm">
+                      {errors.penalty_basis.message}
+                    </p>
+                  )}
+                </div>
+              )}
             </fieldset>
           )}
 
