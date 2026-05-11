@@ -19,29 +19,34 @@ const DeleteAccountDialog = ({ username, onDelete }) => {
   const [inputUsername, setInputUsername] = useState("");
   const [confirmationText, setConfirmationText] = useState("");
 
+  const handleOpenChange = (open) => {
+    setIsOpen(open);
+    if (!open) {
+      setInputUsername("");
+      setConfirmationText("");
+    }
+  };
+
   const handleDelete = () => {
     if (
-      inputUsername !== username ||
-      confirmationText !== "delete this account"
+      inputUsername.trim() !== (username || "").trim() ||
+      confirmationText.trim().toLowerCase() !== "delete this account"
     ) {
       toast({
-        title: "Error",
+        title: "Verification Failed",
         variant: "destructive",
-        description: "Verification failed. Please enter the correct details.",
+        description: "Please enter the correct client name and confirmation text.",
       });
       return;
     }
 
-    onDelete(); // Trigger the delete action passed as a prop
+    onDelete();
     setIsOpen(false);
   };
 
   return (
     <>
-      {/* Trigger Button */}
-
-      {/* Dialog */}
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant="destructive" onClick={() => setIsOpen(true)}>
           Delete Member Account
@@ -51,7 +56,7 @@ const DeleteAccountDialog = ({ username, onDelete }) => {
           <DialogHeader>
             <DialogTitle>Delete Account</DialogTitle>
             <DialogDescription>
-              Permanently remove  account and all associated data. This
+              Permanently remove this client account and all associated data. This
               action is{" "}
               <span className="text-red-600 font-bold">not reversible</span>.
               Please proceed with caution.
@@ -61,9 +66,8 @@ const DeleteAccountDialog = ({ username, onDelete }) => {
           {/* Instructions */}
           <div className="mt-4">
             <p className="text-red-500 font-semibold">
-              This action will delete all member data, including projects,
-              deployments, domains, and other resources. Please confirm your
-              identity to proceed.
+              This action will permanently delete the client and all their records
+              including loans, savings, and transactions.
             </p>
           </div>
 
