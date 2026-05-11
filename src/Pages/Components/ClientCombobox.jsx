@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/popover";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 
-export function ClientCombobox({ label, selectedClient, onClientSelect }) {
+export function ClientCombobox({ label, selectedClient, onClientSelect, searchUrl = '/clients/individual' }) {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [clients, setClients] = useState([]);
@@ -37,7 +37,7 @@ export function ClientCombobox({ label, selectedClient, onClientSelect }) {
       setIsLoading(true);
       try {
         const response = await axiosPrivate.get(
-          `/clients/individual?search=${encodeURIComponent(searchTerm)}`
+          `${searchUrl}?search=${encodeURIComponent(searchTerm)}`
         );
         setClients(response.data.data.clients ?? []);
       } catch {
@@ -48,12 +48,15 @@ export function ClientCombobox({ label, selectedClient, onClientSelect }) {
     }, 300);
 
     return () => clearTimeout(debounceRef.current);
-  }, [searchTerm, axiosPrivate]);
+  }, [searchTerm, axiosPrivate, searchUrl]);
 
-  const clientOptions = clients.map((c) => ({
-    value: c.client_id,
-    label: `${c.client_firstname} ${c.client_lastname} (${c.client_account_number})`,
-  }));
+  const clientOptions = clients.map((c) => {
+    const name = [c.client_firstname, c.client_lastname].filter(Boolean).join(' ');
+    return {
+      value: c.client_id,
+      label: `${name} (${c.client_account_number})`,
+    };
+  });
 
   const selectedLabel = clientOptions.find((c) => c.value === selectedClient)?.label;
 

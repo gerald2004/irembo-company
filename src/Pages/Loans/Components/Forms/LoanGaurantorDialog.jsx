@@ -57,6 +57,14 @@ const LoanGaurantorDialog = ({ isOpen, onClose, refetch }) => {
   } = useForm();
 
   const [step, setStep] = useState(1);
+  const [selectedClient, setSelectedClient] = useState(null);
+
+  const handleClose = () => {
+    reset();
+    setStep(1);
+    setSelectedClient(null);
+    onClose();
+  };
 
   const validateStep = async () => {
     const valid = await trigger();
@@ -68,8 +76,7 @@ const LoanGaurantorDialog = ({ isOpen, onClose, refetch }) => {
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
 
   const onSubmit = async (data) => {
-          const controller = new AbortController();
-
+    const controller = new AbortController();
     try {
       const payload = {
         ...data,
@@ -84,10 +91,8 @@ const LoanGaurantorDialog = ({ isOpen, onClose, refetch }) => {
         title: "Success",
         description: response.data.messages,
       });
-      reset();
       refetch();
-      onClose();
-      setStep(1);
+      handleClose();
     } catch (error) {
       const errorMessage =
         error?.response?.data?.messages || "No server response";
@@ -110,37 +115,26 @@ const LoanGaurantorDialog = ({ isOpen, onClose, refetch }) => {
     },
   ];
 
-  const [selectedClient, setSelectedClient] = useState(null);
-
   // Watch for changes in loan_guarantor_mode
   const loanGuarantorMode = watch("loan_guarantor_mode", ""); // Default to "member"
   // const loanGuarantorType = watch("loan_guarantor_type", "savings"); // Default to savings
 
-  // Effect to fetch client details when selecting a member
+  // Auto-fill form fields when a member client is selected
   useEffect(() => {
-    if (selectedClient) {
-      axiosPrivate
-        .get(`/clients/individual/${selectedClient}`)
-        .then((response) => {
-          const {
-            client_gender,
-            client_contact,
-            client_account_number,
-            client_firstname,
-            client_lastname,
-          } = response.data.data.client;
-          setValue("guarantor_gender", client_gender);
-          setValue("guranator_contact", client_contact);
-          setValue("guarantor_account_number", client_account_number);
-          setValue(
-            "loan_guarantor_name",
-            `${client_firstname} ${client_lastname}`
-          );
-        })
-        .catch((error) => {
-          console.error("Error fetching client details:", error);
-        });
-    }
+    if (!selectedClient) return;
+    axiosPrivate
+      .get(`/clients/individual/${selectedClient}`)
+      .then((response) => {
+        const c = response.data.data.client;
+        const displayName = c.client_type === 'group'
+          ? (c.client_group_name ?? '')
+          : `${c.client_firstname ?? ''} ${c.client_lastname ?? ''}`.trim();
+        setValue("guarantor_gender", c.client_gender ?? '');
+        setValue("guranator_contact", c.client_contact ?? '');
+        setValue("guarantor_account_number", c.client_account_number ?? '');
+        setValue("loan_guarantor_name", displayName);
+      })
+      .catch(() => {});
   }, [selectedClient, setValue, axiosPrivate]);
 
   return (
@@ -154,7 +148,7 @@ const LoanGaurantorDialog = ({ isOpen, onClose, refetch }) => {
           <DialogClose asChild>
             <button
               className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              onClick={onClose}
+              onClick={handleClose}
             >
               <X className="h-4 w-4" />
             </button>
@@ -255,6 +249,7 @@ const LoanGaurantorDialog = ({ isOpen, onClose, refetch }) => {
                     label="Select Client"
                     selectedClient={selectedClient}
                     onClientSelect={setSelectedClient}
+                    searchUrl="/clients/search"
                   />
                 </div>
               )}
