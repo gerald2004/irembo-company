@@ -327,7 +327,7 @@ export function IncomesTable() {
 
   useEffect(() => {
     setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-  }, [debouncedGlobalFilter]);
+  }, [debouncedFilter]);
 
   const table = useReactTable({
     data: rows,
