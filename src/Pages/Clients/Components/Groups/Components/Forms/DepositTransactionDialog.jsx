@@ -196,6 +196,7 @@ const DepositTransactionDialog = ({ isOpen, onClose, refetch, accountId, handleO
                   value={selectedChannel}
                   onChange={(acc) => { setSelectedChannel(acc); setChannelError(""); }}
                   error={channelError}
+                  restrictCashToOwnTill
                 />
               </div>
             </div>

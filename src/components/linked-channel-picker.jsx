@@ -20,11 +20,12 @@ const TYPE_CONFIG = {
  * Two-step linked account picker: pick type → pick specific account.
  *
  * Props:
- *   value      – currently selected linked_account object (or null)
- *   onChange   – (account | null) => void
- *   error      – string (validation message from parent)
+ *   value                  – currently selected linked_account object (or null)
+ *   onChange               – (account | null) => void
+ *   error                  – string (validation message from parent)
+ *   restrictCashToOwnTill  – when true, cash accounts are filtered to the current user's own till only
  */
-export function LinkedChannelPicker({ value, onChange, error }) {
+export function LinkedChannelPicker({ value, onChange, error, restrictCashToOwnTill = false }) {
   const axiosPrivate = useAxiosPrivate();
   const { auth } = useAuth();
   const branchId = auth?.current_branch_id ?? auth?.user?.branch_id;
@@ -38,6 +39,7 @@ export function LinkedChannelPicker({ value, onChange, error }) {
     setLoading(true);
     setFetchError(null);
     const params = branchId ? { branch_id: branchId } : {};
+    if (restrictCashToOwnTill) params.own_till = "1";
     axiosPrivate
       .get("/settings/accounts/linked", { params })
       .then((r) => setAccounts(r.data?.data?.linked_accounts ?? []))
@@ -50,7 +52,7 @@ export function LinkedChannelPicker({ value, onChange, error }) {
       })
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [branchId]);
+  }, [branchId, restrictCashToOwnTill]);
 
   // Sync active type when value is cleared externally
   useEffect(() => {

@@ -141,6 +141,7 @@ const WithdrawTransactionDialog = ({ isOpen, onClose, refetch, accountId, handle
                   value={selectedChannel}
                   onChange={(acc) => { setSelectedChannel(acc); setChannelError(""); }}
                   error={channelError}
+                  restrictCashToOwnTill
                 />
               </div>
             </div>
