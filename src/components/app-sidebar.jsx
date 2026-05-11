@@ -212,6 +212,11 @@ export function AppSidebar({ ...props }) {
               url: "loan-notifications-admin",
               permissionCodes: [100266],
             },
+            {
+              title: "Disk Usage",
+              url: "sacco-disk-usage",
+              permissionCodes: [100148],
+            },
           ],
         },
       ],

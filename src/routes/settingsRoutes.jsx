@@ -22,6 +22,7 @@ import AddRoles from "@/Pages/Settings/System/AddRoles";
 import EditRoles from "@/Pages/Settings/System/EditRoles";
 import GeneralConfigurationTriggers from "@/Pages/Settings/System/GeneralConfigurationTriggers";
 import LoanNotificationsAdmin from "@/Pages/Settings/System/LoanNotificationsAdmin";
+import SaccoDiskUsage from "@/Pages/Settings/System/SaccoDiskUsage";
 import TransactionChannelLinkedAccounts from "@/Pages/Settings/Business/TransactionChannelLinkedAccounts";
 
 const settingsRoutes = [
@@ -112,6 +113,11 @@ const settingsRoutes = [
     path: "/loan-notifications-admin",
     element: <LoanNotificationsAdmin />,
     roles: [100266],
+  },
+  {
+    path: "/sacco-disk-usage",
+    element: <SaccoDiskUsage />,
+    roles: [100148],
   },
   { path: "/system-roles", element: <Roles />, roles: [100149] },
   { path: "/system-roles/add-role", element: <AddRoles />, roles: [100149] },
