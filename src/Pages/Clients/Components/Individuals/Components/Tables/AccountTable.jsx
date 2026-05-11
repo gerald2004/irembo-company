@@ -360,6 +360,7 @@ export function AccountsTable() {
           onClose={handleCloseModalTransfer}
           refetch={refetch}
           accountId={accountId}
+          clientId={params.id}
         />
       )}
       {isModalChargeOpen && hasPermission(roles, 100048) && (

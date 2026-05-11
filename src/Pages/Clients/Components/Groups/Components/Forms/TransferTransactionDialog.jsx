@@ -38,7 +38,8 @@ import {
   InputOTPSeparator,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
-const TransferTransactionDialog = ({ isOpen, onClose, refetch, accountId }) => {
+
+const TransferTransactionDialog = ({ isOpen, onClose, refetch, accountId, clientId }) => {
   const axiosPrivate = useAxiosPrivate();
   const {
     register,
@@ -50,80 +51,103 @@ const TransferTransactionDialog = ({ isOpen, onClose, refetch, accountId }) => {
   } = useForm();
 
   const [step, setStep] = useState(1);
+  const [transferMode, setTransferMode] = useState(null); // "own" | "other"
   const [selectedClient, setSelectedClient] = useState(null);
   const [clientAccounts, setClientAccounts] = useState([]);
 
-  // Step icons
   const stepIcons = [
-    {
-      icon: <User className="w-6 h-6 text-blue-500" />,
-      label: "Select Client",
-    },
-    {
-      icon: <Info className="w-6 h-6 text-green-500" />,
-      label: "Select Account & Enter Amount",
-    },
-    {
-      icon: <LockKeyhole className="w-6 h-6 text-yellow-500" />,
-      label: "PIN",
-    },
+    { icon: <User className="w-6 h-6 text-blue-500" />, label: "Select Destination" },
+    { icon: <Info className="w-6 h-6 text-green-500" />, label: "Amount & Account" },
+    { icon: <LockKeyhole className="w-6 h-6 text-yellow-500" />, label: "PIN" },
   ];
 
-  // Fetch client accounts when client is selected
+  // When "own account" mode is selected, auto-load the current client's accounts
   useEffect(() => {
-    const fetchClientAccounts = async (clientId) => {
-      const controller = new AbortController();
-
-      try {
-        const response = await axiosPrivate.get(
-          `/accounts/attached/accounts/${clientId}`,
-          { signal: controller.signal }
-        );
-        setClientAccounts(response.data.data.accounts ?? []);
-      } catch (error) {
-        const errorMessage =
-          error?.response?.data?.messages || "Failed to fetch accounts";
-        toast({
-          title: "Error",
-          variant: "destructive",
-          description: errorMessage,
-        });
-      }
-    };
-    if (selectedClient) {
-      fetchClientAccounts(selectedClient);
+    if (transferMode === "own" && clientId) {
+      setSelectedClient(clientId);
     }
-  }, [selectedClient, axiosPrivate]);
+  }, [transferMode, clientId]);
 
-  const validateStep = async () => {
-    const valid = await trigger();
-    if (valid && step < 3) setStep((prev) => prev + 1);
+  // Fetch accounts when a client is selected
+  useEffect(() => {
+    if (!selectedClient) return;
+    const controller = new AbortController();
+    axiosPrivate
+      .get(`/accounts/attached/accounts/${selectedClient}`, { signal: controller.signal })
+      .then((res) => {
+        // Exclude the sending account so a client can't transfer to the same account
+        const all = res.data.data.accounts ?? [];
+        setClientAccounts(all.filter((a) => a.client_account_id !== accountId));
+      })
+      .catch((err) => {
+        if (!controller.signal.aborted) {
+          toast({
+            title: "Error",
+            variant: "destructive",
+            description: err?.response?.data?.messages || "Failed to fetch accounts",
+          });
+        }
+      });
+    return () => controller.abort();
+  }, [selectedClient, accountId, axiosPrivate]);
+
+  const handleModeSelect = (mode) => {
+    setTransferMode(mode);
+    setSelectedClient(null);
+    setClientAccounts([]);
+    reset();
+    setStep(2);
   };
 
-  const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
+  const validateStep = async () => {
+    if (step === 1) {
+      if (!selectedClient) {
+        toast({ title: "Please select a client", variant: "destructive" });
+        return;
+      }
+      setStep(2);
+      return;
+    }
+    const valid = await trigger();
+    if (valid) setStep((prev) => prev + 1);
+  };
+
+  const prevStep = () => {
+    if (step === 2) {
+      setStep(1);
+      if (transferMode !== "own") {
+        setSelectedClient(null);
+        setClientAccounts([]);
+      }
+      setTransferMode(null);
+    } else {
+      setStep((prev) => Math.max(prev - 1, 1));
+    }
+  };
+
+  const handleClose = () => {
+    reset();
+    setStep(1);
+    setTransferMode(null);
+    setSelectedClient(null);
+    setClientAccounts([]);
+    onClose();
+  };
 
   const onSubmit = async (data) => {
-    const controller = new AbortController();
-
     try {
       const payload = {
         ...data,
-        client_id: selectedClient,
         account_sending: accountId,
       };
-      // console.log(payload);
-      const response = await axiosPrivate.post(
-        "/accounting/transfers/inbound",
-        payload,
-        { signal: controller.signal }
-      );
+      const response = await axiosPrivate.post("/accounting/transfers/inbound", payload);
       toast({ title: "Success", description: response.data.messages });
       reset();
       refetch();
-      onClose();
+      handleClose();
     } catch (error) {
       toast({
-        title: "Uh oh! Something went wrong.",
+        title: "Transfer failed",
         variant: "destructive",
         description: error?.response?.data?.messages || "No server response",
       });
@@ -131,93 +155,119 @@ const TransferTransactionDialog = ({ isOpen, onClose, refetch, accountId }) => {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={() => {}}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Internal Transfer</DialogTitle>
-          <DialogDescription>
-            Follow the steps to complete the transfer.
-          </DialogDescription>
+          <DialogDescription>Follow the steps to complete the transfer.</DialogDescription>
           <DialogClose asChild>
             <button
               className="absolute right-4 top-4 rounded-sm opacity-70 hover:opacity-100"
-              onClick={onClose}
+              onClick={handleClose}
             >
               <X className="h-4 w-4" />
             </button>
           </DialogClose>
         </DialogHeader>
 
-        {/* Step Progress Indicator */}
+        {/* Step indicators */}
         <div className="flex items-center space-x-4 my-1">
-          {stepIcons.map((stepIcon, index) => (
+          {stepIcons.map((s, i) => (
             <div
-              key={index}
-              className={`flex items-center ${
-                step > index + 1 ? "opacity-100" : "opacity-50"
-              } transition-opacity`}
+              key={i}
+              className={`flex items-center transition-opacity ${step > i + 1 ? "opacity-100" : "opacity-50"}`}
             >
-              {stepIcon.icon}
-              <span className="ml-2 text-sm font-medium">{stepIcon.label}</span>
-              {index < stepIcons.length - 1 && (
-                <div className="h-[2px] w-8 bg-gray-300 mx-2"></div>
-              )}
+              {s.icon}
+              <span className="ml-2 text-sm font-medium">{s.label}</span>
+              {i < stepIcons.length - 1 && <div className="h-[2px] w-8 bg-gray-300 mx-2" />}
             </div>
           ))}
         </div>
         <Progress value={(step / 3) * 100} className="my-1" />
 
-        {/* Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Step 1: Select Client */}
+          {/* Step 1: Choose destination */}
           {step === 1 && (
-            <div>
-              <ClientCombobox
-                label="Select Client"
-                selectedClient={selectedClient}
-                onClientSelect={setSelectedClient}
-              />
+            <div className="space-y-4">
+              {/* Own account shortcut */}
+              {clientId && (
+                <button
+                  type="button"
+                  onClick={() => handleModeSelect("own")}
+                  className="w-full flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-left hover:bg-blue-100 transition-colors"
+                >
+                  <User className="w-5 h-5 text-blue-600 shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-blue-800">Transfer to own account</p>
+                    <p className="text-xs text-blue-600">Move funds between this client&apos;s accounts</p>
+                  </div>
+                </button>
+              )}
+
+              {/* Search for another client */}
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">
+                  {clientId ? "Or transfer to another member:" : "Select receiving client:"}
+                </p>
+                <ClientCombobox
+                  label="Search client"
+                  selectedClient={transferMode === "other" ? selectedClient : null}
+                  onClientSelect={(id) => {
+                    setTransferMode("other");
+                    setSelectedClient(id);
+                    setClientAccounts([]);
+                  }}
+                />
+              </div>
+
+              {selectedClient && transferMode === "other" && (
+                <Button type="button" className="w-full" onClick={() => setStep(2)}>
+                  Continue <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              )}
             </div>
           )}
 
-          {/* Step 2: Select Account */}
+          {/* Step 2: Account + amount */}
           {step === 2 && (
             <>
-              <div>
-                <Label>Select Account</Label>
-                <Controller
-                  name="account_receiving"
-                  control={control}
-                  rules={{ required: "Please select an account" }}
-                  render={({ field }) => (
-                    <Select
-                      onValueChange={(value) => {
-                        field.onChange(value); // ✅ Update form state
-                      }}
-                      value={field.value || ""} // ✅ Ensure controlled component
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select Account" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {clientAccounts.map((account) => (
-                          <SelectItem
-                            key={account.client_account_id}
-                            value={String(account.client_account_id)} // ✅ Ensure it's a string
-                          >
-                            {account.product_title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+              {clientAccounts.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-2">
+                  {selectedClient ? "No other accounts found for this client." : "Loading accounts…"}
+                </p>
+              ) : (
+                <div>
+                  <Label>Receiving Account</Label>
+                  <Controller
+                    name="account_receiving"
+                    control={control}
+                    rules={{ required: "Please select an account" }}
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select account" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {clientAccounts.map((acc) => (
+                            <SelectItem
+                              key={acc.client_account_id}
+                              value={String(acc.client_account_id)}
+                            >
+                              {acc.product_title}
+                              {acc.client_account_balance !== undefined &&
+                                ` — UGX ${Number(acc.client_account_balance).toLocaleString()}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.account_receiving && (
+                    <p className="text-red-500 text-sm">{errors.account_receiving.message}</p>
                   )}
-                />
-                {errors.account_receiving && (
-                  <p className="text-red-500 text-sm">
-                    {errors.account_receiving.message}
-                  </p>
-                )}
-              </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="transfer_amount">Transfer Amount</Label>
@@ -226,14 +276,10 @@ const TransferTransactionDialog = ({ isOpen, onClose, refetch, accountId }) => {
                     type="number"
                     step="0.01"
                     placeholder="Enter amount"
-                    {...register("transfer_amount", {
-                      required: "Amount is required",
-                    })}
+                    {...register("transfer_amount", { required: "Amount is required" })}
                   />
                   {errors.transfer_amount && (
-                    <p className="text-red-500 text-sm">
-                      {errors.transfer_amount.message}
-                    </p>
+                    <p className="text-red-500 text-sm">{errors.transfer_amount.message}</p>
                   )}
                 </div>
                 <div>
@@ -241,94 +287,63 @@ const TransferTransactionDialog = ({ isOpen, onClose, refetch, accountId }) => {
                   <Input
                     id="transfer_reason"
                     placeholder="Reason for transfer"
-                    {...register("transfer_reason", {
-                      required: "Transfer reason is required",
-                    })}
+                    {...register("transfer_reason", { required: "Transfer reason is required" })}
                   />
                   {errors.transfer_reason && (
-                    <p className="text-red-500 text-sm">
-                      {errors.transfer_reason.message}
-                    </p>
+                    <p className="text-red-500 text-sm">{errors.transfer_reason.message}</p>
                   )}
                 </div>
               </div>
             </>
           )}
 
-          {/* Step 3: Enter Amount & PIN */}
+          {/* Step 3: PIN */}
           {step === 3 && (
-            <fieldset>
-              {/* PIN Entry */}
-              <div className="flex flex-col items-center">
-                <Controller
-                  control={control}
-                  name="user_pincode"
-                  rules={{
-                    required: "Pincode is required",
-                    pattern: {
-                      value: /^\d{4}$/,
-                      message: "PIN must be exactly 4 digits",
-                    },
-                  }}
-                  render={({ field }) => (
-                    <>
-                      <Label>Enter Pincode</Label>
-                      <InputOTP maxLength={4} {...field}>
-                        <InputOTPGroup className="flex space-x-3 py-4">
-                          <InputOTPSlot
-                            index={0}
-                            className="h-10 w-10 text-center rounded-md"
-                          />
-                          <InputOTPSlot
-                            index={1}
-                            className="h-10 w-10 text-center rounded-md"
-                          />
-                          <InputOTPSeparator />
-                          <InputOTPSlot
-                            index={2}
-                            className="h-10 w-10 text-center rounded-md"
-                          />
-                          <InputOTPSlot
-                            index={3}
-                            className="h-10 w-10 text-center rounded-md"
-                          />
-                        </InputOTPGroup>
-                      </InputOTP>
-                    </>
-                  )}
-                />
-                {errors.user_pincode && (
-                  <p className="text-red-500 text-sm mt-1">
-                    {errors.user_pincode.message}
-                  </p>
+            <div className="flex flex-col items-center">
+              <Controller
+                control={control}
+                name="user_pincode"
+                rules={{
+                  required: "Pincode is required",
+                  pattern: { value: /^\d{4}$/, message: "PIN must be exactly 4 digits" },
+                }}
+                render={({ field }) => (
+                  <>
+                    <Label>Enter Pincode</Label>
+                    <InputOTP maxLength={4} {...field}>
+                      <InputOTPGroup className="flex space-x-3 py-4">
+                        <InputOTPSlot index={0} className="h-10 w-10 text-center rounded-md" />
+                        <InputOTPSlot index={1} className="h-10 w-10 text-center rounded-md" />
+                        <InputOTPSeparator />
+                        <InputOTPSlot index={2} className="h-10 w-10 text-center rounded-md" />
+                        <InputOTPSlot index={3} className="h-10 w-10 text-center rounded-md" />
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </>
                 )}
-              </div>
-            </fieldset>
+              />
+              {errors.user_pincode && (
+                <p className="text-red-500 text-sm mt-1">{errors.user_pincode.message}</p>
+              )}
+            </div>
           )}
 
-          {/* Footer Navigation */}
+          {/* Footer */}
           <DialogFooter>
-            <div className="flex justify-end w-full">
+            <div className="flex justify-end w-full gap-2">
               {step > 1 && (
-                <Button
-                  type="button"
-                  className="mx-2"
-                  variant="secondary"
-                  onClick={prevStep}
-                >
-                  <ArrowLeft className="mr-2" /> Back
+                <Button type="button" variant="secondary" onClick={prevStep}>
+                  <ArrowLeft className="mr-2 h-4 w-4" /> Back
                 </Button>
               )}
-              {step < 3 ? (
+              {step === 2 && (
                 <Button type="button" onClick={validateStep}>
-                  Next <ArrowRight className="ml-2" />
+                  Next <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
-              ) : (
-                ""
               )}
               {step === 3 && (
                 <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Processing..." : "Confirm Transfer"}
+                  {isSubmitting ? "Processing…" : "Confirm Transfer"}
                 </Button>
               )}
             </div>

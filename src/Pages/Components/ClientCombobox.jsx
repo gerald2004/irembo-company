@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
-import { useState, useEffect } from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -10,9 +10,6 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
-
 import {
   Popover,
   PopoverContent,
@@ -22,46 +19,43 @@ import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 
 export function ClientCombobox({ label, selectedClient, onClientSelect }) {
   const [open, setOpen] = useState(false);
-  const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState(""); // ✅ Local search term
+  const [searchTerm, setSearchTerm] = useState("");
+  const [clients, setClients] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const axiosPrivate = useAxiosPrivate();
+  const debounceRef = useRef(null);
 
-  // ✅ API Query with Search
-  const { data: clients = [], refetch } = useQuery({
-    queryKey: ["individuals-data"], // ✅ Trigger API on search term update
-    queryFn: async () => {
-      const controller = new AbortController();
-
-      const fetchURL = `/clients/individual`;
-      try {
-        const response = await axiosPrivate.get(fetchURL, {
-          signal: controller.signal,
-        });
-        return response.data.data.clients ?? [];
-      } catch (error) {
-        if (error?.response?.status === 401) {
-          navigate("/", { state: { from: location }, replace: true });
-        }
-        return error;
-      }
-    },
-    keepPreviousData: true,
-  });
-
-  // ✅ Debounce API Calls (Wait 500ms before making a request)
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      refetch();
-    }, 10000);
-    return () => clearTimeout(timeout);
-  }, [searchTerm, refetch]);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
 
-  // ✅ Map Clients for Display
-  const clientOptions =
-    clients?.map((client) => ({
-      value: client.client_id,
-      label: `${client.client_firstname} ${client.client_lastname} (${client.client_account_number})`,
-    })) ?? [];
+    if (searchTerm.length < 2) {
+      setClients([]);
+      return;
+    }
+
+    debounceRef.current = setTimeout(async () => {
+      setIsLoading(true);
+      try {
+        const response = await axiosPrivate.get(
+          `/clients/individual?search=${encodeURIComponent(searchTerm)}`
+        );
+        setClients(response.data.data.clients ?? []);
+      } catch {
+        setClients([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(debounceRef.current);
+  }, [searchTerm, axiosPrivate]);
+
+  const clientOptions = clients.map((c) => ({
+    value: c.client_id,
+    label: `${c.client_firstname} ${c.client_lastname} (${c.client_account_number})`,
+  }));
+
+  const selectedLabel = clientOptions.find((c) => c.value === selectedClient)?.label;
 
   return (
     <div className="space-y-2">
@@ -72,32 +66,40 @@ export function ClientCombobox({ label, selectedClient, onClientSelect }) {
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between"
+            className="w-full justify-between font-normal"
           >
-            {selectedClient
-              ? clientOptions.find((client) => client.value === selectedClient)
-                  ?.label
-              : "Search & select client..."}
-            <ChevronsUpDown className="opacity-50" />
+            <span className="truncate">
+              {selectedLabel ?? "Search & select client..."}
+            </span>
+            <ChevronsUpDown className="ml-2 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0">
-          <Command>
-            {/* ✅ FIXED: Now search updates properly */}
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+          <Command shouldFilter={false}>
             <CommandInput
-              placeholder="Search client..."
-              className="h-9 px-10"
+              placeholder="Type name, contact or account no..."
+              className="h-9"
               value={searchTerm}
-              onValueChange={setSearchTerm} // ✅ FIX: Properly updates state
+              onValueChange={setSearchTerm}
             />
             <CommandList>
-              <CommandEmpty>No client found.</CommandEmpty>
+              {isLoading && (
+                <div className="flex items-center justify-center py-3 text-sm text-muted-foreground gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Searching...
+                </div>
+              )}
+              {!isLoading && searchTerm.length < 2 && (
+                <CommandEmpty>Type at least 2 characters to search.</CommandEmpty>
+              )}
+              {!isLoading && searchTerm.length >= 2 && clientOptions.length === 0 && (
+                <CommandEmpty>No client found.</CommandEmpty>
+              )}
               <CommandGroup>
                 {clientOptions.map((client) => (
                   <CommandItem
-                    className="capitalize"
                     key={client.value}
-                    value={client.value}
+                    value={client.label}
                     onSelect={() => {
                       onClientSelect(client.value);
                       setOpen(false);
@@ -105,10 +107,8 @@ export function ClientCombobox({ label, selectedClient, onClientSelect }) {
                   >
                     {client.label}
                     <Check
-                      className={`ml-auto capitalize ${
-                        selectedClient === client.value
-                          ? "opacity-100"
-                          : "opacity-0"
+                      className={`ml-auto ${
+                        selectedClient === client.value ? "opacity-100" : "opacity-0"
                       }`}
                     />
                   </CommandItem>
