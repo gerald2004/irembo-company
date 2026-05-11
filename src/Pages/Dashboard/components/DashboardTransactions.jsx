@@ -63,6 +63,7 @@ const DashboardTransactions = ({ startDate, endDate }) => {
         return res.data.data ?? {};
       } catch (err) {
         if (err?.response?.status === 401) navigate("/", { replace: true });
+        throw err;
       }
     },
     enabled: !!startDate && !!endDate,

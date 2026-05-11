@@ -33,7 +33,7 @@ const DashboardOverview = () => {
   const navigate = useNavigate();
   const { branchKey, branchParams } = useBranchFilter();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["dashboard-overview-data", branchKey],
     queryFn: async () => {
       try {
@@ -41,6 +41,7 @@ const DashboardOverview = () => {
         return res.data.data;
       } catch (err) {
         if (err?.response?.status === 401) navigate("/", { replace: true });
+        throw err;
       }
     },
   });
@@ -61,6 +62,12 @@ const DashboardOverview = () => {
   const aml            = widgets.aml_alerts ?? {};
   const dormant        = widgets.dormant_accounts ?? {};
   const dayStatus      = widgets.day_status;
+
+  if (isError) return (
+    <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center text-sm text-destructive">
+      Failed to load overview data — please refresh the page.
+    </div>
+  );
 
   return (
     <div className="space-y-6">
