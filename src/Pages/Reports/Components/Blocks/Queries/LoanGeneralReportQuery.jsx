@@ -305,7 +305,12 @@ const LoanGeneralReportQuery = ({
           {isSacco && (
             <Controller name="branch_id" control={control} render={({ field }) => (
               <Sel label="Branch" value={selectedBranch} placeholder="All Branches" width="w-36"
-                onValue={(v) => { field.onChange(v); setSelectedBranch(v); setSelectedUser("all"); }}>
+                onValue={(v) => {
+                  field.onChange(v);
+                  setSelectedBranch(v);
+                  setSelectedUser("all");
+                  onFilterChange({ ...buildParams(), branch_id: toParam(v), user_id: "" });
+                }}>
                 <SelectItem value="all">All Branches</SelectItem>
                 {branches.map((b) => <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>)}
               </Sel>
@@ -316,7 +321,11 @@ const LoanGeneralReportQuery = ({
           {cfg.officer && (isSacco || isBranch) && (
             <Controller name="user_id" control={control} render={({ field }) => (
               <Sel label="Officer / Teller" value={selectedUser} placeholder="All Officers" width="w-40"
-                onValue={(v) => { field.onChange(v); setSelectedUser(v); }}>
+                onValue={(v) => {
+                  field.onChange(v);
+                  setSelectedUser(v);
+                  onFilterChange({ ...buildParams(), user_id: toParam(v) });
+                }}>
                 <SelectItem value="all">All Officers</SelectItem>
                 {filteredUsers.map((u) => (
                   <SelectItem key={u.user_id} value={String(u.user_id)}>
