@@ -17,7 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X, Shield, ShieldCheck, ShieldOff, Smartphone, MessageSquare, Mail, AlertTriangle, Trash2, Plus, GitBranch, CreditCard } from "lucide-react";
+import { X, Shield, ShieldCheck, ShieldOff, Smartphone, MessageSquare, Mail, AlertTriangle, Trash2, Plus, GitBranch, CreditCard, Building2, Info } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
@@ -437,6 +437,57 @@ const StaffDetails = () => {
     onError: () => toast({ title: "Failed to remove", variant: "destructive" }),
   });
 
+  // ── Client Branch Access (client-specific, separate from general data privilege) ──
+  const { data: clientBranchAccess = { client_data_privileges: "sacco", branches: [] } } = useQuery({
+    queryKey: ["staff-client-branch-access", params.id],
+    queryFn: () =>
+      axiosPrivate
+        .get(`/hr/client-branch-access?user_id=${params.id}`)
+        .then((r) => r.data?.data ?? { client_data_privileges: "sacco", branches: [] }),
+    enabled: !!params.id,
+  });
+
+  const grantClientBranch = useMutation({
+    mutationFn: (branchId) =>
+      axiosPrivate.post("/hr/client-branch-access", {
+        user_id: Number(params.id),
+        branch_id: branchId,
+      }),
+    onSuccess: () => {
+      toast({ title: "Branch access granted" });
+      queryClient.invalidateQueries({ queryKey: ["staff-client-branch-access", params.id] });
+    },
+    onError: (err) =>
+      toast({ title: "Error", description: err?.response?.data?.messages?.[0] ?? "Failed to grant access", variant: "destructive" }),
+  });
+
+  const revokeClientBranch = useMutation({
+    mutationFn: (branchId) =>
+      axiosPrivate.delete("/hr/client-branch-access", {
+        data: { user_id: Number(params.id), branch_id: branchId },
+      }),
+    onSuccess: () => {
+      toast({ title: "Branch access revoked" });
+      queryClient.invalidateQueries({ queryKey: ["staff-client-branch-access", params.id] });
+    },
+    onError: () =>
+      toast({ title: "Error", description: "Failed to revoke access", variant: "destructive" }),
+  });
+
+  const updateClientPriv = useMutation({
+    mutationFn: (privilege) =>
+      axiosPrivate.patch(`/hr/client-branch-access/${params.id}`, {
+        client_data_privileges: privilege,
+      }),
+    onSuccess: () => {
+      toast({ title: "Data access level updated" });
+      queryClient.invalidateQueries({ queryKey: ["staff-client-branch-access", params.id] });
+      queryClient.invalidateQueries({ queryKey: ["staff", params.id] });
+    },
+    onError: () =>
+      toast({ title: "Error", description: "Failed to update access level", variant: "destructive" }),
+  });
+
   return (
     <>
       <Breadcrumb>
@@ -595,7 +646,8 @@ const StaffDetails = () => {
                           Staff Data Privileges & Dashboards
                         </CardTitle>
                       </CardHeader>
-                      <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <CardContent className="p-4 space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <Select
                             value={userData.user_data_privileges}
@@ -613,6 +665,7 @@ const StaffDetails = () => {
                               </SelectItem>
                             </SelectContent>
                           </Select>
+                          <p className="text-xs text-muted-foreground mt-1">General data access (loans, accounting, etc.)</p>
                         </div>
                         <div>
                           <Select
@@ -635,6 +688,93 @@ const StaffDetails = () => {
                               </SelectItem>
                             </SelectContent>
                           </Select>
+                        </div>
+                        </div>
+
+                        {/* Client Data Access — independent from general privilege above */}
+                        <div className="border-t pt-3 space-y-3">
+                          <div>
+                            <p className="text-sm font-medium">Client Data Access</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Controls which branch clients this staff can see — separate from the general access level above.
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {[
+                              { val: "sacco",    label: "All Branches",      cls: "bg-emerald-100 text-emerald-800 border-emerald-300" },
+                              { val: "branch",   label: "Specific Branches", cls: "bg-sky-100 text-sky-800 border-sky-300" },
+                              { val: "personal", label: "Own Records Only",  cls: "bg-amber-100 text-amber-800 border-amber-300" },
+                            ].map(({ val, label, cls }) => {
+                              const isActive = clientBranchAccess.client_data_privileges === val;
+                              return (
+                                <button
+                                  key={val}
+                                  disabled={isActive || updateClientPriv.isPending}
+                                  onClick={() => updateClientPriv.mutate(val)}
+                                  className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
+                                    isActive
+                                      ? `${cls} cursor-default`
+                                      : "border-dashed border-muted-foreground/40 text-muted-foreground hover:border-primary/50 hover:text-foreground cursor-pointer disabled:opacity-50"
+                                  }`}
+                                >
+                                  {isActive && "✓ "}{label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          {clientBranchAccess.client_data_privileges === "branch" && clientBranchAccess.branches.length === 0 && (
+                            <div className="flex items-center gap-2 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-2">
+                              <Info className="w-4 h-4 text-amber-600 shrink-0" />
+                              <p className="text-xs text-amber-800 dark:text-amber-300">
+                                Set to "Specific Branches" but no branches assigned — this staff member won't see any clients.
+                              </p>
+                            </div>
+                          )}
+                          {clientBranchAccess.branches.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {clientBranchAccess.branches.map((b) => (
+                                <Badge
+                                  key={b.branch_id}
+                                  variant="secondary"
+                                  className="flex items-center gap-1 bg-sky-50 text-sky-800 border-sky-200"
+                                >
+                                  <Building2 className="h-3 w-3" />
+                                  {b.branch_name}
+                                  <button
+                                    className="ml-1 inline-flex"
+                                    onClick={() => revokeClientBranch.mutate(b.branch_id)}
+                                    disabled={revokeClientBranch.isPending}
+                                    title="Remove"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                          {(() => {
+                            const assignedIds = new Set(clientBranchAccess.branches.map((b) => b.branch_id));
+                            const available = (allBranches ?? []).filter((b) => !assignedIds.has(b.id));
+                            if (available.length === 0) return null;
+                            return (
+                              <Select
+                                onValueChange={(val) => grantClientBranch.mutate(Number(val))}
+                                disabled={grantClientBranch.isPending}
+                                value=""
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Grant access to a branch…" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {available.map((b) => (
+                                    <SelectItem key={b.id} value={String(b.id)}>
+                                      {b.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            );
+                          })()}
                         </div>
                       </CardContent>
                     </Card>
