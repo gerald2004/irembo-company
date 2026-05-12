@@ -1,15 +1,34 @@
+import { useEffect, useState } from "react";
 import useAuth from "./useAuth";
 
 /**
  * Returns branch-aware query key fragment and API params.
- * When the user has selected a specific branch in the sidebar switcher,
- * `branchKey` is that branch_id (used in React Query keys to trigger refetch)
- * and `branchParams` has `{ branchId }` to pass as query params to the API.
- * When "All Branches" is selected, both are null/empty so the API returns sacco-level data.
+ *
+ * Reacts to the `branch-switched` custom event fired by TeamSwitcher so that
+ * queries refetch immediately without waiting for a token refresh.
+ *
+ * branchKey  — value to include in React Query keys (null = all branches)
+ * branchParams — { branchId } to send as query params (empty when all branches)
  */
 export default function useBranchFilter() {
   const { auth } = useAuth();
-  const branchId = auth?.current_branch_id ?? null;
+
+  // Seed from auth context; the event handler keeps it in sync afterward.
+  const [branchId, setBranchId] = useState(auth?.current_branch_id ?? null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      const id = e.detail?.branch_id ?? null;
+      setBranchId(id ? Number(id) : null);
+    };
+    window.addEventListener("branch-switched", handler);
+    return () => window.removeEventListener("branch-switched", handler);
+  }, []);
+
+  // If auth changes (e.g. page refresh / token refresh), re-sync.
+  useEffect(() => {
+    setBranchId(auth?.current_branch_id ?? null);
+  }, [auth?.current_branch_id]);
 
   return {
     branchKey: branchId,

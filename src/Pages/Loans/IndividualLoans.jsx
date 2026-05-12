@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -46,10 +47,13 @@ const StatCard = ({ label, count, color = "slate" }) => {
 const IndividualLoans = () => {
   const axiosPrivate = useAxiosPrivate();
   const { auth: { user } } = useAuth();
-  const isSaccoUser = String(user?.data_privilege || "branch").toLowerCase() === "sacco";
+  const privilege = String(user?.data_privilege || "branch").toLowerCase();
+  const isSaccoUser  = privilege === "sacco";
+  const isBranchUser = privilege === "branch";
 
   const [selectedProduct, setSelectedProduct] = useState("");
   const [selectedBranch, setSelectedBranch] = useState("");
+  const [selectedOfficer, setSelectedOfficer] = useState("");
   const [extraFilters, setExtraFilters] = useState({});
 
   const { data: branches = [] } = useBranches();
@@ -60,6 +64,22 @@ const IndividualLoans = () => {
       try {
         const res = await axiosPrivate.get("/settings/loans/products");
         return res?.data?.data?.loan_products ?? [];
+      } catch {
+        return [];
+      }
+    },
+  });
+
+  // Fetch officers; for sacco users filter by selected branch if one is picked
+  const officerBranchId = isSaccoUser ? selectedBranch : null;
+  const { data: officers = [] } = useQuery({
+    queryKey: ["loan-officers", officerBranchId],
+    queryFn: async () => {
+      try {
+        const params = officerBranchId ? { branch_id: officerBranchId } : {};
+        const res = await axiosPrivate.get("/sacco/users", { params });
+        const users = res?.data?.data?.users ?? [];
+        return users;
       } catch {
         return [];
       }
@@ -109,13 +129,15 @@ const IndividualLoans = () => {
   const applyFilters = () => {
     const f = {};
     if (selectedProduct) f.loan_product_id = selectedProduct;
-    if (selectedBranch) f.branch_id = selectedBranch;
+    if (selectedBranch)  f.branch_id = selectedBranch;
+    if (selectedOfficer) f.user_id   = selectedOfficer;
     setExtraFilters(f);
   };
 
   const clearFilters = () => {
     setSelectedProduct("");
     setSelectedBranch("");
+    setSelectedOfficer("");
     setExtraFilters({});
   };
 
@@ -158,7 +180,7 @@ const IndividualLoans = () => {
             </Select>
 
             {isSaccoUser && (
-              <Select value={selectedBranch} onValueChange={setSelectedBranch}>
+              <Select value={selectedBranch} onValueChange={(v) => { setSelectedBranch(v); setSelectedOfficer(""); }}>
                 <SelectTrigger className="w-44 bg-background">
                   <SelectValue placeholder="All branches" />
                 </SelectTrigger>
@@ -166,6 +188,21 @@ const IndividualLoans = () => {
                   {branches.map((b) => (
                     <SelectItem key={b.branch_id} value={String(b.branch_id)}>
                       {b.branch_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {(isSaccoUser || isBranchUser) && officers.length > 0 && (
+              <Select value={selectedOfficer} onValueChange={setSelectedOfficer}>
+                <SelectTrigger className="w-48 bg-background">
+                  <SelectValue placeholder="All officers" />
+                </SelectTrigger>
+                <SelectContent>
+                  {officers.map((o) => (
+                    <SelectItem key={o.id ?? o.user_id} value={String(o.id ?? o.user_id)}>
+                      {(o.firstname ?? o.user_firstname ?? "")} {(o.lastname ?? o.user_lastname ?? "")}
                     </SelectItem>
                   ))}
                 </SelectContent>

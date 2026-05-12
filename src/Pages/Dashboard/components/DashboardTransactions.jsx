@@ -79,6 +79,7 @@ const DashboardTransactions = ({ startDate, endDate }) => {
   const journals    = data?.journal_activity ?? {};
   const largeJe     = data?.large_transactions ?? [];
   const recentJe    = data?.recent_journals ?? [];
+  const savings     = data?.savings_accounts ?? {};
 
   return (
     <div className="space-y-6">
@@ -427,6 +428,98 @@ const DashboardTransactions = ({ startDate, endDate }) => {
             </ResponsiveContainer>
           </CardContent>
         </Card>
+      )}
+
+      {/* ── Savings Accounts Report ───────────────────────────────────────── */}
+      {!isLoading && savings.total_accounts > 0 && (
+        <section>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+            Savings Accounts
+          </p>
+
+          {/* Summary cards */}
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 mb-4">
+            <StatCard
+              label="Total Active Accounts"
+              value={fmt(savings.total_accounts)}
+              subtitle="Currently active savings accounts"
+              icon={Wallet}
+              colorClass="text-emerald-600 dark:text-emerald-400"
+              bgClass="bg-emerald-100 dark:bg-emerald-900/30"
+            />
+            <StatCard
+              label="Total Savings Balance"
+              value={fmt(savings.total_balance)}
+              subtitle="Aggregate balance across all accounts"
+              icon={Building2}
+              colorClass="text-sky-600 dark:text-sky-400"
+              bgClass="bg-sky-100 dark:bg-sky-900/30"
+            />
+          </div>
+
+          {/* Balance by product + period deposits side-by-side */}
+          <div className="grid gap-4 lg:grid-cols-2">
+            {savings.by_product?.length > 0 && (
+              <Card className="shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-semibold">Balance by Savings Product</CardTitle>
+                  <p className="text-xs text-muted-foreground">Current balance distribution</p>
+                </CardHeader>
+                <CardContent>
+                  <BreakdownBar items={savings.by_product.map(p => ({ account: p.product, balance: p.balance, pct: p.pct }))} colorClass="bg-emerald-500" />
+                </CardContent>
+              </Card>
+            )}
+
+            {savings.period_deposits?.length > 0 && (
+              <Card className="shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-semibold">Period Deposits by Product</CardTitle>
+                  <p className="text-xs text-muted-foreground">Deposits received during selected period</p>
+                </CardHeader>
+                <CardContent>
+                  <BreakdownBar items={savings.period_deposits.map(p => ({ account: p.product, balance: p.total }))} colorClass="bg-sky-500" />
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Top accounts table */}
+          {savings.top_accounts?.length > 0 && (
+            <Card className="shadow-sm mt-4">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold">Top Accounts by Balance</CardTitle>
+                <p className="text-xs text-muted-foreground">Highest-balance active savings accounts</p>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-xs text-muted-foreground">
+                        <th className="text-left pb-2 font-medium">Account No.</th>
+                        <th className="text-left pb-2 font-medium">Client</th>
+                        <th className="text-left pb-2 font-medium">Product</th>
+                        <th className="text-right pb-2 font-medium">Balance</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {savings.top_accounts.map((a, i) => (
+                        <tr key={i} className="border-b last:border-0">
+                          <td className="py-2 font-mono text-xs">{a.account_number}</td>
+                          <td className="py-2 font-medium">{a.client_name}</td>
+                          <td className="py-2 text-muted-foreground text-xs">{a.product}</td>
+                          <td className="py-2 text-right tabular-nums font-semibold text-emerald-600 dark:text-emerald-400">
+                            {fmt(a.balance)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </section>
       )}
     </div>
   );
