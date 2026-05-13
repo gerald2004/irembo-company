@@ -8,14 +8,29 @@ export default defineConfig({
     react(),
     VitePWA({
       workbox: {
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // ✅ Increase to 5MB (default is 2MB)
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "logo912.png", "logo912.png"],
+      injectRegister: "auto",
+      includeAssets: [
+        "favicon.ico",
+        "apple-touch-icon.png",
+        "apple-touch-icon-180x180.png",
+        "pwa-64x64.png",
+        "pwa-192x192.png",
+        "pwa-512x512.png",
+        "maskable-icon-512x512.png",
+      ],
       manifest: {
         name: "Algosys Core Banking System",
         short_name: "Algosys",
-        theme_color: "#000",
+        description: "Algosys Core Banking & SACCO Management System",
+        start_url: "/",
+        scope: "/",
+        display: "standalone",
+        background_color: "#ffffff",
+        theme_color: "#000000",
+        lang: "en",
         icons: [
           {
             src: "pwa-64x64.png",
@@ -40,6 +55,10 @@ export default defineConfig({
             purpose: "maskable",
           },
         ],
+      },
+      devOptions: {
+        enabled: true,
+        type: "module",
       },
     }),
   ],
