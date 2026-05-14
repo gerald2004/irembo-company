@@ -12,7 +12,7 @@ export function PWAInstallPrompt() {
   return (
     <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-lg border bg-background shadow-lg px-4 py-3 text-sm w-[calc(100%-2rem)] max-w-sm">
       <Download className="h-5 w-5 shrink-0 text-primary" />
-      <span className="flex-1 font-medium">Install Algosys for faster access</span>
+      <span className="flex-1 font-medium">Install Irembo for faster access</span>
       <Button size="sm" onClick={install} className="shrink-0">
         Install
       </Button>

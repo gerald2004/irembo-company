@@ -14,6 +14,7 @@ export default defineConfig({
       injectRegister: "auto",
       includeAssets: [
         "favicon.ico",
+        "logo.png",
         "apple-touch-icon.png",
         "apple-touch-icon-180x180.png",
         "pwa-64x64.png",
@@ -22,9 +23,9 @@ export default defineConfig({
         "maskable-icon-512x512.png",
       ],
       manifest: {
-        name: "Algosys Core Banking System",
-        short_name: "Algosys",
-        description: "Algosys Core Banking & SACCO Management System",
+        name: "Irembo Finance Management Information System",
+        short_name: "Irembo",
+        description: "Irembo Finance Management Information System",
         start_url: "/",
         scope: "/",
         display: "standalone",

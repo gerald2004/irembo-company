@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/v2/:path*",
-      "destination": "https://apis.furahabanking.com/:path*"
+      "destination": "https://apis.irembofinance.com/:path*"
     },
     { "source": "/:path*", "destination": "/index.html" }
   ]
