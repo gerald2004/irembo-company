@@ -18,12 +18,12 @@ const loansRoutes = [
   {
     path: "/joint-loans",
     element: <JointLoans />,
-    roles: [100202],
+    roles: [100520],
   },
   {
     path: "/company-loans",
     element: <CompanyLoans />,
-    roles: [100203],
+    roles: [100521],
   },
   {
     path: "/loans/:loanid",

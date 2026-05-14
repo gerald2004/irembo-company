@@ -61,7 +61,7 @@ const accountingRoutes = [
   {
     path: "/inter-branch-transfers",
     element: <InterBranchTransfers />,
-    roles: [100211],
+    roles: [100511],
   },
   { path: "/budgets",                    element: <Budgets />,        roles: [100270, 100275] },
   { path: "/budgets/:budgetId",          element: <BudgetDetail />,   roles: [100270, 100275] },

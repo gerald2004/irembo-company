@@ -307,7 +307,7 @@ export function AppSidebar({ ...props }) {
 
     loans: {
       title: "Loans",
-      permissionCodes: [100067, 100158, 100202, 100203],
+      permissionCodes: [100067, 100158, 100520, 100521],
       items: [
         {
           title: "Loans",
@@ -327,12 +327,12 @@ export function AppSidebar({ ...props }) {
             {
               title: "Joint Account Loans",
               url: "joint-loans",
-              permissionCodes: [100202],
+              permissionCodes: [100520],
             },
             {
               title: "Company Loans",
               url: "company-loans",
-              permissionCodes: [100203],
+              permissionCodes: [100521],
             },
           ],
         },
@@ -377,7 +377,7 @@ export function AppSidebar({ ...props }) {
           name: "Inter-Branch Transfers",
           icon: ArrowLeftRight,
           url: "inter-branch-transfers",
-          permissionCodes: [100211],
+          permissionCodes: [100511],
         },
         {
           name: "Closing A Business Day",

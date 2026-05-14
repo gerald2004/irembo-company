@@ -31,18 +31,9 @@ const LoanCalculator = ({ data, isOpen, onClose }) => {
   const loanProductData = payload?.loan_product ?? {};
   const extraCharges = payload?.charges ?? data?.loanCharges ?? []; // non-monitoring charges from API
 
-  // totals (your original nearest-10 rounding)
   const { totalInterest, totalPrincipal } = useMemo(() => {
-    const tInt =
-      Math.round(
-        (loanData?.reduce((sum, r) => sum + Number(r?.interest || 0), 0) || 0) /
-          10
-      ) * 10;
-    const tPrin =
-      Math.round(
-        (loanData?.reduce((sum, r) => sum + Number(r?.principal || 0), 0) ||
-          0) / 10
-      ) * 10;
+    const tInt  = loanData?.reduce((sum, r) => sum + Number(r?.interest  || 0), 0) || 0;
+    const tPrin = loanData?.reduce((sum, r) => sum + Number(r?.principal || 0), 0) || 0;
     return { totalInterest: tInt, totalPrincipal: tPrin };
   }, [loanData]);
 
