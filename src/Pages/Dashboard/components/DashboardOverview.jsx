@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import {
   TrendingUp, TrendingDown, Users, CreditCard, PiggyBank, Building2,
   AlertTriangle, Droplets, Clock, UserX, Bell, ShieldAlert, CheckCircle,
+  Banknote, Coins, UserPlus, ArrowUpRight, Wallet,
 } from "lucide-react";
 import {
   BarChart, Bar, AreaChart, Area, XAxis, YAxis,
@@ -50,6 +51,7 @@ const DashboardOverview = () => {
   const ops     = data?.today_operations ?? {};
   const charts  = data?.charts ?? {};
   const widgets = data?.widgets ?? {};
+  const mtd     = data?.mtd_stats ?? {};
   const fy      = data?.fiscal_year;
 
   const dailyTrend     = charts.daily_transactions ?? [];
@@ -106,24 +108,14 @@ const DashboardOverview = () => {
                 colorClass="text-sky-600 dark:text-sky-400"
                 bgClass="bg-sky-100 dark:bg-sky-900/30"
               />
-              <Card className="border shadow-sm hover:shadow-md transition-shadow duration-200">
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-1 min-w-0">
-                      <p className="text-sm font-medium text-muted-foreground">Net Income Today</p>
-                      <p className={`text-xl font-bold tabular-nums ${(ops.net_income?.amount ?? 0) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
-                        {fmt(ops.net_income?.amount)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {fmt(ops.net_income?.income)} in &middot; {fmt(ops.net_income?.expenses)} out
-                      </p>
-                    </div>
-                    <div className="p-2.5 rounded-xl shrink-0 bg-indigo-100 dark:bg-indigo-900/30">
-                      <TrendingUp className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <StatCard
+                label="Loans Due Today"
+                value={fmt(loansDue.total_amount)}
+                subtitle={`${loansDue.count ?? 0} installments due`}
+                icon={Clock}
+                colorClass="text-amber-600 dark:text-amber-400"
+                bgClass="bg-amber-100 dark:bg-amber-900/30"
+              />
             </>
           )}
         </div>
@@ -176,6 +168,167 @@ const DashboardOverview = () => {
         </div>
       </section>
 
+      {/* ── Today's Income & Expenses ────────────────────────────────────── */}
+      <section>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+          Income &amp; Expenses — Today
+        </p>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+          {isLoading ? (
+            Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-[108px] rounded-xl" />)
+          ) : (
+            <>
+              <StatCard
+                label="Income Today"
+                value={fmt(ops.net_income?.income)}
+                subtitle="Posted to income accounts"
+                icon={TrendingUp}
+                colorClass="text-emerald-600 dark:text-emerald-400"
+                bgClass="bg-emerald-100 dark:bg-emerald-900/30"
+              />
+              <StatCard
+                label="Expenses Today"
+                value={fmt(ops.net_income?.expenses)}
+                subtitle="Posted to expense accounts"
+                icon={TrendingDown}
+                colorClass="text-rose-600 dark:text-rose-400"
+                bgClass="bg-rose-100 dark:bg-rose-900/30"
+              />
+              <Card className="border shadow-sm">
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1 min-w-0">
+                      <p className="text-sm font-medium text-muted-foreground">Net Profit / Loss</p>
+                      <p className={`text-xl font-bold tabular-nums ${(ops.net_income?.amount ?? 0) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                        {fmt(ops.net_income?.amount)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {(ops.net_income?.income ?? 0) > 0
+                          ? `${(((ops.net_income?.amount ?? 0) / ops.net_income.income) * 100).toFixed(1)}% margin`
+                          : "Today's net"}
+                      </p>
+                    </div>
+                    <div className={`p-2.5 rounded-xl shrink-0 ${(ops.net_income?.amount ?? 0) >= 0 ? "bg-emerald-100 dark:bg-emerald-900/30" : "bg-rose-100 dark:bg-rose-900/30"}`}>
+                      <TrendingUp className={`h-5 w-5 ${(ops.net_income?.amount ?? 0) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`} />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </div>
+      </section>
+
+      {/* ── Month-to-Date Stats ───────────────────────────────────────────── */}
+      <section>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+          {mtd.month ?? "This Month"} — Month to Date
+        </p>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          {isLoading ? (
+            Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[108px] rounded-xl" />)
+          ) : (
+            <>
+              <StatCard
+                label="Disbursements MTD"
+                value={fmt(mtd.disbursements?.amount)}
+                subtitle={`${mtd.disbursements?.count ?? 0} loans disbursed`}
+                icon={ArrowUpRight}
+                colorClass="text-sky-600 dark:text-sky-400"
+                bgClass="bg-sky-100 dark:bg-sky-900/30"
+              />
+              <StatCard
+                label="Collections MTD"
+                value={fmt(mtd.collections?.amount)}
+                subtitle={`${mtd.collections?.count ?? 0} repayments`}
+                icon={Banknote}
+                colorClass="text-emerald-600 dark:text-emerald-400"
+                bgClass="bg-emerald-100 dark:bg-emerald-900/30"
+              />
+              <StatCard
+                label="New Members MTD"
+                value={fmt(mtd.new_members)}
+                subtitle={`${mtd.new_loans ?? 0} new loans disbursed`}
+                icon={UserPlus}
+                colorClass="text-violet-600 dark:text-violet-400"
+                bgClass="bg-violet-100 dark:bg-violet-900/30"
+              />
+              <Card className="border shadow-sm">
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1 min-w-0">
+                      <p className="text-sm font-medium text-muted-foreground">Net Savings MTD</p>
+                      <p className={`text-xl font-bold tabular-nums ${((mtd.deposits ?? 0) - (mtd.withdrawals ?? 0)) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                        {fmt((mtd.deposits ?? 0) - (mtd.withdrawals ?? 0))}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {fmt(mtd.deposits)} in &middot; {fmt(mtd.withdrawals)} out
+                      </p>
+                    </div>
+                    <div className="p-2.5 rounded-xl shrink-0 bg-teal-100 dark:bg-teal-900/30">
+                      <Wallet className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </div>
+      </section>
+
+      {/* ── Balance Sheet Snapshot ─────────────────────────────────────────── */}
+      <section>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+          Balance Sheet Snapshot
+        </p>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          {isLoading ? (
+            Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[108px] rounded-xl" />)
+          ) : (
+            <>
+              <StatCard
+                label="Share Capital"
+                value={fmt(kpis.share_capital)}
+                subtitle={kpis.share_price ? `@ ${fmt(kpis.share_price)} per share` : "Total equity capital"}
+                icon={Coins}
+                colorClass="text-amber-600 dark:text-amber-400"
+                bgClass="bg-amber-100 dark:bg-amber-900/30"
+              />
+              <StatCard
+                label="Fixed Deposits"
+                value={fmt(kpis.fixed_deposits_total)}
+                subtitle={`${kpis.fixed_deposits_count ?? 0} active fixed deposits`}
+                icon={PiggyBank}
+                colorClass="text-indigo-600 dark:text-indigo-400"
+                bgClass="bg-indigo-100 dark:bg-indigo-900/30"
+              />
+              <Card className="border shadow-sm">
+                <CardContent className="p-5 flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Overdue Loans</p>
+                    <p className="text-2xl font-bold tabular-nums text-rose-600 dark:text-rose-400">
+                      {fmt(kpis.overdue_loans_count)}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {fmt(kpis.overdue_loans_amount)} outstanding
+                    </p>
+                  </div>
+                  <AlertTriangle className={`h-5 w-5 mt-1 shrink-0 ${(kpis.overdue_loans_count ?? 0) > 0 ? "text-rose-500" : "text-emerald-500"}`} />
+                </CardContent>
+              </Card>
+              <StatCard
+                label="Liquid Assets"
+                value={fmt(kpis.liquid_assets)}
+                subtitle={`${fmtPct(kpis.liquidity_ratio)} of savings`}
+                icon={Droplets}
+                colorClass="text-teal-600 dark:text-teal-400"
+                bgClass="bg-teal-100 dark:bg-teal-900/30"
+              />
+            </>
+          )}
+        </div>
+      </section>
+
       {/* ── Risk Indicators ───────────────────────────────────────────────── */}
       <section>
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
@@ -218,14 +371,6 @@ const DashboardOverview = () => {
                   <Droplets className="h-5 w-5 mt-1 shrink-0 text-muted-foreground" />
                 </CardContent>
               </Card>
-              <StatCard
-                label="Liquid Assets"
-                value={fmt(kpis.liquid_assets)}
-                subtitle="Cash + bank combined"
-                icon={PiggyBank}
-                colorClass="text-teal-600 dark:text-teal-400"
-                bgClass="bg-teal-100 dark:bg-teal-900/30"
-              />
             </>
           )}
         </div>
@@ -488,11 +633,14 @@ const DashboardOverview = () => {
           <CardContent>
             <div className="space-y-2">
               {aml.alerts.slice(0, 5).map((a, i) => (
-                <div key={i} className="flex items-center justify-between gap-3 py-1 border-b last:border-0 text-sm">
-                  <div>
-                    <p className="text-xs text-muted-foreground">{a.created_at?.slice(0, 10)}</p>
+                <div key={i} className="flex items-center justify-between gap-3 py-2 border-b last:border-0 text-sm">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium truncate">{a.client_name || "Unknown client"}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {a.rule_name || a.transaction_table || "AML rule"} · {a.created_at?.slice(0, 10)}
+                    </p>
                   </div>
-                  <Badge variant="destructive">Score: {a.score}</Badge>
+                  <Badge variant="destructive" className="shrink-0">Score: {a.score}</Badge>
                 </div>
               ))}
             </div>

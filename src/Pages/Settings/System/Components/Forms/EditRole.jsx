@@ -7,10 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
+import useRefreshToken from "@/MiddleWares/Hooks/useRefreshToken";
 import { toast } from "@/hooks/use-toast";
 
 export default function EditRole() {
   const axiosPrivate = useAxiosPrivate();
+  const refresh = useRefreshToken();
   const { id } = useParams();
   const queryClient = useQueryClient();
 
@@ -80,6 +82,7 @@ export default function EditRole() {
     onSuccess: () => {
       queryClient.invalidateQueries(["role", id]);
       toast({ title: "Success", description: "Permissions updated successfully." });
+      refresh();
     },
     onError: (err) =>
       toast({
@@ -96,11 +99,11 @@ export default function EditRole() {
 
   const isLoading = loadingRole || loadingPerms;
 
-  const totalSelected = selected.size;
-  const totalPermissions = permissionsData.reduce(
-    (s, g) => s + g.permissions.length,
-    0
+  const allKnownIds = new Set(
+    permissionsData.flatMap((g) => g.permissions.map((p) => p.id))
   );
+  const totalSelected = [...selected].filter((id) => allKnownIds.has(id)).length;
+  const totalPermissions = allKnownIds.size;
 
   if (isLoading) {
     return (

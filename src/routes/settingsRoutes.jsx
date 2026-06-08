@@ -23,6 +23,7 @@ import EditRoles from "@/Pages/Settings/System/EditRoles";
 import GeneralConfigurationTriggers from "@/Pages/Settings/System/GeneralConfigurationTriggers";
 import LoanNotificationsAdmin from "@/Pages/Settings/System/LoanNotificationsAdmin";
 import SaccoDiskUsage from "@/Pages/Settings/System/SaccoDiskUsage";
+import DataMigration from "@/Pages/Settings/System/DataMigration";
 import TransactionChannelLinkedAccounts from "@/Pages/Settings/Business/TransactionChannelLinkedAccounts";
 
 const settingsRoutes = [
@@ -118,6 +119,11 @@ const settingsRoutes = [
     path: "/sacco-disk-usage",
     element: <SaccoDiskUsage />,
     roles: [100148],
+  },
+  {
+    path: "/data-migration",
+    element: <DataMigration />,
+    roles: [100148], // sacco-level system admin permission
   },
   { path: "/system-roles", element: <Roles />, roles: [100149] },
   { path: "/system-roles/add-role", element: <AddRoles />, roles: [100149] },

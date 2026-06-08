@@ -125,7 +125,7 @@ const LoanSingleScheduleRepayment = ({ isOpen, onClose, refetch, scheduleData })
             <div
               key={index}
               className={`flex items-center ${
-                step > index + 1 ? "opacity-100" : "opacity-50"
+                step > index ? "opacity-100" : "opacity-50"
               } transition-opacity`}
             >
               {stepIcon.icon}

@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useForm, Controller } from "react-hook-form";
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader,
@@ -25,7 +25,9 @@ import {
 import ChargesReviewStep from "@/Pages/Components/ChargesReviewStep";
 import { LinkedChannelPicker } from "@/components/linked-channel-picker";
 
-const TOTAL_STEPS = 3;
+// Steps: 1 = Details, 2 = Charges (skipped if none), 3 = PIN
+// We use logical step numbers 1/2/3 internally.
+// When hasCharges===false we jump directly from 1→3 and display "2 of 2" etc.
 
 const DepositTransactionDialog = ({ isOpen, onClose, refetch, accountId, handleOpenReceiptDialog }) => {
   const axiosPrivate = useAxiosPrivate();
@@ -40,8 +42,22 @@ const DepositTransactionDialog = ({ isOpen, onClose, refetch, accountId, handleO
   const [selectedMemberId, setSelectedMemberId] = useState("none");
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [channelError, setChannelError] = useState("");
+  // null = not yet loaded, number = count of applicable charges (fees + pending)
+  const [chargesCount, setChargesCount] = useState(null);
 
   const watchedAmount = parseFloat(watch("deposit_transaction_amount")) || 0;
+
+  // When charges step loads, it tells us how many items there are
+  const handleChargesLoaded = useCallback((count) => {
+    setChargesCount(count);
+  }, []);
+
+  // Whether the charges review step is needed
+  const hasCharges = chargesCount === null || chargesCount > 0; // null = unknown, show by default
+
+  // Visual step count for the progress bar / labels
+  const totalVisualSteps = hasCharges ? 3 : 2;
+  const visualStep = step === 3 ? totalVisualSteps : step;
 
   // Load group members for the "depositing member" selector
   const { data: memberSavingsData } = useQuery({
@@ -58,14 +74,29 @@ const DepositTransactionDialog = ({ isOpen, onClose, refetch, accountId, handleO
     return acc;
   }, []);
 
-  const validateStep = async () => {
+  const goNext = async () => {
     if (step === 1 && !selectedChannel) {
       setChannelError("Please select a payment channel");
       return;
     }
     setChannelError("");
     const valid = await trigger();
-    if (valid) setStep((p) => Math.min(p + 1, TOTAL_STEPS));
+    if (!valid) return;
+
+    if (step === 1 && !hasCharges) {
+      // Skip the charges step entirely
+      setStep(3);
+    } else {
+      setStep((p) => Math.min(p + 1, 3));
+    }
+  };
+
+  const goBack = () => {
+    if (step === 3 && !hasCharges) {
+      setStep(1);
+    } else {
+      setStep((p) => Math.max(p - 1, 1));
+    }
   };
 
   const handleClose = () => {
@@ -76,6 +107,7 @@ const DepositTransactionDialog = ({ isOpen, onClose, refetch, accountId, handleO
     setSelectedMemberId("none");
     setSelectedChannel(null);
     setChannelError("");
+    setChargesCount(null);
     onClose();
   };
 
@@ -105,6 +137,7 @@ const DepositTransactionDialog = ({ isOpen, onClose, refetch, accountId, handleO
       setSelectedMemberId("none");
       setSelectedChannel(null);
       setChannelError("");
+      setChargesCount(null);
       refetch();
       onClose();
     } catch (error) {
@@ -116,55 +149,90 @@ const DepositTransactionDialog = ({ isOpen, onClose, refetch, accountId, handleO
     }
   };
 
-  const stepIcons = [
-    { icon: <Info className="w-6 h-6 text-blue-500" />,      label: "Deposit Details" },
-    { icon: <Receipt className="w-6 h-6 text-orange-500" />, label: "Charges" },
-    { icon: <LockKeyhole className="w-6 h-6 text-yellow-500" />, label: "PinCode" },
-  ];
+  const stepLabels = hasCharges
+    ? ["Deposit Details", "Charges", "Confirm"]
+    : ["Deposit Details", "Confirm"];
+
+  const stepIcons = hasCharges
+    ? [
+        <Info key="i" className="w-5 h-5 text-blue-500" />,
+        <Receipt key="r" className="w-5 h-5 text-orange-500" />,
+        <LockKeyhole key="l" className="w-5 h-5 text-yellow-500" />,
+      ]
+    : [
+        <Info key="i" className="w-5 h-5 text-blue-500" />,
+        <LockKeyhole key="l" className="w-5 h-5 text-yellow-500" />,
+      ];
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Deposit Transaction</DialogTitle>
-          <DialogDescription>Follow the steps to complete transaction.</DialogDescription>
+          <DialogDescription>Follow the steps to complete the transaction.</DialogDescription>
           <DialogClose asChild>
-            <button className="absolute right-4 top-4 rounded-sm opacity-70 hover:opacity-100 focus:outline-none" onClick={handleClose}>
+            <button
+              className="absolute right-4 top-4 rounded-sm opacity-70 hover:opacity-100 focus:outline-none"
+              onClick={handleClose}
+            >
               <X className="h-4 w-4" />
             </button>
           </DialogClose>
         </DialogHeader>
 
+        {/* Step indicator */}
         <div className="flex items-center space-x-3 my-1">
-          {stepIcons.map((s, i) => (
-            <div key={i} className={`flex items-center ${step > i + 1 ? "opacity-100" : "opacity-50"} transition-opacity`}>
-              {s.icon}
-              <span className="ml-2 text-sm font-medium">{s.label}</span>
-              {i < stepIcons.length - 1 && <div className="h-[2px] w-6 bg-gray-300 mx-2" />}
+          {stepLabels.map((label, i) => (
+            <div
+              key={label}
+              className={`flex items-center ${visualStep >= i + 1 ? "opacity-100" : "opacity-50"} transition-opacity`}
+            >
+              {stepIcons[i]}
+              <span className="ml-2 text-sm font-medium">{label}</span>
+              {i < stepLabels.length - 1 && <div className="h-[2px] w-6 bg-gray-300 mx-2" />}
             </div>
           ))}
         </div>
-        <Progress value={(step / TOTAL_STEPS) * 100} className="my-1" />
+        <Progress value={(visualStep / totalVisualSteps) * 100} className="my-1" />
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden min-h-0">
+          <div className="overflow-y-auto flex-1 min-h-0 space-y-4 pr-1">
+          {/* ── Step 1: Details ── */}
           {step === 1 && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="deposit_transaction_amount">Deposit Amount</Label>
-                  <Input id="deposit_transaction_amount" type="number" step="0.01" placeholder="Enter amount"
-                    {...register("deposit_transaction_amount", { required: "Amount is required" })} />
-                  {errors.deposit_transaction_amount && <p className="text-red-500 text-sm">{errors.deposit_transaction_amount.message}</p>}
+                  <Input
+                    id="deposit_transaction_amount"
+                    type="number"
+                    step="0.01"
+                    placeholder="Enter amount"
+                    {...register("deposit_transaction_amount", { required: "Amount is required" })}
+                  />
+                  {errors.deposit_transaction_amount && (
+                    <p className="text-red-500 text-sm">{errors.deposit_transaction_amount.message}</p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="deposit_transaction_notary">Notary</Label>
-                  <Input id="deposit_transaction_notary" defaultValue="Savings" placeholder="Deposit Notary"
-                    {...register("deposit_transaction_notary", { required: "Notary is required" })} />
-                  {errors.deposit_transaction_notary && <p className="text-red-500 text-sm">{errors.deposit_transaction_notary.message}</p>}
+                  <Input
+                    id="deposit_transaction_notary"
+                    defaultValue="Savings"
+                    placeholder="Deposit Notary"
+                    {...register("deposit_transaction_notary", { required: "Notary is required" })}
+                  />
+                  {errors.deposit_transaction_notary && (
+                    <p className="text-red-500 text-sm">{errors.deposit_transaction_notary.message}</p>
+                  )}
                 </div>
                 <div className="md:col-span-2">
                   <Label htmlFor="deposit_transaction_notes">Notes (Optional)</Label>
-                  <Input id="deposit_transaction_notes" placeholder="Optional note" {...register("deposit_transaction_notes")} />
+                  <Input
+                    id="deposit_transaction_notes"
+                    placeholder="Optional note"
+                    {...register("deposit_transaction_notes")}
+                  />
                 </div>
 
                 {allMembers.length > 0 && (
@@ -202,6 +270,7 @@ const DepositTransactionDialog = ({ isOpen, onClose, refetch, accountId, handleO
             </div>
           )}
 
+          {/* ── Step 2: Charges ── */}
           {step === 2 && (
             <ChargesReviewStep
               amount={watchedAmount}
@@ -209,13 +278,20 @@ const DepositTransactionDialog = ({ isOpen, onClose, refetch, accountId, handleO
               trigger="on_saving"
               onSkipChange={setSkipFeeIds}
               onOverrideChange={setFeeOverrides}
+              onChargesLoaded={handleChargesLoaded}
             />
           )}
 
+          {/* ── Step 3: PIN ── */}
           {step === 3 && (
             <div className="flex flex-col items-center">
-              <Controller control={control} name="user_pincode"
-                rules={{ required: "Pincode is required", pattern: { value: /^\d{4}$/, message: "PIN must be exactly 4 digits" } }}
+              <Controller
+                control={control}
+                name="user_pincode"
+                rules={{
+                  required: "Pincode is required",
+                  pattern: { value: /^\d{4}$/, message: "PIN must be exactly 4 digits" },
+                }}
                 render={({ field }) => (
                   <>
                     <Label>Enter Pincode</Label>
@@ -229,24 +305,28 @@ const DepositTransactionDialog = ({ isOpen, onClose, refetch, accountId, handleO
                       </InputOTPGroup>
                     </InputOTP>
                   </>
-                )} />
-              {errors.user_pincode && <p className="text-red-500 text-sm mt-1">{errors.user_pincode.message}</p>}
+                )}
+              />
+              {errors.user_pincode && (
+                <p className="text-red-500 text-sm mt-1">{errors.user_pincode.message}</p>
+              )}
             </div>
           )}
 
-          <DialogFooter>
+          </div>
+          <DialogFooter className="pt-3">
             <div className="flex justify-end w-full gap-2">
               {step > 1 && (
-                <Button type="button" variant="secondary" onClick={() => setStep((p) => p - 1)}>
+                <Button type="button" variant="secondary" onClick={goBack}>
                   <ArrowLeft className="mr-2" /> Back
                 </Button>
               )}
-              {step < TOTAL_STEPS && (
-                <Button type="button" onClick={validateStep}>
+              {step < 3 && (
+                <Button type="button" onClick={goNext}>
                   Next <ArrowRight className="ml-2" />
                 </Button>
               )}
-              {step === TOTAL_STEPS && (
+              {step === 3 && (
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? "Processing..." : <><span>Save</span> <CheckCircle className="ml-2" /></>}
                 </Button>

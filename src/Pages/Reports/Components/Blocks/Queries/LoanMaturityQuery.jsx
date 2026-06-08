@@ -65,13 +65,19 @@ const LoanMaturityQuery = ({
 
     const exportData = prepareDataForExport(tableRef.current, data);
     const controller = new AbortController();
+    const today    = new Date();
+    const future   = new Date(today);
+    future.setDate(future.getDate() + (Number(days) || 30));
+    const toISO = (d) => d.toISOString().slice(0, 10);
     const dataDownload = {
       data: exportData,
       totals: totals,
       colspan: colSpan,
       mode: mode,
-      // 👇 No dates at all; include the days window for context
-      window: { days },
+      dates: {
+        start_date: toISO(today),
+        end_date:   toISO(future),
+      },
       filters: {
         branch_id: selectedBranch || null,
         user_id: selectedUserId || null,

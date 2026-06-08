@@ -46,7 +46,12 @@ const LoanPeriodicRepaymentReport = () => {
 
   const [periodType, setPeriodType] = useState("monthly");
   const { branchKey } = useBranchFilter();
-  const [filters, setFilters] = useState({ startDate: "", endDate: "", branch_id: String(branchKey ?? "") });
+
+  const today = new Date();
+  const defaultStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
+  const defaultEnd   = today.toISOString().slice(0, 10);
+
+  const [filters, setFilters] = useState({ startDate: defaultStart, endDate: defaultEnd, branch_id: String(branchKey ?? "") });
 
   // Merge incoming filter changes without wiping periodType
   const handleFilterChange = useCallback(

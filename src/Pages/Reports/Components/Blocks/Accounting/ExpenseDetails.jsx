@@ -6,7 +6,8 @@ import {
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import useBranchFilter from "@/MiddleWares/Hooks/useBranchFilter";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
 import DatatableReport from "@/Pages/Components/DatatableReport";
 import ReportFilterBar from "../Queries/ReportFilterBar";
 import { formatDateTimestamp } from "@/lib/utils";
@@ -42,6 +43,17 @@ const ExpenseDetails = () => {
   const total = data?.total ?? 0;
 
   const columns = [
+    {
+      accessorKey: "transaction_id",
+      header: "Ref",
+      cell: ({ row }) => row.original.transaction_id ? (
+        <Link to={`/journal-entries/${row.original.transaction_id}`}>
+          <Badge variant="secondary" className="text-xs font-mono cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors">
+            #{row.original.transaction_id}
+          </Badge>
+        </Link>
+      ) : <span className="text-xs text-muted-foreground">—</span>,
+    },
     {
       accessorKey: "date",
       header: "Date",
@@ -80,9 +92,9 @@ const ExpenseDetails = () => {
     },
   ];
 
-  const exportHeaders = ["Date", "Branch", "Account", "Description", "Recorded By", "Amount"];
+  const exportHeaders = ["Ref", "Date", "Branch", "Account", "Description", "Recorded By", "Amount"];
   const exportRows = rows.map((r) => [
-    r.date, r.branch || "", r.account, r.description, r.recorded_by || "", parseFloat(r.amount || 0).toFixed(2),
+    r.transaction_id ? `#${r.transaction_id}` : "", r.date, r.branch || "", r.account, r.description, r.recorded_by || "", parseFloat(r.amount || 0).toFixed(2),
   ]);
 
   return (

@@ -166,7 +166,7 @@ const MemberTransactionDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-[560px]">
+      <DialogContent className="sm:max-w-[560px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
             {isDeposit ? "Member Deposit" : "Member Withdrawal"} — {memberName}
@@ -188,7 +188,7 @@ const MemberTransactionDialog = ({
           {stepIcons.map((s, i) => (
             <div
               key={i}
-              className={`flex items-center ${step > i + 1 ? "opacity-100" : "opacity-50"} transition-opacity`}
+              className={`flex items-center ${step >= i + 1 ? "opacity-100" : "opacity-50"} transition-opacity`}
             >
               {s.icon}
               <span className="ml-2 text-sm font-medium">{s.label}</span>
@@ -198,7 +198,8 @@ const MemberTransactionDialog = ({
         </div>
         <Progress value={(step / TOTAL_STEPS) * 100} className="my-1" />
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden min-h-0">
+          <div className="overflow-y-auto flex-1 min-h-0 space-y-4 pr-1">
           {step === 1 && (
             <fieldset className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -288,7 +289,8 @@ const MemberTransactionDialog = ({
             </div>
           )}
 
-          <DialogFooter>
+          </div>
+          <DialogFooter className="pt-3">
             <div className="flex justify-end w-full gap-2">
               {step > 1 && (
                 <Button type="button" variant="secondary" onClick={() => setStep((p) => p - 1)}>
@@ -472,7 +474,11 @@ const GroupMemberSavings = () => {
   }
 
   const byProduct = data?.by_product ?? [];
-  const totalAll = byProduct.reduce((s, p) => s + (p.total_member_balance ?? 0), 0);
+  // Use the group's own account balance (authoritative); fall back to sum of member sub-balances
+  const totalAll = byProduct.reduce(
+    (s, p) => s + (p.group_account?.balance ?? p.total_member_balance ?? 0),
+    0
+  );
 
   return (
     <div className="space-y-4 p-1">

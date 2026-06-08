@@ -38,12 +38,12 @@ const IncomeStatementTable = ({ data }) => {
           {income.map((acc) => (
             <TableRow key={acc.account_id}>
               <TableCell>
-                <Link to={`/ledgers/accounts/${acc.account_id}`}>
+                <Link to={`/ledgers/accounts/${acc.account_id}`} className="text-primary hover:underline font-medium">
                   {acc.title}
                 </Link>
               </TableCell>
               <TableCell>
-                <Link to={`/ledgers/accounts/${acc.account_id}`}>
+                <Link to={`/ledgers/accounts/${acc.account_id}`} className="text-xs text-muted-foreground hover:text-primary hover:underline font-mono">
                   {acc.code}
                 </Link>
               </TableCell>
@@ -72,12 +72,12 @@ const IncomeStatementTable = ({ data }) => {
           {expenses.map((acc) => (
             <TableRow key={acc.account_id}>
               <TableCell>
-                <Link to={`/ledgers/accounts/${acc.account_id}`}>
+                <Link to={`/ledgers/accounts/${acc.account_id}`} className="text-primary hover:underline font-medium">
                   {acc.title}
                 </Link>
               </TableCell>
               <TableCell>
-                <Link to={`/ledgers/accounts/${acc.account_id}`}>
+                <Link to={`/ledgers/accounts/${acc.account_id}`} className="text-xs text-muted-foreground hover:text-primary hover:underline font-mono">
                   {acc.code}
                 </Link>
               </TableCell>

@@ -6,12 +6,24 @@ import {
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import useBranchFilter from "@/MiddleWares/Hooks/useBranchFilter";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
 import DatatableReport from "@/Pages/Components/DatatableReport";
 import ReportFilterBar from "../Queries/ReportFilterBar";
 import { formatDateTimestamp } from "@/lib/utils";
 
 const rowColumns = [
+  {
+    accessorKey: "journal_entry_id",
+    header: "Ref",
+    cell: ({ row }) => row.original.journal_entry_id ? (
+      <Link to={`/journal-entries/${row.original.journal_entry_id}`}>
+        <Badge variant="secondary" className="text-xs font-mono cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors">
+          #{row.original.journal_entry_id}
+        </Badge>
+      </Link>
+    ) : <span className="text-xs text-muted-foreground">—</span>,
+  },
   {
     accessorKey: "date",
     header: "Date",
@@ -39,8 +51,8 @@ const rowColumns = [
 ];
 
 const buildExport = (rows) => ({
-  headers: ["Date", "Description", "Account", "Amount"],
-  rows: rows.map((r) => [r.date, r.description, r.account, parseFloat(r.amount || 0).toFixed(2)]),
+  headers: ["Ref", "Date", "Description", "Account", "Amount"],
+  rows: rows.map((r) => [r.journal_entry_id ? `#${r.journal_entry_id}` : "", r.date, r.description, r.account, parseFloat(r.amount || 0).toFixed(2)]),
 });
 
 const DaySheet = () => {

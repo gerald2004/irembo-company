@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import {
-  Users, TrendingUp, PiggyBank, BarChart3, AlertTriangle, Briefcase, CalendarClock, Activity,
+  Users, TrendingUp, PiggyBank, BarChart3, AlertTriangle, Briefcase, CalendarClock, Activity, ClipboardList,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -92,6 +92,15 @@ const SECTIONS = [
         color: "text-teal-600",
         bg: "bg-teal-50 dark:bg-teal-900/20",
         permission: 100248,
+      },
+      {
+        title: "Collection Sheet",
+        link: "group-reports/collection-sheet",
+        description: "All outstanding installments and compulsory savings due per group — filterable by date and printable",
+        icon: <ClipboardList className="w-5 h-5" />,
+        color: "text-cyan-600",
+        bg: "bg-cyan-50 dark:bg-cyan-900/20",
+        permission: 100128,
       },
     ],
   },

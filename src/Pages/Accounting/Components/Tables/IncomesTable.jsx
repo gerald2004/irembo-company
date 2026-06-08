@@ -39,6 +39,8 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   ArrowUp,
@@ -47,6 +49,7 @@ import {
   ChevronDown,
   RefreshCw,
   RotateCcw,
+  Eye,
 } from "lucide-react";
 import AddIncomeDialog from "../Forms/AddIncomeDialog";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
@@ -70,6 +73,7 @@ export function IncomesTable() {
   const [pagination,   setPagination]   = useState({ pageIndex: 0, pageSize: 10 });
   const [selectedIds,  setSelectedIds]  = useState(new Set()); // journal_entry_id values
   const [isAddOpen,    setIsAddOpen]    = useState(false);
+  const [viewIncome,   setViewIncome]   = useState(null);
 
   // PIN dialog: null | { mode: 'single', jeId: number } | { mode: 'bulk', jeIds: number[] }
   const [pinDialog, setPinDialog] = useState(null);
@@ -109,8 +113,8 @@ export function IncomesTable() {
   });
 
   const reverseSingle = useMutation({
-    mutationFn: ({ jeId, pincode }) =>
-      axiosPrivate.post(`/accounting/journals/${jeId}/reverse`, { user_pincode: pincode }),
+    mutationFn: ({ incomeId, pincode }) =>
+      axiosPrivate.post(`/accounting/incomes/${incomeId}/reverse`, { user_pincode: pincode }),
     onSuccess: () => {
       toast({ title: "Income reversed", description: "A reversal journal entry has been created." });
       queryClient.invalidateQueries({ queryKey: ["incomes-ssr"] });
@@ -122,8 +126,8 @@ export function IncomesTable() {
   });
 
   const reverseBulk = useMutation({
-    mutationFn: ({ jeIds, pincode }) =>
-      axiosPrivate.post("/accounting/journals/bulk-reverse", { ids: jeIds, user_pincode: pincode }),
+    mutationFn: ({ incomeIds, pincode }) =>
+      axiosPrivate.post("/accounting/incomes/bulk-reverse", { ids: incomeIds, user_pincode: pincode }),
     onSuccess: (res) => {
       const count = res.data.data?.reversed?.length ?? 0;
       toast({ title: `${count} income entr${count === 1 ? "y" : "ies"} reversed`, description: "Reversal journal entries have been created." });
@@ -136,13 +140,13 @@ export function IncomesTable() {
     },
   });
 
-  const openPinDialog = useCallback((mode, jeId) => {
+  const openPinDialog = useCallback((mode, incomeId) => {
     if (mode === "single") {
-      setPinDialog({ mode: "single", jeId });
+      setPinDialog({ mode: "single", incomeId });
     } else {
       const ids = [...selectedIds];
       if (!ids.length) return;
-      setPinDialog({ mode: "bulk", jeIds: ids });
+      setPinDialog({ mode: "bulk", incomeIds: ids });
     }
     setPin("");
     setPinError("");
@@ -157,18 +161,51 @@ export function IncomesTable() {
   const submitReversal = useCallback(() => {
     if (!pin.trim()) { setPinError("PIN is required"); return; }
     if (pinDialog.mode === "single") {
-      reverseSingle.mutate({ jeId: pinDialog.jeId, pincode: pin });
+      reverseSingle.mutate({ incomeId: pinDialog.incomeId, pincode: pin });
     } else {
-      reverseBulk.mutate({ jeIds: pinDialog.jeIds, pincode: pin });
+      reverseBulk.mutate({ incomeIds: pinDialog.incomeIds, pincode: pin });
     }
   }, [pin, pinDialog, reverseSingle, reverseBulk]);
 
   const isPending = reverseSingle.isPending || reverseBulk.isPending;
 
+  const printReceipt = (income) => {
+    const w = window.open("", "_blank", "width=600,height=700");
+    w.document.write(`
+      <html><head><title>Income Receipt — ${income.income_code}</title><style>
+        body{font-family:sans-serif;padding:32px;font-size:14px;color:#111}
+        h2{margin:0 0 2px;font-size:20px}
+        .sub{color:#666;font-size:12px;margin-bottom:24px}
+        table{width:100%;border-collapse:collapse}
+        td{padding:7px 0;border-bottom:1px solid #eee;vertical-align:top}
+        td:first-child{color:#555;width:42%;font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+        .amount{font-size:22px;font-weight:700;color:#1d4ed8}
+        .footer{margin-top:32px;font-size:11px;color:#999;text-align:center;border-top:1px solid #eee;padding-top:12px}
+      </style></head><body>
+        <h2>Income Receipt</h2>
+        <p class="sub">${income.income_code}</p>
+        <table>
+          <tr><td>Received From</td><td>${income.income_received_from || "—"}</td></tr>
+          <tr><td>Amount</td><td class="amount">UGX ${parseFloat(income.income_amount).toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>
+          <tr><td>Income Account</td><td>${income.income_account || "—"}</td></tr>
+          <tr><td>Debit Account</td><td>${income.debit_account || "—"}</td></tr>
+          <tr><td>Date</td><td>${income.income_date || "—"}</td></tr>
+          <tr><td>Posted By</td><td>${income.user || "—"}</td></tr>
+          <tr><td>Branch</td><td>${income.branch || "—"}</td></tr>
+          <tr><td>Notes</td><td>${income.income_notes || "—"}</td></tr>
+          <tr><td>Status</td><td>${income.income_reverse_status || "active"}</td></tr>
+        </table>
+        <p class="footer">${import.meta.env.VITE_APP_NAME ?? "Banking System"} — Generated ${new Date().toLocaleString()}</p>
+        <script>window.onload=()=>{window.print();}</script>
+      </body></html>
+    `);
+    w.document.close();
+  };
+
   const rows          = data?.data ?? [];
   const totalRowCount = data?.meta?.totalRowCount ?? 0;
 
-  const allPageJeIds       = rows.filter((r) => r.journal_entry_id && r.income_reverse_status !== "reversed").map((r) => r.journal_entry_id);
+  const allPageJeIds       = rows.filter((r) => r.income_id && r.income_reverse_status !== "reversed").map((r) => r.income_id);
   const allPageSelected    = allPageJeIds.length > 0 && allPageJeIds.every((id) => selectedIds.has(id));
   const somePageSelected   = allPageJeIds.some((id) => selectedIds.has(id));
   const selectedCount      = selectedIds.size;
@@ -193,10 +230,11 @@ export function IncomesTable() {
     });
   }, []);
 
-  const canReverse = hasPermission(roles, 100269);
+  const canReverseSingle = hasPermission(roles, 100172);
+  const canReverseBulk   = hasPermission(roles, 100269);
 
   const columns = [
-    ...(canReverse ? [{
+    ...(canReverseBulk ? [{
       id: "select",
       header: () => (
         <Checkbox
@@ -207,13 +245,13 @@ export function IncomesTable() {
         />
       ),
       cell: ({ row }) => {
-        const jeId    = row.original.journal_entry_id;
+        const incomeId = row.original.income_id;
         const reversed = row.original.income_reverse_status === "reversed";
-        if (!jeId || reversed) return null;
+        if (!incomeId || reversed) return null;
         return (
           <Checkbox
-            checked={selectedIds.has(jeId)}
-            onCheckedChange={() => toggleRow(jeId)}
+            checked={selectedIds.has(incomeId)}
+            onCheckedChange={() => toggleRow(incomeId)}
             aria-label="Select row"
           />
         );
@@ -302,27 +340,41 @@ export function IncomesTable() {
       cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.income_notes || "—"}</span>,
       exportValue: (r) => r.income_notes || "",
     },
-    ...(canReverse ? [{
+    {
       id: "actions",
       header: "",
       enableSorting: false,
       enableHiding:  false,
       cell: ({ row }) => {
-        const jeId    = row.original.journal_entry_id;
+        const incomeId = row.original.income_id;
         const reversed = row.original.income_reverse_status === "reversed";
-        if (!jeId || reversed) return null;
         return (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs text-destructive hover:text-destructive"
-            onClick={() => openPinDialog("single", jeId)}
-          >
-            <RotateCcw className="w-3 h-3 mr-1" /> Reverse
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-7 w-7 p-0 text-muted-foreground">
+                <span className="sr-only">Open menu</span>
+                <ChevronDown className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuLabel className="text-xs">Actions</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-xs" onClick={() => setViewIncome(row.original)}>
+                <Eye className="w-3 h-3 mr-1.5" /> View Details
+              </DropdownMenuItem>
+              {canReverseSingle && incomeId && !reversed && (
+                <DropdownMenuItem
+                  className="text-xs text-destructive focus:text-destructive"
+                  onClick={() => openPinDialog("single", incomeId)}
+                >
+                  <RotateCcw className="w-3 h-3 mr-1.5" /> Reverse
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         );
       },
-    }] : []),
+    },
   ];
 
   useEffect(() => {
@@ -390,7 +442,7 @@ export function IncomesTable() {
           </Button>
         )}
 
-        {canReverse && selectedCount > 0 && (
+        {canReverseBulk && selectedCount > 0 && (
           <Button
             variant="destructive"
             size="sm"
@@ -552,13 +604,71 @@ export function IncomesTable() {
         />
       )}
 
+      {/* ── Income Details Dialog ── */}
+      <Dialog open={!!viewIncome} onOpenChange={(o) => !o && setViewIncome(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Income Details</DialogTitle>
+            <DialogDescription className="font-mono text-xs">{viewIncome?.income_code}</DialogDescription>
+          </DialogHeader>
+          {viewIncome && (
+            <div className="space-y-2 py-1 text-sm">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                <span className="text-muted-foreground text-xs">Received From</span>
+                <span className="text-xs font-medium">{viewIncome.income_received_from || "—"}</span>
+
+                <span className="text-muted-foreground text-xs">Amount</span>
+                <span className="text-xs font-bold text-blue-600">
+                  UGX {parseFloat(viewIncome.income_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </span>
+
+                <span className="text-muted-foreground text-xs">Income Account</span>
+                <span className="text-xs">{viewIncome.income_account || "—"}</span>
+
+                <span className="text-muted-foreground text-xs">Debit Account</span>
+                <span className="text-xs">{viewIncome.debit_account || "—"}</span>
+
+                <span className="text-muted-foreground text-xs">Date</span>
+                <span className="text-xs">{viewIncome.income_date || "—"}</span>
+
+                <span className="text-muted-foreground text-xs">Posted By</span>
+                <span className="text-xs">{viewIncome.user || "—"}</span>
+
+                <span className="text-muted-foreground text-xs">Branch</span>
+                <span className="text-xs">{viewIncome.branch || "—"}</span>
+
+                <span className="text-muted-foreground text-xs">Status</span>
+                <span className="text-xs capitalize">
+                  <Badge className={`text-xs border ${STATUS_CLASS[viewIncome.income_reverse_status ?? "active"] ?? "bg-muted"}`}>
+                    {viewIncome.income_reverse_status || "active"}
+                  </Badge>
+                </span>
+
+                {viewIncome.income_notes && (
+                  <>
+                    <span className="text-muted-foreground text-xs">Notes</span>
+                    <span className="text-xs">{viewIncome.income_notes}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => setViewIncome(null)}>Close</Button>
+            <Button size="sm" onClick={() => printReceipt(viewIncome)}>
+              Print Receipt
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* ── PIN Reversal Dialog ── */}
       <Dialog open={!!pinDialog} onOpenChange={(o) => !o && closePinDialog()}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>
               {pinDialog?.mode === "bulk"
-                ? `Reverse ${pinDialog.jeIds?.length} income entr${pinDialog.jeIds?.length === 1 ? "y" : "ies"}`
+                ? `Reverse ${pinDialog.incomeIds?.length} income entr${pinDialog.incomeIds?.length === 1 ? "y" : "ies"}`
                 : "Reverse income entry"}
             </DialogTitle>
             <DialogDescription>

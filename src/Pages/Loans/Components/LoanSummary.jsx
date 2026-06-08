@@ -22,6 +22,7 @@ import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { useParams } from "react-router-dom";
 import { formatDateTimestamp, hasPermission } from "@/lib/utils";
 import EditLoanUser from "./Forms/EditLoanUser";
+import LoanFlagOffDialog from "./Forms/LoanFlagOffDialog";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
 
 const loanStatusBadge = (status) => {
@@ -118,6 +119,10 @@ const LoanSummary = ({ data, refetch, totals, onViewHistory }) => {
     setOpenLoanUpdateUserModal(true);
   const handleCloseLoanUpdateMemberModal = () =>
     setOpenLoanUpdateUserModal(false);
+
+  const [flagOffModal, setFlagOffModal] = useState({ open: false, mode: "flag" });
+  const openFlagOff = (mode) => setFlagOffModal({ open: true, mode });
+  const closeFlagOff = () => setFlagOffModal({ open: false, mode: "flag" });
 
   const togglePaymentStatus = async (currentStatus) => {
     const controller = new AbortController();
@@ -277,6 +282,27 @@ const LoanSummary = ({ data, refetch, totals, onViewHistory }) => {
                 Write Off Loan
               </Button>
             )}
+            {hasPermission(roles, 100280) && (
+              data?.loan_flag_off_status === "flagged" ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-green-500 text-green-700 hover:bg-green-50"
+                  onClick={() => openFlagOff("unflag")}
+                >
+                  Reverse Flag-Off
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-orange-500 text-orange-700 hover:bg-orange-50"
+                  onClick={() => openFlagOff("flag")}
+                >
+                  Flag Off Loan
+                </Button>
+              )
+            )}
             {hasPermission(roles, 100075) && (
               <div className="flex items-center gap-2">
                 <Switch
@@ -338,8 +364,13 @@ const LoanSummary = ({ data, refetch, totals, onViewHistory }) => {
         </div>
         <div className="flex gap-x-4 items-center">
           <Label className="w-1/3 font-semibold">Application Status</Label>
-          <span className="w-2/3">
+          <span className="w-2/3 flex items-center gap-2">
             {loanStatusBadge(data?.loan_application_status)}
+            {data?.loan_flag_off_status === "flagged" && (
+              <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300 text-xs">
+                Flagged Off
+              </Badge>
+            )}
           </span>
         </div>
         <div className="flex gap-x-4 items-center">
@@ -551,6 +582,15 @@ const LoanSummary = ({ data, refetch, totals, onViewHistory }) => {
         <EditLoanUser
           isOpen={openLoanUpdateUserModal}
           onClose={handleCloseLoanUpdateMemberModal}
+          refetch={refetch}
+        />
+      )}
+
+      {flagOffModal.open && (
+        <LoanFlagOffDialog
+          isOpen={flagOffModal.open}
+          onClose={closeFlagOff}
+          mode={flagOffModal.mode}
           refetch={refetch}
         />
       )}

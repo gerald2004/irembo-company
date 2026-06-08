@@ -87,11 +87,13 @@ const SMSReport = () => {
     {
       accessorKey: "status",
       header: "Status",
-      cell: ({ row }) => (
-        <Badge className="capitalize text-xs">
-          {row.original.sms_status === "Y" ? "Sent" : "Pending"}
-        </Badge>
-      ),
+      cell: ({ row }) => {
+        const s = row.original.status;
+        const color = s === "Sent" ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+          : s === "Failed" ? "bg-red-500/10 text-red-500 border-red-500/20"
+          : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
+        return <Badge className={`text-xs border ${color}`}>{s}</Badge>;
+      },
     },
     {
       accessorKey: "sms_timestamp",
@@ -108,10 +110,15 @@ const SMSReport = () => {
     refetch();
   };
 
-  const smsRows     = data?.data ?? data ?? [];
-  const delivered   = data?.meta?.delivered ?? smsRows.filter(r => r.status === "Y").length;
-  const failed      = data?.meta?.failed    ?? smsRows.filter(r => r.status === "N").length;
-  const total       = data?.meta?.total     ?? smsRows.length;
+  const rawRows     = data?.data ?? data ?? [];
+  // Normalise: add human-readable `status` so the export picks it up correctly
+  const smsRows     = rawRows.map(r => ({
+    ...r,
+    status: r.sms_status === "Y" ? "Sent" : r.sms_status === "F" ? "Failed" : "Pending",
+  }));
+  const delivered   = data?.meta?.delivered ?? rawRows.filter(r => r.sms_status === "Y").length;
+  const failed      = data?.meta?.failed    ?? rawRows.filter(r => r.sms_status !== "Y").length;
+  const total       = data?.meta?.total     ?? rawRows.length;
   const delivRate   = total > 0 ? Math.round((delivered / total) * 100) : 0;
 
   const KPI = ({ label, value, sub, accent = "bg-blue-500" }) => (

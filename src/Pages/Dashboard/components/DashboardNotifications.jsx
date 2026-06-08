@@ -242,7 +242,7 @@ const DashboardNotifications = () => {
                         <p className={`text-sm font-semibold ${cfg.text}`}>{n.title}</p>
                         <Badge variant={cfg.variant} className="text-[10px] capitalize">{n.level}</Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{n.message}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate" dangerouslySetInnerHTML={{ __html: n.message }} />
                     </div>
                     <p className="text-[10px] text-muted-foreground shrink-0">{n.created_at?.slice(0, 10)}</p>
                   </div>

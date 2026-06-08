@@ -24,6 +24,7 @@ import { X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { AccountCombobox } from "@/Pages/Components/AccountCombobox";
+import { Switch } from "@/components/ui/switch";
 
 const EMPTY_RANGES = [{ min: "", max: "", charge: "" }];
 
@@ -69,6 +70,7 @@ export default function EditLoanFeeDialog({
     account_id: null,
     receivable_account: null,
   });
+  const [splitInGroup, setSplitInGroup] = useState(true);
 
   // Load defaults when dialog opens / defaults change
   useEffect(() => {
@@ -88,6 +90,8 @@ export default function EditLoanFeeDialog({
       account_id: defaultValues.account?.account_id ?? null,
       receivable_account: defaultValues.receivable_account?.account_id ?? null,
     });
+
+    setSplitInGroup(defaultValues.split_in_group !== 0);
   }, [defaultValues, reset]);
 
   // Keep value/ranges in sync when type switches
@@ -107,7 +111,7 @@ export default function EditLoanFeeDialog({
       ...data,
       account_id: selectedAccounts.account_id,
       receivable_account: selectedAccounts.receivable_account,
-      // ensure numbers where needed
+      split_in_group: splitInGroup ? 1 : 0,
       value: data.value === "" ? null : Number(data.value),
       ranges: (data.ranges || []).map((r) => ({
         min: r.min === "" ? null : Number(r.min),
@@ -410,6 +414,24 @@ export default function EditLoanFeeDialog({
               Add Range
             </Button>
           )}
+
+          <div className="flex items-center gap-3 rounded-md border px-4 py-3 bg-muted/40">
+            <Switch
+              id="edit_split_in_group"
+              checked={splitInGroup}
+              onCheckedChange={setSplitInGroup}
+            />
+            <div>
+              <Label htmlFor="edit_split_in_group" className="font-medium cursor-pointer">
+                Split across group members
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                {splitInGroup
+                  ? "Charge will be split proportionally among members"
+                  : "Each member is charged the full amount individually"}
+              </p>
+            </div>
+          </div>
 
           <DialogFooter>
             <Button type="submit" disabled={isSubmitting}>

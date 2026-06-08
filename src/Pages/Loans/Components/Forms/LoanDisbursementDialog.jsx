@@ -17,8 +17,11 @@ import { format } from "date-fns";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import {
   ArrowLeft, ArrowRight, CheckCircle, X, Info, LockKeyhole,
-  CalendarIcon, Receipt, Wallet, LockIcon,
+  CalendarIcon, Receipt, Wallet, LockIcon, ChevronDown, ChevronUp,
 } from "lucide-react";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import {
   InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot,
 } from "@/components/ui/input-otp";
@@ -53,8 +56,12 @@ const LoanDisbursementDialog = ({ isOpen, onClose, refetch, defaultValues, actio
   const [step, setStep] = useState(1);
   const [skipChargeIds, setSkipChargeIds] = useState([]);
   const [chargeOverrides, setChargeOverrides] = useState({});
+  const [monFeeOverride, setMonFeeOverride] = useState(null); // { type, value, base } | null
+  const [memberOverrides, setMemberOverrides] = useState({}); // { [allocation_id]: { tenure_period, interest_rate, loan_type } }
+  const [showMemberOverrides, setShowMemberOverrides] = useState(false);
 
   const watchedAmount = parseFloat(watch("loan_application_amount")) || 0;
+  const tenure        = parseInt(watch("loan_application_tenure_period")) || null;
   const loanProductId = defaultValues?.loan_product?.loan_product_id ?? null;
 
   // Derive product metadata for display
@@ -81,11 +88,40 @@ const LoanDisbursementDialog = ({ isOpen, onClose, refetch, defaultValues, actio
     return acc;
   }, []);
 
+  // Fetch group loan allocations for per-member override UI
+  const { data: allocationsData } = useQuery({
+    queryKey: ["group-loan-allocations", loanid],
+    queryFn: async () => {
+      const res = await axiosPrivate.get(`/loans/${loanid}/group-allocations`);
+      return res.data.data ?? [];
+    },
+    enabled: !!isGroupLoan && !!loanid,
+  });
+  const allocations = allocationsData ?? [];
+
+  const setMemberOverride = (allocId, field, value) => {
+    setMemberOverrides((prev) => ({
+      ...prev,
+      [allocId]: { ...(prev[allocId] ?? {}), [field]: value },
+    }));
+  };
+
   useEffect(() => {
     if (defaultValues) {
       Object.entries(defaultValues).forEach(([k, v]) => setValue(k, v));
       if (defaultValues.loan_product?.loan_products_interest_rate) {
         setValue("loan_products_interest_rate", String(defaultValues.loan_product.loan_products_interest_rate));
+      }
+      // Pre-populate monitoring fee override from product defaults
+      const p = defaultValues.loan_product;
+      if (p?.monitoring_fee_enabled == 1 && parseFloat(p.monitoring_fee_value) > 0) {
+        setMonFeeOverride({
+          type:  p.monitoring_fee_type  || "fixed",
+          value: String(p.monitoring_fee_value),
+          base:  p.monitoring_fee_base  || "principal",
+        });
+      } else {
+        setMonFeeOverride(null);
       }
     }
   }, [defaultValues, setValue]);
@@ -100,11 +136,24 @@ const LoanDisbursementDialog = ({ isOpen, onClose, refetch, defaultValues, actio
     setStep(1);
     setSkipChargeIds([]);
     setChargeOverrides({});
+    setMonFeeOverride(null);
+    setMemberOverrides({});
+    setShowMemberOverrides(false);
     onClose();
   };
 
   const onSubmit = async (data) => {
     try {
+      // Build per-member override list — only include allocations with at least one override
+      const member_overrides = Object.entries(memberOverrides)
+        .filter(([, v]) => v.tenure_period || v.interest_rate || v.loan_type)
+        .map(([allocId, v]) => ({
+          allocation_id: parseInt(allocId),
+          ...(v.tenure_period ? { tenure_period: parseInt(v.tenure_period) } : {}),
+          ...(v.interest_rate ? { interest_rate: parseFloat(v.interest_rate) } : {}),
+          ...(v.loan_type     ? { loan_type: v.loan_type } : {}),
+        }));
+
       const payload = {
         loan_application_id: loanid,
         interest:     data.loan_products_interest_rate,
@@ -115,6 +164,10 @@ const LoanDisbursementDialog = ({ isOpen, onClose, refetch, defaultValues, actio
         user_pincode: data.user_pincode,
         skip_charge_ids: skipChargeIds,
         charge_overrides: chargeOverrides,
+        monitoring_fee_override: monFeeOverride
+          ? { ...monFeeOverride, value: parseFloat(monFeeOverride.value) || 0 }
+          : null,
+        ...(member_overrides.length > 0 ? { member_overrides } : {}),
       };
       const response = await axiosPrivate.patch("/loans/applications", payload);
       toast({ title: "Success", description: response.data.messages });
@@ -122,6 +175,9 @@ const LoanDisbursementDialog = ({ isOpen, onClose, refetch, defaultValues, actio
       setStep(1);
       setSkipChargeIds([]);
       setChargeOverrides({});
+      setMonFeeOverride(null);
+      setMemberOverrides({});
+      setShowMemberOverrides(false);
       refetch();
       onClose();
     } catch (error) {
@@ -141,7 +197,7 @@ const LoanDisbursementDialog = ({ isOpen, onClose, refetch, defaultValues, actio
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-[620px]">
+      <DialogContent className="sm:max-w-[620px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Disburse Loan Application</DialogTitle>
           <DialogDescription>Follow the steps to disburse the loan.</DialogDescription>
@@ -155,7 +211,7 @@ const LoanDisbursementDialog = ({ isOpen, onClose, refetch, defaultValues, actio
         {/* Stepper */}
         <div className="flex items-center space-x-3 my-1">
           {stepIcons.map((s, i) => (
-            <div key={i} className={`flex items-center ${step > i + 1 ? "opacity-100" : "opacity-50"} transition-opacity`}>
+            <div key={i} className={`flex items-center ${step >= i + 1 ? "opacity-100" : "opacity-50"} transition-opacity`}>
               {s.icon}
               <span className="ml-2 text-sm font-medium">{s.label}</span>
               {i < stepIcons.length - 1 && <div className="h-[2px] w-6 bg-gray-300 mx-2" />}
@@ -164,7 +220,8 @@ const LoanDisbursementDialog = ({ isOpen, onClose, refetch, defaultValues, actio
         </div>
         <Progress value={(step / TOTAL_STEPS) * 100} className="my-1" />
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden min-h-0">
+          <div className="overflow-y-auto flex-1 min-h-0 space-y-4 pr-1">
           {/* ── Step 1: Loan Details ── */}
           {step === 1 && (
             <div className="space-y-4">
@@ -239,6 +296,49 @@ const LoanDisbursementDialog = ({ isOpen, onClose, refetch, defaultValues, actio
                 </div>
               </fieldset>
 
+              {/* Monitoring fee override */}
+              {defaultValues?.loan_product?.monitoring_fee_enabled == 1 && (
+                <div className="border rounded-md p-3 space-y-2 bg-muted/40">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold">Monitoring Fee</p>
+                    <div className="flex gap-1">
+                      <Badge variant="outline" className="text-xs capitalize">
+                        {monFeeOverride?.type ?? defaultValues.loan_product.monitoring_fee_type ?? "fixed"}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs capitalize">
+                        per {monFeeOverride?.base ?? defaultValues.loan_product.monitoring_fee_base ?? "principal"}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="mon_fee_value" className="text-xs text-muted-foreground">
+                      {monFeeOverride?.type === "percent"
+                        ? "Fee (%)"
+                        : "Fee Amount"}{" "}
+                      — override if needed
+                    </Label>
+                    <Input
+                      id="mon_fee_value"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={monFeeOverride?.value ?? ""}
+                      onChange={(e) =>
+                        setMonFeeOverride((prev) => ({
+                          type:  prev?.type  ?? defaultValues.loan_product.monitoring_fee_type  ?? "fixed",
+                          base:  prev?.base  ?? defaultValues.loan_product.monitoring_fee_base  ?? "principal",
+                          value: e.target.value,
+                        }))
+                      }
+                      className="mt-1"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Set to 0 to disable monitoring fee for this disbursement.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Group member savings preview */}
               {isGroupLoan && allMembers.length > 0 && (
                 <div className="space-y-2">
@@ -281,6 +381,93 @@ const LoanDisbursementDialog = ({ isOpen, onClose, refetch, defaultValues, actio
                   </p>
                 </div>
               )}
+
+              {/* Per-member rate / tenure overrides (group loans only) */}
+              {isGroupLoan && allocations.length > 0 && (
+                <div className="border rounded-lg overflow-hidden">
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between px-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 text-sm font-semibold hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors"
+                    onClick={() => setShowMemberOverrides((v) => !v)}
+                  >
+                    <span>Per-member rate / tenure overrides (optional)</span>
+                    {showMemberOverrides
+                      ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                      : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                  </button>
+
+                  {showMemberOverrides && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead className="bg-muted/30 text-muted-foreground">
+                          <tr>
+                            <th className="text-left px-3 py-2">Member</th>
+                            <th className="text-left px-3 py-2">Allocation</th>
+                            <th className="px-3 py-2">Tenure</th>
+                            <th className="px-3 py-2">Rate (%)</th>
+                            <th className="px-3 py-2">Type</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {allocations.map((a) => {
+                            const ovr = memberOverrides[a.id] ?? {};
+                            const memberName = a.member
+                              ? `${a.member.client_firstname ?? ""} ${a.member.client_lastname ?? ""}`.trim()
+                              : `Member #${a.member_id}`;
+                            return (
+                              <tr key={a.id} className="border-t dark:border-slate-700">
+                                <td className="px-3 py-1.5 font-medium whitespace-nowrap">{memberName}</td>
+                                <td className="px-3 py-1.5 text-right whitespace-nowrap text-blue-700 font-medium">
+                                  UGX {fmt(a.allocated_amount)}
+                                </td>
+                                <td className="px-2 py-1">
+                                  <Input
+                                    type="number"
+                                    min="1"
+                                    placeholder={String(tenure ?? "—")}
+                                    value={ovr.tenure_period ?? ""}
+                                    onChange={(e) => setMemberOverride(a.id, "tenure_period", e.target.value)}
+                                    className="h-7 text-xs w-20"
+                                  />
+                                </td>
+                                <td className="px-2 py-1">
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    placeholder={String(defaultValues?.loan_product?.loan_products_interest_rate ?? "—")}
+                                    value={ovr.interest_rate ?? ""}
+                                    onChange={(e) => setMemberOverride(a.id, "interest_rate", e.target.value)}
+                                    className="h-7 text-xs w-20"
+                                  />
+                                </td>
+                                <td className="px-2 py-1">
+                                  <Select
+                                    value={ovr.loan_type ?? ""}
+                                    onValueChange={(v) => setMemberOverride(a.id, "loan_type", v)}
+                                  >
+                                    <SelectTrigger className="h-7 text-xs w-32">
+                                      <SelectValue placeholder={productType || "default"} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="">Use default</SelectItem>
+                                      <SelectItem value="fixed">Fixed</SelectItem>
+                                      <SelectItem value="reducing_balance">Reducing Balance</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                      <p className="text-xs text-muted-foreground px-3 py-2">
+                        Leave blank to use the loan-level defaults. Filled values generate an independent schedule for that member.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -318,7 +505,8 @@ const LoanDisbursementDialog = ({ isOpen, onClose, refetch, defaultValues, actio
             </div>
           )}
 
-          <DialogFooter>
+          </div>
+          <DialogFooter className="pt-3">
             <div className="flex justify-end w-full gap-2">
               {step > 1 && (
                 <Button type="button" variant="secondary" onClick={() => setStep((p) => Math.max(p - 1, 1))}>

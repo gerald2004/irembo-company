@@ -9,6 +9,7 @@ import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -20,7 +21,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { ChevronDown, RefreshCw, RotateCcw } from "lucide-react";
+import { ChevronDown, RefreshCw, RotateCcw, Eye } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { formatDateTimestamp, hasPermission } from "@/lib/utils";
@@ -36,21 +37,28 @@ const STATUS_BADGE = {
   reversed:  "bg-gray-100 text-gray-600 border-gray-200",
 };
 
+const isReversible = (je) =>
+  je.status !== "reversed" && !je.is_reversal && je.source_module === "manual";
+
 export function JournalEntriesTable() {
   const navigate      = useNavigate();
   const axiosPrivate  = useAxiosPrivate();
   const queryClient   = useQueryClient();
   const { auth: { roles } } = useAuth();
 
-  const [sorting,       setSorting]       = useState([]);
-  const [globalFilter,  setGlobalFilter]  = useState("");
-  const [statusFilter,  setStatusFilter]  = useState("all");
-  const [pagination,    setPagination]    = useState({ pageIndex: 0, pageSize: 10 });
-  const [isModalOpen,   setIsModalOpen]   = useState(false);
-  const [reverseTarget, setReverseTarget] = useState(null);
-  const [reversePin,    setReversePin]    = useState("");
-  const [reversePinErr, setReversePinErr] = useState("");
+  const [sorting,      setSorting]      = useState([]);
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [pagination,   setPagination]   = useState({ pageIndex: 0, pageSize: 10 });
+  const [isModalOpen,  setIsModalOpen]  = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [selectedIds,  setSelectedIds]  = useState(new Set());
+  const [viewJe,       setViewJe]       = useState(null);
+
+  // PIN dialog: null | { mode: 'single', jeId, code } | { mode: 'bulk', jeIds: [] }
+  const [pinDialog, setPinDialog] = useState(null);
+  const [pin,       setPin]       = useState("");
+  const [pinError,  setPinError]  = useState("");
 
   const debouncedFilter = useDebounce(globalFilter, 600);
 
@@ -76,18 +84,62 @@ export function JournalEntriesTable() {
     placeholderData: (prev) => prev,
   });
 
-  const reverseMutation = useMutation({
+  const reverseSingle = useMutation({
     mutationFn: ({ jeId, pincode }) =>
       axiosPrivate.post(`/accounting/journals/${jeId}/reverse`, { user_pincode: pincode }),
     onSuccess: () => {
       toast({ title: "Journal entry reversed", description: "A reversal entry has been created." });
       queryClient.invalidateQueries({ queryKey: ["journal-entries-data"] });
-      setReverseTarget(null);
+      closePinDialog();
     },
     onError: (err) => {
-      setReversePinErr(err?.response?.data?.messages?.[0] ?? "Could not reverse this entry.");
+      setPinError(err?.response?.data?.messages?.[0] ?? "Could not reverse this entry.");
     },
   });
+
+  const reverseBulk = useMutation({
+    mutationFn: ({ jeIds, pincode }) =>
+      axiosPrivate.post("/accounting/journals/bulk-reverse", { ids: jeIds, user_pincode: pincode }),
+    onSuccess: (res) => {
+      const count = res.data.data?.reversed?.length ?? 0;
+      toast({ title: `${count} entr${count === 1 ? "y" : "ies"} reversed`, description: "Reversal journal entries have been created." });
+      setSelectedIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ["journal-entries-data"] });
+      closePinDialog();
+    },
+    onError: (err) => {
+      setPinError(err?.response?.data?.messages?.[0] ?? "Bulk reversal failed.");
+    },
+  });
+
+  const openPinDialog = useCallback((mode, je) => {
+    if (mode === "single") {
+      setPinDialog({ mode: "single", jeId: je.journal_entry_id, code: je.transaction_code });
+    } else {
+      const ids = [...selectedIds];
+      if (!ids.length) return;
+      setPinDialog({ mode: "bulk", jeIds: ids });
+    }
+    setPin("");
+    setPinError("");
+  }, [selectedIds]);
+
+  const closePinDialog = useCallback(() => {
+    setPinDialog(null);
+    setPin("");
+    setPinError("");
+  }, []);
+
+  const submitReversal = useCallback(() => {
+    if (!pin.trim()) { setPinError("PIN is required"); return; }
+    if (pinDialog.mode === "single") {
+      reverseSingle.mutate({ jeId: pinDialog.jeId, pincode: pin });
+    } else {
+      reverseBulk.mutate({ jeIds: pinDialog.jeIds, pincode: pin });
+    }
+  }, [pin, pinDialog, reverseSingle, reverseBulk]);
+
+  const isPending = reverseSingle.isPending || reverseBulk.isPending;
 
   const handleExport = useCallback(async (type) => {
     const rows = (data?.data ?? []).map((row) => ({
@@ -137,7 +189,101 @@ export function JournalEntriesTable() {
     }
   }, [axiosPrivate, data]);
 
+  const printJournalEntry = (je) => {
+    const lines = je.lines ?? [];
+    const lineRows = lines.map((l) => `
+      <tr>
+        <td>${l.account_title || "—"}</td>
+        <td style="text-align:right;color:#1d4ed8">${l.debit_amount > 0 ? Number(l.debit_amount).toLocaleString() : ""}</td>
+        <td style="text-align:right;color:#15803d">${l.credit_amount > 0 ? Number(l.credit_amount).toLocaleString() : ""}</td>
+      </tr>`).join("");
+    const w = window.open("", "_blank", "width=640,height=720");
+    w.document.write(`
+      <html><head><title>Journal Entry — ${je.transaction_code}</title><style>
+        body{font-family:sans-serif;padding:32px;font-size:14px;color:#111}
+        h2{margin:0 0 2px;font-size:20px}
+        .sub{color:#666;font-size:12px;margin-bottom:20px}
+        .meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;margin-bottom:20px}
+        .meta-label{color:#555;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+        .meta-value{font-size:13px;font-weight:500}
+        table{width:100%;border-collapse:collapse;margin-top:8px}
+        th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#555;border-bottom:2px solid #e5e7eb;padding:6px 4px}
+        td{padding:6px 4px;border-bottom:1px solid #f3f4f6;font-size:13px}
+        .footer{margin-top:32px;font-size:11px;color:#999;text-align:center;border-top:1px solid #eee;padding-top:12px}
+      </style></head><body>
+        <h2>Journal Entry</h2>
+        <p class="sub">${je.transaction_code}</p>
+        <div class="meta">
+          <div><div class="meta-label">Date</div><div class="meta-value">${je.transaction_date || "—"}</div></div>
+          <div><div class="meta-label">Branch</div><div class="meta-value">${je.branch || "—"}</div></div>
+          <div><div class="meta-label">Amount</div><div class="meta-value">${Number(je.amount).toLocaleString()}</div></div>
+          <div><div class="meta-label">Status</div><div class="meta-value" style="text-transform:capitalize">${je.status || "—"}</div></div>
+          <div style="grid-column:span 2"><div class="meta-label">Description</div><div class="meta-value">${je.description || "—"}</div></div>
+        </div>
+        <table>
+          <thead><tr><th>Account</th><th style="text-align:right">Debit</th><th style="text-align:right">Credit</th></tr></thead>
+          <tbody>${lineRows}</tbody>
+        </table>
+        <p class="footer">${import.meta.env.VITE_APP_NAME ?? "Banking System"} — Generated ${new Date().toLocaleString()}</p>
+        <script>window.onload=()=>{window.print();}</script>
+      </body></html>
+    `);
+    w.document.close();
+  };
+
+  const canReverseSingle = hasPermission(roles, 100172);
+  const canReverseBulk   = hasPermission(roles, 100269);
+
+  const rows          = data?.data ?? [];
+  const allPageJeIds  = rows.filter(isReversible).map((r) => r.journal_entry_id);
+  const allPageSelected  = allPageJeIds.length > 0 && allPageJeIds.every((id) => selectedIds.has(id));
+  const somePageSelected = allPageJeIds.some((id) => selectedIds.has(id));
+  const selectedCount    = selectedIds.size;
+
+  const toggleAll = useCallback(() => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allPageSelected) {
+        allPageJeIds.forEach((id) => next.delete(id));
+      } else {
+        allPageJeIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  }, [allPageJeIds, allPageSelected]);
+
+  const toggleRow = useCallback((jeId) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(jeId) ? next.delete(jeId) : next.add(jeId);
+      return next;
+    });
+  }, []);
+
   const columns = [
+    ...(canReverseBulk ? [{
+      id: "select",
+      header: () => (
+        <Checkbox
+          checked={allPageSelected}
+          ref={(el) => { if (el) el.indeterminate = somePageSelected && !allPageSelected; }}
+          onCheckedChange={toggleAll}
+          aria-label="Select all"
+        />
+      ),
+      cell: ({ row }) => {
+        if (!isReversible(row.original)) return null;
+        return (
+          <Checkbox
+            checked={selectedIds.has(row.original.journal_entry_id)}
+            onCheckedChange={() => toggleRow(row.original.journal_entry_id)}
+            aria-label="Select row"
+          />
+        );
+      },
+      enableSorting: false,
+      enableHiding:  false,
+    }] : []),
     {
       id: "transaction_code",
       header: "Code",
@@ -206,7 +352,7 @@ export function JournalEntriesTable() {
       header: "",
       cell: ({ row }) => {
         const je = row.original;
-        const canReverse = hasPermission(roles, 100172) && je.status !== "reversed" && je.source_module === "manual";
+        const canReverse = canReverseSingle && isReversible(je);
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -215,21 +361,24 @@ export function JournalEntriesTable() {
                 <ChevronDown className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuContent align="end" className="w-44">
               <DropdownMenuLabel className="text-xs">Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-xs" onClick={() => setViewJe(je)}>
+                <Eye className="w-3 h-3 mr-1.5" /> View Details
+              </DropdownMenuItem>
               {hasPermission(roles, 100169) && (
                 <DropdownMenuItem
                   className="text-xs"
                   onClick={() => navigate(`/journal-entries/${je.journal_entry_id}`)}
                 >
-                  View Details
+                  Open Full Page
                 </DropdownMenuItem>
               )}
               {canReverse && (
                 <DropdownMenuItem
                   className="text-xs text-destructive focus:text-destructive"
-                  onClick={() => setReverseTarget(je)}
+                  onClick={() => openPinDialog("single", je)}
                 >
                   <RotateCcw className="w-3 h-3 mr-1.5" /> Reverse
                 </DropdownMenuItem>
@@ -246,12 +395,19 @@ export function JournalEntriesTable() {
   }, [debouncedFilter]);
 
   const table = useReactTable({
-    data:         data?.data || [],
+    data:         rows,
     rowCount:     data?.meta?.totalRowCount,
     columns,
     manualPagination: true,
     manualSorting:    true,
     onSortingChange:  setSorting,
+    onPaginationChange: (updater) => {
+      setPagination((old) => {
+        const next = typeof updater === "function" ? updater(old) : updater;
+        setSelectedIds(new Set());
+        return next;
+      });
+    },
     getCoreRowModel:       getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel:     getSortedRowModel(),
@@ -299,6 +455,18 @@ export function JournalEntriesTable() {
           </Button>
         )}
 
+        {canReverseBulk && selectedCount > 0 && (
+          <Button
+            variant="destructive"
+            size="sm"
+            className="h-8"
+            onClick={() => openPinDialog("bulk")}
+          >
+            <RotateCcw className="w-3 h-3 mr-1.5" />
+            Reverse Selected ({selectedCount})
+          </Button>
+        )}
+
         <div className="ml-auto flex items-center gap-2">
           <Button variant="outline" size="sm" className="h-8" onClick={() => handleExport("csv")} disabled={isDownloading}>
             CSV
@@ -321,7 +489,7 @@ export function JournalEntriesTable() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {table.getAllColumns().filter((c) => c.getCanHide() && c.id !== "actions").map((col) => (
+              {table.getAllColumns().filter((c) => c.getCanHide() && !["select", "actions"].includes(c.id)).map((col) => (
                 <DropdownMenuCheckboxItem
                   key={col.id}
                   className="capitalize text-xs"
@@ -357,6 +525,12 @@ export function JournalEntriesTable() {
         </div>
       </div>
 
+      {selectedCount > 0 && (
+        <p className="text-xs text-primary font-medium">
+          {selectedCount} entr{selectedCount === 1 ? "y" : "ies"} selected
+        </p>
+      )}
+
       {/* ── Table ── */}
       <div className="rounded-md border overflow-x-auto">
         <Table>
@@ -388,7 +562,10 @@ export function JournalEntriesTable() {
               </TableRow>
             ) : data?.data?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} className="hover:bg-muted/30">
+                <TableRow
+                  key={row.id}
+                  className={`hover:bg-muted/30 ${row.original.status === "reversed" ? "opacity-50" : ""}`}
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -441,18 +618,93 @@ export function JournalEntriesTable() {
         />
       )}
 
-      {/* ── Reverse confirmation (PIN required) ── */}
-      <Dialog
-        open={!!reverseTarget}
-        onOpenChange={(o) => { if (!o) { setReverseTarget(null); setReversePin(""); setReversePinErr(""); } }}
-      >
+      {/* ── Journal Entry Details Dialog ── */}
+      <Dialog open={!!viewJe} onOpenChange={(o) => !o && setViewJe(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Journal Entry Details</DialogTitle>
+            <DialogDescription className="font-mono text-xs">{viewJe?.transaction_code}</DialogDescription>
+          </DialogHeader>
+          {viewJe && (
+            <div className="space-y-4 py-1">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                <span className="text-muted-foreground text-xs">Date</span>
+                <span className="text-xs">{formatDateTimestamp(viewJe.transaction_date)}</span>
+
+                <span className="text-muted-foreground text-xs">Branch</span>
+                <span className="text-xs">{viewJe.branch || "—"}</span>
+
+                <span className="text-muted-foreground text-xs">Amount</span>
+                <span className="text-xs font-bold tabular-nums">{Number(viewJe.amount).toLocaleString()}</span>
+
+                <span className="text-muted-foreground text-xs">Status</span>
+                <span className="text-xs capitalize">
+                  <Badge className={`text-xs border ${STATUS_BADGE[viewJe.status] ?? "bg-muted text-muted-foreground"}`}>
+                    {viewJe.status}
+                  </Badge>
+                </span>
+
+                {viewJe.description && (
+                  <>
+                    <span className="text-muted-foreground text-xs">Description</span>
+                    <span className="text-xs">{viewJe.description}</span>
+                  </>
+                )}
+              </div>
+
+              {(viewJe.lines ?? []).length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">Journal Lines</p>
+                  <div className="rounded border overflow-hidden">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-muted/50">
+                          <th className="text-left px-2 py-1.5 font-medium">Account</th>
+                          <th className="text-right px-2 py-1.5 font-medium text-blue-600">Debit</th>
+                          <th className="text-right px-2 py-1.5 font-medium text-green-700">Credit</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {viewJe.lines.map((l, i) => (
+                          <tr key={i} className="border-t">
+                            <td className="px-2 py-1.5 text-muted-foreground">{l.account_title}</td>
+                            <td className="px-2 py-1.5 text-right tabular-nums text-blue-600">
+                              {l.debit_amount > 0 ? Number(l.debit_amount).toLocaleString() : ""}
+                            </td>
+                            <td className="px-2 py-1.5 text-right tabular-nums text-green-700">
+                              {l.credit_amount > 0 ? Number(l.credit_amount).toLocaleString() : ""}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => setViewJe(null)}>Close</Button>
+            <Button size="sm" onClick={() => printJournalEntry(viewJe)}>
+              Print Entry
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Reversal PIN dialog ── */}
+      <Dialog open={!!pinDialog} onOpenChange={(o) => !o && closePinDialog()}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Reverse journal entry?</DialogTitle>
+            <DialogTitle>
+              {pinDialog?.mode === "bulk"
+                ? `Reverse ${pinDialog.jeIds?.length} entr${pinDialog.jeIds?.length === 1 ? "y" : "ies"}`
+                : "Reverse journal entry?"}
+            </DialogTitle>
             <DialogDescription>
-              A reversal entry will be created that cancels{" "}
-              <strong>{reverseTarget?.transaction_code}</strong>. The original entry will be
-              marked as <em>reversed</em>. Enter your PIN to confirm.
+              {pinDialog?.mode === "bulk"
+                ? "All selected entries will be reversed in a single all-or-nothing operation. Enter your PIN to confirm."
+                : <>A reversal entry will be created that cancels <strong>{pinDialog?.code}</strong>. The original entry will be marked as <em>reversed</em>. Enter your PIN to confirm.</>}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
@@ -462,28 +714,22 @@ export function JournalEntriesTable() {
                 id="je-reversal-pin"
                 type="password"
                 placeholder="Enter PIN"
-                value={reversePin}
-                onChange={(e) => { setReversePin(e.target.value); setReversePinErr(""); }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && reversePin.trim()) {
-                    reverseMutation.mutate({ jeId: reverseTarget.journal_entry_id, pincode: reversePin });
-                  }
-                }}
+                value={pin}
+                onChange={(e) => { setPin(e.target.value); setPinError(""); }}
+                onKeyDown={(e) => e.key === "Enter" && submitReversal()}
                 autoFocus
               />
-              {reversePinErr && <p className="text-xs text-destructive">{reversePinErr}</p>}
+              {pinError && <p className="text-xs text-destructive">{pinError}</p>}
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setReverseTarget(null); setReversePin(""); setReversePinErr(""); }} disabled={reverseMutation.isPending}>
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={closePinDialog} disabled={isPending}>Cancel</Button>
             <Button
               variant="destructive"
-              disabled={reverseMutation.isPending || !reversePin.trim()}
-              onClick={() => reverseMutation.mutate({ jeId: reverseTarget.journal_entry_id, pincode: reversePin })}
+              disabled={isPending || !pin.trim()}
+              onClick={submitReversal}
             >
-              {reverseMutation.isPending
+              {isPending
                 ? <><RefreshCw className="w-3.5 h-3.5 animate-spin mr-1.5" />Reversing…</>
                 : <><RotateCcw className="w-3.5 h-3.5 mr-1.5" />Confirm Reversal</>}
             </Button>

@@ -38,10 +38,10 @@ const LoansPortfolioReport = () => {
       try {
         const response = await axiosPrivate.get("reports/loans/portfolio", {
           params: {
-            startDate: filters.startDate,
-            endDate:   filters.endDate,
-            branch_id: filters.branch_id,
-            user_id:   filters.user_id,
+            branch_id:   filters.branch_id,
+            user_id:     filters.user_id,
+            client_type: filters.client_type,
+            group_id:    filters.group_id,
           },
         });
         return response?.data?.data ?? [];
@@ -252,6 +252,7 @@ const LoansPortfolioReport = () => {
             </div>
           </div>
           <LoanGeneralReportQuery
+            show={{ clientType: true, group: true }}
             onFilterChange={handleFilterChange}
             isRefetching={isRefetching}
             refetch={refetch}

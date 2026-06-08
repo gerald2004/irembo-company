@@ -259,6 +259,33 @@ const AddLoanProductDialog = ({ isOpen, onClose, refetch }) => {
                   </p>
                 )}
               </div>
+
+              <div>
+                <Label>Interest Rate Type</Label>
+                <Select
+                  onValueChange={(value) =>
+                    setValue("interest_rate_type", value, { shouldValidate: true })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder="Select Rate Type"
+                      {...register("interest_rate_type", {
+                        required: "Interest rate type is required",
+                      })}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="per_period">Per Period</SelectItem>
+                    <SelectItem value="total_flat">Total Flat</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.interest_rate_type && (
+                  <p className="text-red-500 text-sm">
+                    {errors.interest_rate_type.message}
+                  </p>
+                )}
+              </div>
             </fieldset>
           )}
 

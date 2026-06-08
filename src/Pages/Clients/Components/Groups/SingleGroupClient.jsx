@@ -14,8 +14,9 @@ import Communication from "./Components/Communication";
 import { SharesTable } from "./Components/Tables/SharesTable";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
 import { hasPermission } from "@/lib/utils";
-import { Users, CreditCard, MessageSquare, PieChart, Brain } from "lucide-react";
+import { Users, CreditCard, MessageSquare, PieChart, Brain, Layers } from "lucide-react";
 import GroupIntelligence from "./Components/GroupIntelligence";
+import GroupSubGroups from "./Components/GroupSubGroups";
 
 const TAB_CLASS =
   "rounded-none border-b-2 border-transparent px-4 py-2 text-sm font-medium text-muted-foreground " +
@@ -109,6 +110,9 @@ const SingleGroupClient = () => {
                 <PieChart className="w-3.5 h-3.5 mr-1.5" />Shares
               </TabsTrigger>
             )}
+            <TabsTrigger value="sub-groups" className={TAB_CLASS}>
+              <Layers className="w-3.5 h-3.5 mr-1.5" />Sub-Groups
+            </TabsTrigger>
             <TabsTrigger value="intelligence" className={TAB_CLASS}>
               <Brain className="w-3.5 h-3.5 mr-1.5" />Intelligence
             </TabsTrigger>
@@ -133,6 +137,9 @@ const SingleGroupClient = () => {
           </TabsContent>
           <TabsContent value="shares">
             {hasPermission(roles, 100064) && <SharesTable />}
+          </TabsContent>
+          <TabsContent value="sub-groups">
+            <GroupSubGroups groupId={group?.client_id} />
           </TabsContent>
           <TabsContent value="intelligence">
             <GroupIntelligence clientId={group?.client_id} />

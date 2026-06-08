@@ -248,25 +248,9 @@ export function LoanScheduleTable({
                 Pay Schedule
               </DropdownMenuItem>
             )}
-            {hasPermission(roles, 100084) && (
-              <DropdownMenuItem
-                onClick={() => handleOpenDialog("penalty", row.original)}
-              >
-                Adjust Penalty
-              </DropdownMenuItem>
-            )}
-            {hasPermission(roles, 100085) && (
-              <DropdownMenuItem
-                onClick={() => handleOpenDialog("interest", row.original)}
-              >
-                Adjust Interest
-              </DropdownMenuItem>
-            )}
-            {hasPermission(roles, 100085) && (
-              <DropdownMenuItem
-                onClick={() => handleOpenDialog("monitoring", row.original)}
-              >
-                Adjust Monitoring Fees
+            {hasPermission(roles, [100084, 100085]) && (
+              <DropdownMenuItem onClick={() => handleOpenDialog(row.original)}>
+                Adjust Schedule
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>
@@ -287,28 +271,19 @@ export function LoanScheduleTable({
   };
 
   const [showDialog, setShowDialog] = useState(false);
-  const [action, setAction] = useState("");
 
-  const handleOpenDialog = (act, rowData) => {
+  const handleOpenDialog = (rowData) => {
     setShowDialog(true);
-    setAction(act);
     setSchedule(rowData);
   };
   const handleCloseDialog = () => {
     setShowDialog(false);
-    setAction("");
     setSchedule("");
   };
 
   const [showGeneralDialog, setShowGeneralDialog] = useState(false);
-  const handleGeneralOpenDialog = (act) => {
-    setShowGeneralDialog(true);
-    setAction(act);
-  };
-  const handleGeneralCloseDialog = () => {
-    setShowGeneralDialog(false);
-    setAction("");
-  };
+  const handleGeneralOpenDialog = () => setShowGeneralDialog(true);
+  const handleGeneralCloseDialog = () => setShowGeneralDialog(false);
 
   const [showRolloverDialog, setShowRolloverDialog] = useState(false);
   const handleRolloverOpenDialog = () => setShowRolloverDialog(true);
@@ -389,28 +364,9 @@ export function LoanScheduleTable({
                 Top Up
               </Button>
             )}
-            {hasPermission(roles, 100080) && (
-              <Button
-                size="sm"
-                onClick={() => handleGeneralOpenDialog("penalty")}
-              >
-                Adjust Penalty
-              </Button>
-            )}
-            {hasPermission(roles, 100080) && (
-              <Button
-                size="sm"
-                onClick={() => handleGeneralOpenDialog("monitoring")}
-              >
-                Adjust Monitoring Fees
-              </Button>
-            )}
-            {hasPermission(roles, 100081) && (
-              <Button
-                size="sm"
-                onClick={() => handleGeneralOpenDialog("interest")}
-              >
-                Adjust Interest
+            {hasPermission(roles, [100080, 100081]) && (
+              <Button size="sm" onClick={handleGeneralOpenDialog}>
+                Adjust Schedules
               </Button>
             )}
             {hasPermission(roles, 100082) && (
@@ -455,7 +411,6 @@ export function LoanScheduleTable({
           refetch={refetch}
           isOpen={showDialog}
           onClose={handleCloseDialog}
-          actionType={action}
           scheduleData={schedule}
         />
       )}
@@ -465,7 +420,6 @@ export function LoanScheduleTable({
           refetch={refetch}
           isOpen={showGeneralDialog}
           onClose={handleGeneralCloseDialog}
-          actionType={action}
         />
       )}
 

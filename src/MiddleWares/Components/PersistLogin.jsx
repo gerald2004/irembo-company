@@ -3,21 +3,24 @@ import { useState, useEffect } from "react";
 import useRefreshToken from "@/MiddleWares/Hooks/useRefreshToken";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
 import { Loader2 } from "lucide-react";
+
 const PersistLogin = () => {
   const [isLoading, setIsLoading] = useState(true);
   const refresh = useRefreshToken();
-  const { auth } = useAuth();
+  const { auth, setAuth } = useAuth();
 
   useEffect(() => {
     let isMounted = true;
 
     const verifyRefreshToken = async () => {
       try {
-        await refresh(); // fetch new access token via refresh token
-      } catch (err) {
-        console.error(err);
+        await refresh();
+      } catch {
+        // Refresh token missing or expired — ensure auth is cleared so
+        // RequireAuth redirects to login instead of leaving a blank page.
+        if (isMounted) setAuth({});
       } finally {
-        isMounted && setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     };
 
@@ -28,7 +31,7 @@ const PersistLogin = () => {
     }
 
     return () => (isMounted = false);
-  }, [auth?.accessToken, refresh]);
+  }, [auth?.accessToken, refresh, setAuth]);
 
   return isLoading ? (
     <div className="flex items-center justify-center w-full h-[100vh]">

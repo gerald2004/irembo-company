@@ -29,21 +29,12 @@ export function PayrollSettingsConfig() {
   const [showDialog, setShowDialog] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
 
-  // ✅ Handle Modals
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
 
-  const handleOpenModalEdit = (data) => {
-    setIsModalOpenEdit(true);
-    setDefaultData(data);
-  };
+  const handleOpenModalEdit = (data) => { setIsModalOpenEdit(true); setDefaultData(data); };
+  const handleCloseModalEdit = () => { setIsModalOpenEdit(false); setDefaultData([]); };
 
-  const handleCloseModalEdit = () => {
-    setIsModalOpenEdit(false);
-    setDefaultData([]);
-  };
-
-  // ✅ Fetch Payroll Deductions & Allowances
   const {
     data: deductionsAllowancesData = [],
     isLoading,
@@ -53,66 +44,56 @@ export function PayrollSettingsConfig() {
   } = useQuery({
     queryKey: ["payroll-deductions-allowances"],
     queryFn: async () => {
-            const controller = new AbortController();
-
-      const fetchURL = `/settings/payroll-config`;
+      const controller = new AbortController();
       try {
-        const response = await axiosPrivate.get(fetchURL, {
-          signal: controller.signal,
-        });
+        const response = await axiosPrivate.get("/settings/payroll-config", { signal: controller.signal });
         return response?.data?.data?.deductions_allowances ?? [];
       } catch (error) {
-        if (error?.response?.status === 401) {
-          navigate("/", { state: { from: location }, replace: true });
-        }
+        if (error?.response?.status === 401) navigate("/", { state: { from: location }, replace: true });
         throw error;
       }
     },
     keepPreviousData: true,
   });
 
-  // ✅ Handle Delete Deduction/Allowance
-  const handleOpenDeleteDialog = (id) => {
-    setSelectedId(id);
-    setShowDialog(true);
-  };
+  const {
+    data: accountsData = [],
+    isLoading: isLoadingAccounts,
+    isError: isErrorAccounts,
+    refetch: refetchAccounts,
+  } = useQuery({
+    queryKey: ["account-votes"],
+    queryFn: async () => {
+      const controller = new AbortController();
+      const response = await axiosPrivate.get("/settings/accounts/account", { signal: controller.signal });
+      return response.data.data.accounts ?? [];
+    },
+  });
 
-  const handleCloseDeleteDialog = () => {
-    setSelectedId(null);
-    setShowDialog(false);
-  };
+  const handleOpenDeleteDialog = (id) => { setSelectedId(id); setShowDialog(true); };
+  const handleCloseDeleteDialog = () => { setSelectedId(null); setShowDialog(false); };
 
   const handleDeleteDeductionAllowance = async () => {
-          const controller = new AbortController();
-
+    const controller = new AbortController();
     try {
-      const response = await axiosPrivate.delete(
-        `/settings/payroll-config/${selectedId}`,
-        { signal: controller.signal }
-      );
+      const response = await axiosPrivate.delete(`/settings/payroll-config/${selectedId}`, { signal: controller.signal });
       toast({ title: "Success", description: response?.data?.messages });
       refetch();
     } catch (error) {
-      const errorMessage =
-        error?.response?.data?.messages || "No server response";
       toast({
         title: "Uh oh! Something went wrong.",
         variant: "destructive",
-        description: errorMessage,
+        description: error?.response?.data?.messages || "No server response",
       });
     }
   };
 
-  // ✅ Table Columns
   const columns = [
     {
       id: "select",
       header: ({ table }) => (
         <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
+          checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
         />
@@ -134,13 +115,7 @@ export function PayrollSettingsConfig() {
       accessorKey: "type",
       header: "Type",
       cell: ({ row }) => (
-        <p
-          className={`capitalize ${
-            row.original.type === "Deduction"
-              ? "text-red-500"
-              : "text-green-500"
-          }`}
-        >
+        <p className={`capitalize font-medium ${row.original.type === "Deduction" ? "text-red-500" : "text-green-500"}`}>
           {row.original.type}
         </p>
       ),
@@ -157,9 +132,22 @@ export function PayrollSettingsConfig() {
         <p>
           {row.original.value_type === "Percentage"
             ? `${row.original.value}%`
-            : `${Number(row.original.value).toLocaleString()}`}
+            : Number(row.original.value).toLocaleString()}
         </p>
       ),
+    },
+    {
+      accessorKey: "account_name",
+      header: "Account",
+      cell: ({ row }) =>
+        row.original.account_name ? (
+          <p className="text-xs text-gray-500">
+            <span className="font-mono">{row.original.account_code}</span>{" "}
+            {row.original.account_name}
+          </p>
+        ) : (
+          <p className="text-xs text-gray-400 italic">Default</p>
+        ),
     },
     {
       id: "actions",
@@ -167,21 +155,15 @@ export function PayrollSettingsConfig() {
       cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              ...
-            </Button>
+            <Button variant="ghost" className="h-8 w-8 p-0">...</Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onSelect={() => handleOpenModalEdit(row.original)}
-            >
-              Edit Deduction/Allowance
+            <DropdownMenuItem onSelect={() => handleOpenModalEdit(row.original)}>
+              Edit
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => handleOpenDeleteDialog(row.original.id)}
-            >
+            <DropdownMenuItem onClick={() => handleOpenDeleteDialog(row.original.id)}>
               Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -198,24 +180,29 @@ export function PayrollSettingsConfig() {
         fetchData={refetch}
         isLoading={isLoading}
         isRefetching={isRefetching}
-        buttonTitle={"+ Add Deduction/Allowance"}
+        buttonTitle="+ Add Deduction/Allowance"
         buttonMethod={handleOpenModal}
         isError={isError}
       />
-      {/* ✅ Add Deduction/Allowance Modal */}
       <AddDeductionAllowanceDialog
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         refetch={refetch}
+        accountsData={accountsData}
+        isLoadingAccounts={isLoadingAccounts}
+        isErrorAccounts={isErrorAccounts}
+        refetchAccounts={refetchAccounts}
       />
-      {/* ✅ Edit Deduction/Allowance Modal */}
       <EditDeductionAllowanceDialog
         isOpen={isModalOpenEdit}
         onClose={handleCloseModalEdit}
         refetch={refetch}
         defaultValues={defaultData}
+        accountsData={accountsData}
+        isLoadingAccounts={isLoadingAccounts}
+        isErrorAccounts={isErrorAccounts}
+        refetchAccounts={refetchAccounts}
       />
-      {/* ✅ Delete Confirmation Modal */}
       <AlertModal
         showDialog={showDialog}
         setShowDialog={handleCloseDeleteDialog}

@@ -156,7 +156,7 @@ const TransferTransactionDialog = ({ isOpen, onClose, refetch, accountId, client
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Internal Transfer</DialogTitle>
           <DialogDescription>Follow the steps to complete the transfer.</DialogDescription>
@@ -175,7 +175,7 @@ const TransferTransactionDialog = ({ isOpen, onClose, refetch, accountId, client
           {stepIcons.map((s, i) => (
             <div
               key={i}
-              className={`flex items-center transition-opacity ${step > i + 1 ? "opacity-100" : "opacity-50"}`}
+              className={`flex items-center transition-opacity ${step >= i + 1 ? "opacity-100" : "opacity-50"}`}
             >
               {s.icon}
               <span className="ml-2 text-sm font-medium">{s.label}</span>
@@ -185,7 +185,8 @@ const TransferTransactionDialog = ({ isOpen, onClose, refetch, accountId, client
         </div>
         <Progress value={(step / 3) * 100} className="my-1" />
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden min-h-0">
+          <div className="overflow-y-auto flex-1 min-h-0 space-y-4 pr-1">
           {/* Step 1: Choose destination */}
           {step === 1 && (
             <div className="space-y-4">
@@ -328,8 +329,9 @@ const TransferTransactionDialog = ({ isOpen, onClose, refetch, accountId, client
             </div>
           )}
 
+          </div>
           {/* Footer */}
-          <DialogFooter>
+          <DialogFooter className="pt-3">
             <div className="flex justify-end w-full gap-2">
               {step > 1 && (
                 <Button type="button" variant="secondary" onClick={prevStep}>

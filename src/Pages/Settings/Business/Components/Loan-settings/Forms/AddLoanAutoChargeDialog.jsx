@@ -23,6 +23,7 @@ import { X } from "lucide-react";
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import { toast } from "@/hooks/use-toast";
 import { AccountCombobox } from "@/Pages/Components/AccountCombobox";
+import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 const AddLoanAutoChargeDialog = ({
@@ -51,6 +52,7 @@ const AddLoanAutoChargeDialog = ({
     account_id: null,
     receivable_account: null,
   });
+  const [splitInGroup, setSplitInGroup] = useState(true);
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -64,7 +66,7 @@ const AddLoanAutoChargeDialog = ({
       product: params.id,
       ...data,
       ...selectedAccounts,
-      // ...(data.calculated_as === "range" ? { amount_ranges: data.ranges } : {}),
+      split_in_group: splitInGroup ? 1 : 0,
     };
     console.log(payload);
 
@@ -322,6 +324,25 @@ const AddLoanAutoChargeDialog = ({
               Add Range
             </Button>
           )}
+
+          <div className="flex items-center gap-3 rounded-md border px-4 py-3 bg-muted/40">
+            <Switch
+              id="split_in_group"
+              checked={splitInGroup}
+              onCheckedChange={setSplitInGroup}
+            />
+            <div>
+              <Label htmlFor="split_in_group" className="font-medium cursor-pointer">
+                Split across group members
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                {splitInGroup
+                  ? "Charge will be split proportionally among members"
+                  : "Each member is charged the full amount individually"}
+              </p>
+            </div>
+          </div>
+
           <DialogFooter>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Submitting..." : "Submit"}

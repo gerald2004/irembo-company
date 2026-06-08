@@ -297,9 +297,7 @@ export default function Notifications() {
                   </div>
 
                   <CardContent className="flex justify-between gap-4 pt-2 pb-4">
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {n.message}
-                    </p>
+                    <p className="text-sm text-muted-foreground line-clamp-2" dangerouslySetInnerHTML={{ __html: n.message }} />
                     <span className="text-[11px] text-muted-foreground whitespace-nowrap">
                       {new Date(n.created_at).toLocaleString()}
                     </span>
@@ -357,9 +355,7 @@ export default function Notifications() {
               </div>
             )}
 
-            <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-              {selectedNotification.message}
-            </p>
+            <p className="text-sm text-muted-foreground mb-4 leading-relaxed" dangerouslySetInnerHTML={{ __html: selectedNotification.message }} />
 
             <Separator />
 

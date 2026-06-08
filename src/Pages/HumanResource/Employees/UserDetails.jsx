@@ -321,6 +321,21 @@ const StaffDetails = () => {
     }
   };
 
+  const unlock2fa = async () => {
+    try {
+      setTwoFaLoading(true);
+      await axiosPrivate.patch(`/business/employees/${params.id}`, { unlock_2fa: true }, {
+        headers: { "Content-Type": "application/json" },
+      });
+      await refetch();
+      toast({ title: "Success", description: "2FA lockout cleared. The user can now log in." });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to unlock 2FA.", variant: "destructive" });
+    } finally {
+      setTwoFaLoading(false);
+    }
+  };
+
   const reset2fa = async () => {
     try {
       setTwoFaLoading(true);
@@ -942,6 +957,25 @@ const StaffDetails = () => {
                             <p className="text-xs text-muted-foreground">
                               Enabled: <strong>{new Date(userData.two_factor_confirmed_at).toLocaleDateString()}</strong>
                             </p>
+                          )}
+                          {userData?.two_factor_locked_until && new Date(userData.two_factor_locked_until) > new Date() && (
+                            <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3 flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2">
+                                <ShieldOff className="w-4 h-4 text-red-600 shrink-0" />
+                                <p className="text-xs text-red-800 dark:text-red-300">
+                                  Locked until <strong>{new Date(userData.two_factor_locked_until).toLocaleTimeString()}</strong>
+                                </p>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs border-red-300 text-red-700 hover:bg-red-50"
+                                onClick={unlock2fa}
+                                disabled={twoFaLoading}
+                              >
+                                Unlock Now
+                              </Button>
+                            </div>
                           )}
                           <Button
                             size="sm"

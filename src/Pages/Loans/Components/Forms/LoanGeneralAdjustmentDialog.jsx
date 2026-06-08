@@ -23,12 +23,7 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 
-const LoanGeneralAdjustmentDialog = ({
-  isOpen,
-  onClose,
-  refetch,
-  actionType,
-}) => {
+const LoanGeneralAdjustmentDialog = ({ isOpen, onClose, refetch }) => {
   const axiosPrivate = useAxiosPrivate();
   const { loanid: loanId } = useParams();
 
@@ -41,46 +36,55 @@ const LoanGeneralAdjustmentDialog = ({
   } = useForm();
 
   const onSubmit = async (data) => {
-          const controller = new AbortController();
+    const FIELDS = ["interest_adjusted", "penalty_adjusted", "monitoring_adjusted"];
+    const filled = FIELDS.filter(
+      (k) => data[k] !== "" && data[k] !== undefined && data[k] !== null
+    );
+    if (filled.length === 0) {
+      toast({
+        title: "No amounts provided",
+        description: "Enter at least one adjustment amount.",
+        variant: "destructive",
+      });
+      return;
+    }
 
+    const payload = {
+      loan_application_id: loanId,
+      user_pincode: data.user_pincode,
+    };
+    for (const k of filled) {
+      payload[k] = parseFloat(data[k]);
+    }
+    if (data.reason?.trim()) payload.reason = data.reason.trim();
+
+    const controller = new AbortController();
     try {
-      const payload = {
-        loan_application_id: loanId,
-        adjustment_type: actionType,
-        ...data,
-      };
       const response = await axiosPrivate.post(
         "/loans/general/adjustment/schedule",
         payload,
         { signal: controller.signal }
       );
-      toast({
-        title: "Success",
-        description: response.data.messages,
-      });
+      toast({ title: "Success", description: response.data.messages });
       reset();
       refetch();
       onClose();
     } catch (error) {
-      const errorMessage =
-        error?.response?.data?.messages || "No server response";
       toast({
         title: "Uh oh! Something went wrong.",
         variant: "destructive",
-        description: errorMessage,
+        description: error?.response?.data?.messages || "No server response",
       });
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-[450px]">
+      <DialogContent className="sm:max-w-[460px]">
         <DialogHeader>
-          <DialogTitle className="capitalize">
-            {actionType} Loan Adjustment{" "}
-          </DialogTitle>
+          <DialogTitle>Adjust All Loan Schedules</DialogTitle>
           <DialogDescription>
-            Please provide the required details for this loan adjustment.
+            Set new per-installment amounts for any component. Leave a field blank to leave it unchanged.
           </DialogDescription>
           <DialogClose asChild>
             <button
@@ -92,77 +96,102 @@ const LoanGeneralAdjustmentDialog = ({
           </DialogClose>
         </DialogHeader>
 
-        {/* Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <Label htmlFor="amount_adjusted">Amount</Label>
-            <Input
-              id="amount_adjusted"
-              type="number"
-              placeholder="Enter amount"
-              {...register("amount_adjusted", {
-                required: "Amount is required",
-              })}
-            />
-            {errors.amount_adjusted && (
-              <p className="text-red-500 text-sm">{errors.amount_adjusted.message}</p>
-            )}
+          <div className="grid grid-cols-1 gap-3">
+            <div>
+              <Label htmlFor="interest_adjusted">New Interest Amount</Label>
+              <Input
+                id="interest_adjusted"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="Leave blank to skip"
+                {...register("interest_adjusted", {
+                  min: { value: 0, message: "Cannot be negative" },
+                })}
+              />
+              {errors.interest_adjusted && (
+                <p className="text-red-500 text-xs mt-1">{errors.interest_adjusted.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="penalty_adjusted">New Penalty Amount</Label>
+              <Input
+                id="penalty_adjusted"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="Leave blank to skip"
+                {...register("penalty_adjusted", {
+                  min: { value: 0, message: "Cannot be negative" },
+                })}
+              />
+              {errors.penalty_adjusted && (
+                <p className="text-red-500 text-xs mt-1">{errors.penalty_adjusted.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="monitoring_adjusted">New Monitoring Fee</Label>
+              <Input
+                id="monitoring_adjusted"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="Leave blank to skip"
+                {...register("monitoring_adjusted", {
+                  min: { value: 0, message: "Cannot be negative" },
+                })}
+              />
+              {errors.monitoring_adjusted && (
+                <p className="text-red-500 text-xs mt-1">{errors.monitoring_adjusted.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="reason">Reason (optional)</Label>
+              <Input
+                id="reason"
+                type="text"
+                placeholder="Reason for adjustment"
+                {...register("reason")}
+              />
+            </div>
           </div>
-          {/* Pincode Entry */}
+
           <div className="flex flex-col items-center">
             <Controller
               control={control}
               name="user_pincode"
               rules={{
                 required: "Pincode is required",
-                pattern: {
-                  value: /^\d{4}$/,
-                  message: "PIN must be exactly 4 digits",
-                },
+                pattern: { value: /^\d{4}$/, message: "PIN must be exactly 4 digits" },
               }}
               render={({ field }) => (
                 <>
                   <Label>Enter Pincode</Label>
                   <InputOTP maxLength={4} {...field}>
                     <InputOTPGroup className="flex space-x-3 py-4">
-                      <InputOTPSlot
-                        index={0}
-                        className="h-10 w-10 text-center rounded-md"
-                      />
-                      <InputOTPSlot
-                        index={1}
-                        className="h-10 w-10 text-center rounded-md"
-                      />
+                      <InputOTPSlot index={0} className="h-10 w-10 text-center rounded-md" />
+                      <InputOTPSlot index={1} className="h-10 w-10 text-center rounded-md" />
                       <InputOTPSeparator />
-                      <InputOTPSlot
-                        index={2}
-                        className="h-10 w-10 text-center rounded-md"
-                      />
-                      <InputOTPSlot
-                        index={3}
-                        className="h-10 w-10 text-center rounded-md"
-                      />
+                      <InputOTPSlot index={2} className="h-10 w-10 text-center rounded-md" />
+                      <InputOTPSlot index={3} className="h-10 w-10 text-center rounded-md" />
                     </InputOTPGroup>
                   </InputOTP>
                 </>
               )}
             />
             {errors.user_pincode && (
-              <p className="text-red-500 text-sm mt-1">
-                {errors.user_pincode.message}
-              </p>
+              <p className="text-red-500 text-sm mt-1">{errors.user_pincode.message}</p>
             )}
           </div>
 
-          {/* Footer Navigation */}
           <DialogFooter>
-            <Button
-              type="submit"
-              className="capitalize"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Processing..." : `${actionType}`}{" "}
-              <CheckCircle className="ml-2" />
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Processing..." : "Apply Adjustments"}
+              <CheckCircle className="ml-2 h-4 w-4" />
             </Button>
           </DialogFooter>
         </form>

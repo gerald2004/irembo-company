@@ -75,20 +75,25 @@ export function ShareTable() {
     {
       id: "shares_transaction_type",
       header: "Type",
-      cell: ({ row }) => (
-        <Badge variant={row.original.shares_transaction_type === "in" ? "default" : "secondary"} className="text-xs capitalize">
-          {row.original.shares_transaction_type === "in" ? "Purchase" : "Redemption"}
-        </Badge>
-      ),
+      cell: ({ row }) => {
+        const t = row.original.shares_transaction_type;
+        const label = t === "in" ? "Purchase" : t === "transfer_in" ? "Transfer In" : t === "transfer_out" ? "Transfer Out" : "Redemption";
+        const variant = t === "in" || t === "transfer_in" ? "default" : "secondary";
+        return <Badge variant={variant} className="text-xs capitalize">{label}</Badge>;
+      },
     },
     {
       id: "shares_transaction_count",
       header: "Shares",
-      cell: ({ row }) => (
-        <span className={`font-mono font-semibold text-sm ${row.original.shares_transaction_type === "in" ? "text-blue-600" : "text-red-600"}`}>
-          {row.original.shares_transaction_type === "in" ? "+" : "-"}{row.original.shares_transaction_count}
-        </span>
-      ),
+      cell: ({ row }) => {
+        const t = row.original.shares_transaction_type;
+        const positive = t === "in" || t === "transfer_in";
+        return (
+          <span className={`font-mono font-semibold text-sm ${positive ? "text-blue-600" : "text-red-600"}`}>
+            {positive ? "+" : "-"}{row.original.shares_transaction_count}
+          </span>
+        );
+      },
     },
     {
       id: "shares_transaction_narrative",
@@ -109,7 +114,7 @@ export function ShareTable() {
 
   useEffect(() => {
     setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-  }, [debouncedGlobalFilter]);
+  }, [debouncedFilter]);
 
   const table = useReactTable({
     data: data?.data || [],

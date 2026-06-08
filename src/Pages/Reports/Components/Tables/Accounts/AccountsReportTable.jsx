@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Landmark, Package } from "lucide-react";
+import { Landmark, Package, Layers, ArrowLeftRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
@@ -13,10 +13,28 @@ const SECTIONS = [
       {
         title: "Account Balances Report",
         link: "account-reports/account-balances",
-        description: "Current balances for all chart-of-accounts entries — debit and credit totals",
+        description: "Current savings account balances per member — filterable by branch, savings product, and status",
         icon: <Landmark className="w-5 h-5" />,
         color: "text-blue-600",
         bg: "bg-blue-50 dark:bg-blue-900/20",
+        permission: 100251,
+      },
+      {
+        title: "Consolidated Savings Balance",
+        link: "account-reports/savings-consolidated",
+        description: "Total balances grouped by savings product — accounts count, balance, frozen, and available per product",
+        icon: <Layers className="w-5 h-5" />,
+        color: "text-emerald-600",
+        bg: "bg-emerald-50 dark:bg-emerald-900/20",
+        permission: 100251,
+      },
+      {
+        title: "Cross-Branch Transactions",
+        link: "account-reports/cross-branch",
+        description: "Deposits and withdrawals processed at a branch different from the client's home branch — for reconciliation and branch accountability",
+        icon: <ArrowLeftRight className="w-5 h-5" />,
+        color: "text-orange-600",
+        bg: "bg-orange-50 dark:bg-orange-900/20",
         permission: 100251,
       },
       {

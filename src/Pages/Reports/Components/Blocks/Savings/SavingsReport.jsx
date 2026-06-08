@@ -48,6 +48,7 @@ const SavingsReport = () => {
             user_id:            filters.user_id,
             method:             filters.method,
             savings_product_id: filters.savings_product_id,
+            client_type:        filters.client_type,
           },
           signal: controller.signal,
         });
@@ -192,7 +193,7 @@ const SavingsReport = () => {
       <div className="space-y-4 pt-2">
         <h5 className="text-2xl font-bold tracking-tight">Savings Deposits Report</h5>
 
-        <LoanGeneralReportQuery show={{ method: true, savingsProduct: true }}
+        <LoanGeneralReportQuery show={{ method: true, savingsProduct: true, clientType: true }}
           onFilterChange={handleFilterChange}
           isRefetching={isRefetching}
           data={rows}

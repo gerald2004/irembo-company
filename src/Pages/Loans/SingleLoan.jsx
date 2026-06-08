@@ -142,8 +142,8 @@ const SingleLoan = () => {
         <div className="border-b" />
         <div className="flex-1 space-y-4 pt-2">
           <Tabs value={activeTab ?? defaultTab} onValueChange={setActiveTab} className="space-y-4">
-            <div className="flex justify-end">
-              <TabsList className="overflow-x-auto scroll-smooth snap-x snap-start scrollbar-hide">
+            <div className="w-full overflow-x-auto scrollbar-hide">
+              <TabsList className="flex w-max min-w-full scroll-smooth snap-x snap-start">
                 {hasPermission(roles, 100159) && (
                   <TabsTrigger value="summary">Summary</TabsTrigger>
                 )}

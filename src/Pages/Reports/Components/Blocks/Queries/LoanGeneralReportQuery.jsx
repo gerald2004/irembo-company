@@ -58,8 +58,10 @@ const CLIENT_STATUS_OPTIONS = [
 ];
 
 const CLIENT_TYPE_OPTIONS = [
-  { value: "individual", label: "Individual" },
-  { value: "group",      label: "Group" },
+  { value: "individual",    label: "Individual" },
+  { value: "group",         label: "Group" },
+  { value: "company",       label: "Company" },
+  { value: "joint_account", label: "Joint Account" },
 ];
 
 const GENDER_OPTIONS = [
@@ -147,7 +149,11 @@ const LoanGeneralReportQuery = ({
     ? new Date(auth.fiscalYear.start_date)
     : new Date(new Date().getFullYear(), 0, 1);
 
-  const [dateRange,             setDateRange]             = useState({ from: fiscalStart, to: new Date() });
+  // Dates are NOT applied until the user explicitly picks a range.
+  // This prevents "current state" reports (active loans, portfolio, etc.)
+  // from excluding loans disbursed before the current fiscal year.
+  const [datesActive, setDatesActive] = useState(false);
+  const [dateRange,   setDateRange]   = useState({ from: fiscalStart, to: new Date() });
   const [selectedBranch,        setSelectedBranch]        = useState(branchKey != null ? String(branchKey) : "all");
   const [selectedUser,          setSelectedUser]          = useState("all");
   const [selectedProduct,       setSelectedProduct]       = useState("all");
@@ -205,8 +211,8 @@ const LoanGeneralReportQuery = ({
     : users.filter((u) => String(u.branch_id) === String(auth?.user?.branch_id));
 
   const buildParams = () => ({
-    startDate:  dateRange.from.toLocaleDateString("en-CA"),
-    endDate:    dateRange.to.toLocaleDateString("en-CA"),
+    startDate:  datesActive ? (dateRange.from?.toLocaleDateString("en-CA") ?? "") : "",
+    endDate:    datesActive ? (dateRange.to?.toLocaleDateString("en-CA")   ?? "") : "",
     branch_id:  toParam(selectedBranch),
     ...(cfg.officer           ? { user_id:           toParam(selectedUser)           } : {}),
     ...(cfg.product           ? { product_id:        toParam(selectedProduct)        } : {}),
@@ -221,7 +227,7 @@ const LoanGeneralReportQuery = ({
     ...(cfg.minDpd && minDpd ? { min_dpd: minDpd } : {}),
   });
 
-  // Auto-apply fiscal year range on mount
+  // Apply initial branch/officer scope on mount (no date filter — datesActive starts false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { onFilterChange(buildParams()); }, []);
 
@@ -232,12 +238,9 @@ const LoanGeneralReportQuery = ({
     setSelectedClientType("all");    setSelectedGender("all");
     setSelectedGroup("all");         setSelectedSavingsProd("all");
     setSelectedAttStatus("all");     setMinDpd("");
+    setDatesActive(false);
     setDateRange({ from: fiscalStart, to: new Date() });
-    onFilterChange({
-      startDate: fiscalStart.toLocaleDateString("en-CA"),
-      endDate:   new Date().toLocaleDateString("en-CA"),
-      branch_id: "",
-    });
+    onFilterChange({ startDate: "", endDate: "", branch_id: "" });
     reset();
   };
 
@@ -292,12 +295,19 @@ const LoanGeneralReportQuery = ({
         {/* ── Filter row ── */}
         <div className="flex flex-wrap items-end gap-3 p-4">
 
-          {/* Date Range — always shown */}
+          {/* Date Range — always shown; only applied when user explicitly picks */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-muted-foreground">Date Range</Label>
+            <Label className={`text-xs font-medium ${datesActive ? "text-foreground" : "text-muted-foreground"}`}>
+              Date Range{datesActive ? "" : " (inactive)"}
+            </Label>
             <CalendarDateRangePicker
               defaultValue={dateRange}
-              onChange={(r) => r?.from && r?.to && setDateRange({ from: new Date(r.from), to: new Date(r.to) })}
+              onChange={(r) => {
+                if (r?.from && r?.to) {
+                  setDateRange({ from: new Date(r.from), to: new Date(r.to) });
+                  setDatesActive(true);
+                }
+              }}
             />
           </div>
 

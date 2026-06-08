@@ -6,45 +6,50 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
-import useBranchFilter from "@/MiddleWares/Hooks/useBranchFilter";
+import { useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router-dom";
+import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDateTimestamp } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import DatatableReportTwo from "@/Pages/Components/DatatableReportTwo";
 import LoanGeneralReportQuery from "../Queries/LoanGeneralReportQuery";
 import { useState, useRef } from "react";
 
+const clientLink = (type, id) => {
+  switch (type) {
+    case "individual":    return `/clients/individual/${id}`;
+    case "group":         return `/clients/group/${id}`;
+    case "company":       return `/clients/company/${id}`;
+    case "joint_account": return `/clients/joint-account/${id}`;
+    default:              return `/clients/individual/${id}`;
+  }
+};
+
 const AccountsBalanceReport = () => {
   const axiosPrivate = useAxiosPrivate();
   const navigate = useNavigate();
   const tableRef = useRef(null);
-  const { branchKey } = useBranchFilter();
   const [filters, setFilters] = useState({
     startDate: "",
     endDate: "",
-    branch_id: String(branchKey ?? ""),
+    branch_id: "",
     user_id: "",
+    savings_product_id: "",
   });
-  const {
-    data = [],
-    isLoading,
-    refetch,
-    isRefetching,
-    isError,
-  } = useQuery({
+
+  const { data = [], isLoading, refetch, isRefetching, isError } = useQuery({
     queryKey: ["accounts-reports", filters],
     queryFn: async () => {
       const controller = new AbortController();
-      const fetchURL = `reports/accounts/general`;
       try {
-        const response = await axiosPrivate.get(fetchURL, {
+        const response = await axiosPrivate.get("reports/accounts/general", {
           params: {
-            startDate: filters.startDate,
-            endDate: filters.endDate,
-            branch_id: filters.branch_id,
-            user_id: filters.user_id,
+            start_date:         filters.startDate         || undefined,
+            end_date:           filters.endDate           || undefined,
+            branch_id:          filters.branch_id         || undefined,
+            user_id:            filters.user_id           || undefined,
+            savings_product_id: filters.savings_product_id || undefined,
           },
           signal: controller.signal,
         });
@@ -58,18 +63,13 @@ const AccountsBalanceReport = () => {
     },
     placeholderData: (prev) => prev,
   });
+
   const columns = [
     {
       accessorKey: "account",
       header: "Account Number",
       cell: ({ row }) => (
-        <Link
-          to={`/clients/${
-            row.original.client_type === "individual" ? "individual" : "group"
-          }/${row.original.client_id}`}
-          className="capitalize text-xs"
-        >
-          {" "}
+        <Link to={clientLink(row.original.client_type, row.original.client_id)} className="text-xs">
           {row.original.account}
         </Link>
       ),
@@ -78,22 +78,23 @@ const AccountsBalanceReport = () => {
       accessorKey: "name",
       header: "Client Name",
       cell: ({ row }) => (
-        <Link
-          to={`/clients/${
-            row.original.client_type === "individual" ? "individual" : "group"
-          }/${row.original.client_id}`}
-          className="capitalize text-xs"
-        >
-          {" "}
+        <Link to={clientLink(row.original.client_type, row.original.client_id)} className="capitalize text-xs">
           {row.original.name}
         </Link>
+      ),
+    },
+    {
+      accessorKey: "savings_product",
+      header: "Account Product",
+      cell: ({ row }) => (
+        <p className="text-xs">{row.original.savings_product}</p>
       ),
     },
     {
       accessorKey: "account_balance",
       header: "Account Balance",
       cell: ({ row }) => (
-        <p className="capitalize text-xs">
+        <p className="tabular-nums text-xs">
           {parseFloat(row.original.account_balance).toLocaleString()}
         </p>
       ),
@@ -102,7 +103,7 @@ const AccountsBalanceReport = () => {
       accessorKey: "frozen_balance",
       header: "Frozen Balance",
       cell: ({ row }) => (
-        <p className="capitalize text-xs">
+        <p className="tabular-nums text-xs">
           {parseFloat(row.original.frozen_balance).toLocaleString()}
         </p>
       ),
@@ -111,12 +112,11 @@ const AccountsBalanceReport = () => {
       accessorKey: "fixed_amount",
       header: "Fixed Balance",
       cell: ({ row }) => (
-        <p className="capitalize text-xs">
+        <p className="tabular-nums text-xs">
           {parseFloat(row.original.fixed_amount).toLocaleString()}
         </p>
       ),
     },
-
     {
       accessorKey: "status",
       header: "Status",
@@ -125,29 +125,23 @@ const AccountsBalanceReport = () => {
       ),
     },
     {
-      accessorKey: "savings_product",
-      header: "Account Product",
-      cell: ({ row }) => (
-        <p className="capitalize text-xs">{row.original.savings_product}</p>
-      ),
-    },
-    {
       accessorKey: "created_at",
       header: "Timestamp",
       cell: ({ row }) => (
-        <p className="capitalize text-xs">
-          {formatDateTimestamp(row.original.created_at)}
-        </p>
+        <p className="text-xs">{formatDateTimestamp(row.original.created_at)}</p>
       ),
     },
   ];
+
   const handleFilterChange = (data) => {
     setFilters(data);
     refetch();
   };
-  const totalAccountBalance = data?.reduce((a, b) => a + b?.account_balance, 0);
-  const totalFrozenBalance = data?.reduce((a, b) => a + b?.frozen_balance, 0);
-  const totalFixedBalance = data?.reduce((a, b) => a + b?.fixed_amount, 0);
+
+  const totalAccountBalance = data?.reduce((a, b) => a + (b?.account_balance ?? 0), 0);
+  const totalFrozenBalance  = data?.reduce((a, b) => a + (b?.frozen_balance  ?? 0), 0);
+  const totalFixedBalance   = data?.reduce((a, b) => a + (b?.fixed_amount    ?? 0), 0);
+
   return (
     <>
       <Breadcrumb>
@@ -157,25 +151,24 @@ const AccountsBalanceReport = () => {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink to="/account-reports">
-              Account Reports
-            </BreadcrumbLink>
+            <BreadcrumbLink to="/account-reports">Account Reports</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Account Balances Reports</BreadcrumbPage>
+            <BreadcrumbPage>Account Balances Report</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
+
       <div className="flex-col md:flex">
         <div className="border-b" />
         <div className="flex-1 space-y-4 p-0 pt-2">
           <div className="flex items-center justify-between space-y-2">
-            <h5 className="text-2xl font-bold tracking-tight">
-              Account Balances Report
-            </h5>
+            <h5 className="text-2xl font-bold tracking-tight">Account Balances Report</h5>
           </div>
-          <LoanGeneralReportQuery show={{ officer: false }}
+
+          <LoanGeneralReportQuery
+            show={{ officer: false, savingsProduct: true }}
             onFilterChange={handleFilterChange}
             isRefetching={isRefetching}
             refetch={refetch}
@@ -183,17 +176,15 @@ const AccountsBalanceReport = () => {
             tableRef={tableRef}
             filters={filters}
             colSpan={2}
-            mode={{
-              format: "A4-P",
-              orientation: "P",
-            }}
-            title={"Account Balances Report"}
+            mode={{ format: "A4-P", orientation: "P" }}
+            title="Account Balances Report"
             totals={{
-              totalAccountBalance: totalAccountBalance,
-              totalFrozenBalance: totalFrozenBalance,
-              totalFixedBalance: totalFixedBalance,
+              totalAccountBalance,
+              totalFrozenBalance,
+              totalFixedBalance,
             }}
           />
+
           <DatatableReportTwo
             ref={tableRef}
             columns={columns}
@@ -204,9 +195,9 @@ const AccountsBalanceReport = () => {
             isError={isError}
             colSpan={3}
             summaryFields={{
-              totalAccountBalance: totalAccountBalance,
-              totalFrozenBalance: totalFrozenBalance,
-              totalFixedBalance: totalFixedBalance,
+              totalAccountBalance,
+              totalFrozenBalance,
+              totalFixedBalance,
             }}
           />
         </div>

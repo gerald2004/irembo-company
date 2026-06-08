@@ -30,11 +30,15 @@ const SectionTable = ({ title, data, net_income }) => (
             {data?.map((item) => (
               <TableRow key={item?.account_id}>
                 <TableCell>
-                  <Link to={`/ledgers/accounts/${item.account_id}`}>
+                  <Link to={`/ledgers/accounts/${item.account_id}`} className="text-xs text-muted-foreground hover:text-primary hover:underline font-mono">
                     {item?.code}
                   </Link>
                 </TableCell>
-                <TableCell>{item?.title}</TableCell>
+                <TableCell>
+                  <Link to={`/ledgers/accounts/${item.account_id}`} className="text-primary hover:underline font-medium">
+                    {item?.title}
+                  </Link>
+                </TableCell>
                 <TableCell>{item?.sub_group?.title}</TableCell>
                 <TableCell>{item?.balance?.toLocaleString()}</TableCell>
               </TableRow>

@@ -19,13 +19,20 @@ import {
 import {
   InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot,
 } from "@/components/ui/input-otp";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, Plus, Eye, CheckCircle, Send, X, DollarSign, Users, TrendingDown } from "lucide-react";
+import {
+  Loader2, Plus, Eye, CheckCircle, Send, RefreshCw,
+  DollarSign, Users, TrendingDown,
+} from "lucide-react";
 import { formatDateTimestamp } from "@/lib/utils";
 
 const statusVariant = {
@@ -34,6 +41,40 @@ const statusVariant = {
   posted:    "outline",
   cancelled: "destructive",
 };
+
+const MONTHS = [
+  "January","February","March","April","May","June",
+  "July","August","September","October","November","December",
+];
+
+function MonthYearPicker({ value, onChange }) {
+  const now   = new Date();
+  const [year, month] = value ? value.split("-") : [String(now.getFullYear()), String(now.getMonth() + 1).padStart(2, "0")];
+  const years = Array.from({ length: 6 }, (_, i) => String(now.getFullYear() - 2 + i));
+
+  const update = (newYear, newMonth) => {
+    onChange(`${newYear}-${newMonth.padStart(2, "0")}`);
+  };
+
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      <Select value={month} onValueChange={(m) => update(year, m)}>
+        <SelectTrigger><SelectValue placeholder="Month" /></SelectTrigger>
+        <SelectContent>
+          {MONTHS.map((name, i) => (
+            <SelectItem key={i} value={String(i + 1).padStart(2, "0")}>{name}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={year} onValueChange={(y) => update(y, month)}>
+        <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
+        <SelectContent>
+          {years.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
 
 function GenerateRunDialog({ isOpen, onClose, onSuccess }) {
   const axiosPrivate = useAxiosPrivate();
@@ -63,19 +104,16 @@ function GenerateRunDialog({ isOpen, onClose, onSuccess }) {
       <DialogContent className="sm:max-w-[440px]">
         <DialogHeader>
           <DialogTitle>Generate Payroll Run</DialogTitle>
-          <DialogClose asChild>
-            <button type="button" onClick={onClose} className="absolute right-4 top-4 opacity-70 hover:opacity-100"><X className="h-4 w-4" /></button>
-          </DialogClose>
         </DialogHeader>
         <div className="space-y-4">
-          <div>
-            <Label>Payroll Month *</Label>
-            <input type="month" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.payroll_month} onChange={(e) => set("payroll_month", e.target.value)} />
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">Payroll Month *</Label>
+            <MonthYearPicker value={form.payroll_month} onChange={(v) => set("payroll_month", v)} />
           </div>
           <DateField label="Payment Date *" value={form.payment_date} onChange={(v) => set("payment_date", v)} />
-          <div>
-            <Label>Notes (optional)</Label>
-            <Textarea placeholder="Any remarks..." value={form.notes} onChange={(e) => set("notes", e.target.value)} className="min-h-[60px]" />
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">Notes (optional)</Label>
+            <Textarea placeholder="Any remarks…" value={form.notes} onChange={(e) => set("notes", e.target.value)} className="min-h-[60px]" />
           </div>
         </div>
         <DialogFooter>
@@ -113,19 +151,19 @@ function PostRunDialog({ isOpen, run, onClose, onSuccess }) {
       <DialogContent className="sm:max-w-[360px]">
         <DialogHeader>
           <DialogTitle>Post Payroll — {run?.payroll_month}</DialogTitle>
-          <DialogClose asChild>
-            <button type="button" onClick={onClose} className="absolute right-4 top-4 opacity-70 hover:opacity-100"><X className="h-4 w-4" /></button>
-          </DialogClose>
         </DialogHeader>
-        <div className="space-y-4 text-center">
-          <p className="text-sm text-muted-foreground">
-            Net payout: <span className="font-bold text-foreground">{parseFloat(run?.total_net ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground text-center">
+            Net payout:{" "}
+            <span className="font-semibold text-foreground">
+              {parseFloat(run?.total_net ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </span>
           </p>
-          <div>
-            <Label>Enter PIN to Confirm</Label>
-            <div className="flex justify-center mt-2">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground block text-center">Enter PIN to Confirm</Label>
+            <div className="flex justify-center">
               <InputOTP maxLength={4} value={pin} onChange={setPin}>
-                <InputOTPGroup className="flex space-x-3 py-4">
+                <InputOTPGroup className="flex space-x-3 py-2">
                   <InputOTPSlot index={0} className="h-10 w-10 text-center rounded-md" />
                   <InputOTPSlot index={1} className="h-10 w-10 text-center rounded-md" />
                   <InputOTPSeparator />
@@ -164,9 +202,6 @@ function RunItemsDialog({ isOpen, run, onClose }) {
       <DialogContent className="sm:max-w-[780px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Payslips — {run?.payroll_month}</DialogTitle>
-          <DialogClose asChild>
-            <button type="button" onClick={onClose} className="absolute right-4 top-4 opacity-70 hover:opacity-100"><X className="h-4 w-4" /></button>
-          </DialogClose>
         </DialogHeader>
         <div className="rounded-md border overflow-x-auto">
           <Table>
@@ -178,13 +213,21 @@ function RunItemsDialog({ isOpen, run, onClose }) {
                 <TableHead className="text-right">Allowances</TableHead>
                 <TableHead className="text-right">Deductions</TableHead>
                 <TableHead className="text-right">Tax</TableHead>
-                <TableHead className="text-right font-bold">Net Pay</TableHead>
+                <TableHead className="text-right font-semibold">Net Pay</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                [...Array(4)].map((_, i) => <TableRow key={i}>{[...Array(8)].map((_, j) => <TableCell key={j}><Skeleton className="h-5 rounded" /></TableCell>)}</TableRow>)
+                [...Array(4)].map((_, i) => (
+                  <TableRow key={i}>
+                    {[...Array(8)].map((_, j) => <TableCell key={j}><Skeleton className="h-5 rounded" /></TableCell>)}
+                  </TableRow>
+                ))
+              ) : items.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">No payslips found.</TableCell>
+                </TableRow>
               ) : items.map((item) => (
                 <TableRow key={item.item_id}>
                   <TableCell className="font-medium">{item.user_name}</TableCell>
@@ -193,18 +236,18 @@ function RunItemsDialog({ isOpen, run, onClose }) {
                   <TableCell className="text-right font-mono text-sm text-blue-600">+{item.allowances.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                   <TableCell className="text-right font-mono text-sm text-red-600">-{item.deductions.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                   <TableCell className="text-right font-mono text-sm text-orange-600">-{item.tax.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
-                  <TableCell className="text-right font-mono font-bold text-sm">{item.net_salary.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                  <TableCell className="text-right font-mono font-semibold text-sm">{item.net_salary.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                   <TableCell><Badge variant={item.status === "paid" ? "default" : "secondary"} className="text-xs capitalize">{item.status}</Badge></TableCell>
                 </TableRow>
               ))}
               {items.length > 0 && (
                 <TableRow className="bg-muted/40 font-semibold">
-                  <TableCell colSpan={2}>Totals</TableCell>
-                  <TableCell className="text-right font-mono">{items.reduce((s, i) => s + i.basic_salary, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
-                  <TableCell className="text-right font-mono text-blue-600">+{items.reduce((s, i) => s + i.allowances, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
-                  <TableCell className="text-right font-mono text-red-600">-{items.reduce((s, i) => s + i.deductions, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
-                  <TableCell className="text-right font-mono text-orange-600">-{items.reduce((s, i) => s + i.tax, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
-                  <TableCell className="text-right font-mono">{items.reduce((s, i) => s + i.net_salary, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                  <TableCell colSpan={2} className="text-xs">Totals</TableCell>
+                  <TableCell className="text-right font-mono text-sm">{items.reduce((s, i) => s + i.basic_salary, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                  <TableCell className="text-right font-mono text-sm text-blue-600">+{items.reduce((s, i) => s + i.allowances, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                  <TableCell className="text-right font-mono text-sm text-red-600">-{items.reduce((s, i) => s + i.deductions, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                  <TableCell className="text-right font-mono text-sm text-orange-600">-{items.reduce((s, i) => s + i.tax, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                  <TableCell className="text-right font-mono text-sm">{items.reduce((s, i) => s + i.net_salary, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                   <TableCell />
                 </TableRow>
               )}
@@ -223,7 +266,7 @@ export default function PayrollManagement() {
   const [postRun, setPostRun]           = useState(null);
   const [viewRun, setViewRun]           = useState(null);
 
-  const { data, isLoading, refetch, isRefetching } = useQuery({
+  const { data, isLoading, isRefetching, refetch } = useQuery({
     queryKey: ["payroll-runs"],
     queryFn: async () => {
       const res = await axiosPrivate.get("/hr/payroll");
@@ -246,11 +289,11 @@ export default function PayrollManagement() {
   });
 
   const runs = data ?? [];
-  const totalPosted = runs.filter((r) => r.status === "posted").reduce((s, r) => s + r.total_net, 0);
+  const totalPosted = runs.filter((r) => r.status === "posted").reduce((s, r) => s + parseFloat(r.total_net), 0);
   const draftCount  = runs.filter((r) => r.status === "draft").length;
 
   return (
-    <>
+    <div className="space-y-6">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem><BreadcrumbLink to="/dashboard">Home</BreadcrumbLink></BreadcrumbItem>
@@ -259,39 +302,59 @@ export default function PayrollManagement() {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="space-y-4 pt-4">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader className="pb-2 flex-row items-center gap-2">
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-              <CardTitle className="text-sm font-medium">Total Posted (Net)</CardTitle>
-            </CardHeader>
-            <CardContent><p className="text-2xl font-bold">{totalPosted.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p></CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2 flex-row items-center gap-2">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              <CardTitle className="text-sm font-medium">Total Runs</CardTitle>
-            </CardHeader>
-            <CardContent><p className="text-2xl font-bold">{runs.length}</p></CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2 flex-row items-center gap-2">
-              <TrendingDown className="h-4 w-4 text-muted-foreground" />
-              <CardTitle className="text-sm font-medium">Pending Approval</CardTitle>
-            </CardHeader>
-            <CardContent><p className="text-2xl font-bold">{draftCount}</p></CardContent>
-          </Card>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Payroll</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Generate, approve, and post monthly payroll runs.
+          </p>
         </div>
+        <Button size="sm" className="shrink-0 gap-1" onClick={() => setShowGenerate(true)}>
+          <Plus className="h-4 w-4" /> Generate Run
+        </Button>
+      </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" onClick={refetch}>{isRefetching ? "Refreshing…" : "Refresh"}</Button>
-          <Button size="sm" className="ml-auto gap-1" onClick={() => setShowGenerate(true)}>
-            <Plus className="h-4 w-4" /> Generate Payroll Run
+      <Separator />
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Posted (Net)</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{totalPosted.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Runs</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{runs.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Pending Approval</CardTitle>
+            <TrendingDown className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{draftCount}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="rounded-xl border bg-card">
+        <div className="flex items-center justify-between px-4 py-3 border-b">
+          <p className="text-sm font-medium">Payroll Runs</p>
+          <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={refetch} disabled={isRefetching}>
+            <RefreshCw className={`h-3.5 w-3.5 ${isRefetching ? "animate-spin" : ""}`} />
+            {isRefetching ? "Refreshing…" : "Refresh"}
           </Button>
         </div>
-
-        <div className="rounded-md border overflow-x-auto">
+        <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -300,17 +363,25 @@ export default function PayrollManagement() {
                 <TableHead>Payment Date</TableHead>
                 <TableHead className="text-right">Gross</TableHead>
                 <TableHead className="text-right">Deductions</TableHead>
-                <TableHead className="text-right font-bold">Net Pay</TableHead>
+                <TableHead className="text-right font-semibold">Net Pay</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Created By</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
-                [...Array(3)].map((_, i) => <TableRow key={i}>{[...Array(9)].map((_, j) => <TableCell key={j}><Skeleton className="h-5 rounded" /></TableCell>)}</TableRow>)
+              {isLoading || isRefetching ? (
+                [...Array(3)].map((_, i) => (
+                  <TableRow key={i}>
+                    {[...Array(9)].map((_, j) => <TableCell key={j}><Skeleton className="h-5 rounded" /></TableCell>)}
+                  </TableRow>
+                ))
               ) : runs.length === 0 ? (
-                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">No payroll runs yet. Click &ldquo;Generate Payroll Run&rdquo; to start.</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center text-muted-foreground py-10">
+                    No payroll runs yet. Click &ldquo;Generate Run&rdquo; to start.
+                  </TableCell>
+                </TableRow>
               ) : runs.map((run) => (
                 <TableRow key={run.payroll_run_id}>
                   <TableCell className="font-mono text-xs">{run.payroll_run_code}</TableCell>
@@ -318,17 +389,25 @@ export default function PayrollManagement() {
                   <TableCell className="text-xs whitespace-nowrap">{formatDateTimestamp(run.payment_date)}</TableCell>
                   <TableCell className="text-right font-mono text-sm">{parseFloat(run.total_gross).toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                   <TableCell className="text-right font-mono text-sm text-red-600">-{parseFloat(run.total_deductions).toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
-                  <TableCell className="text-right font-mono font-bold text-sm">{parseFloat(run.total_net).toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
-                  <TableCell><Badge variant={statusVariant[run.status] ?? "secondary"} className="capitalize text-xs">{run.status}</Badge></TableCell>
+                  <TableCell className="text-right font-mono font-semibold text-sm">{parseFloat(run.total_net).toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                  <TableCell>
+                    <Badge variant={statusVariant[run.status] ?? "secondary"} className="capitalize text-xs">{run.status}</Badge>
+                  </TableCell>
                   <TableCell className="text-xs">{run.created_by}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" title="View Payslips" onClick={() => setViewRun(run)}><Eye className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" title="View Payslips" onClick={() => setViewRun(run)}>
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
                       {run.status === "draft" && (
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-blue-600" title="Approve" onClick={() => approveRun(run.payroll_run_id)} disabled={isApproving}><CheckCircle className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-blue-600" title="Approve" onClick={() => approveRun(run.payroll_run_id)} disabled={isApproving}>
+                          <CheckCircle className="h-3.5 w-3.5" />
+                        </Button>
                       )}
                       {run.status === "approved" && (
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-green-600" title="Post & Disburse" onClick={() => setPostRun(run)}><Send className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-green-600" title="Post & Disburse" onClick={() => setPostRun(run)}>
+                          <Send className="h-3.5 w-3.5" />
+                        </Button>
                       )}
                     </div>
                   </TableCell>
@@ -339,9 +418,24 @@ export default function PayrollManagement() {
         </div>
       </div>
 
-      {showGenerate && <GenerateRunDialog isOpen={showGenerate} onClose={() => setShowGenerate(false)} onSuccess={() => queryClient.invalidateQueries({ queryKey: ["payroll-runs"] })} />}
-      {postRun && <PostRunDialog isOpen={!!postRun} run={postRun} onClose={() => setPostRun(null)} onSuccess={() => queryClient.invalidateQueries({ queryKey: ["payroll-runs"] })} />}
-      {viewRun && <RunItemsDialog isOpen={!!viewRun} run={viewRun} onClose={() => setViewRun(null)} />}
-    </>
+      {showGenerate && (
+        <GenerateRunDialog
+          isOpen={showGenerate}
+          onClose={() => setShowGenerate(false)}
+          onSuccess={() => queryClient.invalidateQueries({ queryKey: ["payroll-runs"] })}
+        />
+      )}
+      {postRun && (
+        <PostRunDialog
+          isOpen={!!postRun}
+          run={postRun}
+          onClose={() => setPostRun(null)}
+          onSuccess={() => queryClient.invalidateQueries({ queryKey: ["payroll-runs"] })}
+        />
+      )}
+      {viewRun && (
+        <RunItemsDialog isOpen={!!viewRun} run={viewRun} onClose={() => setViewRun(null)} />
+      )}
+    </div>
   );
 }

@@ -48,6 +48,7 @@ import {
   ShieldCheck,
   BarChart3,
   Building2,
+  SlidersHorizontal,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -370,7 +371,7 @@ export function AppSidebar({ ...props }) {
           name: "Cash Transfers",
           icon: Rotate3d,
           url: "cash-transfers",
-          permissionCodes: [100109],
+          permissionCodes: [100516],
         },
 
         {
@@ -586,49 +587,55 @@ export function AppSidebar({ ...props }) {
     },
     qms: {
       title: "QMS — Checker / Maker",
-      permissionCodes: [100001],
+      permissionCodes: [100611, 100613, 100616],
       items: [
         {
           name: "Approval Queue",
           url: "/qms",
           icon: ShieldCheck,
-          permissionCodes: [100001],
+          permissionCodes: [100613],
+        },
+        {
+          name: "Pending Actions",
+          url: "/qms?tab=pending",
+          icon: ClipboardList,
+          permissionCodes: [100616],
         },
         {
           name: "QMS Policies",
           url: "/qms?tab=policies",
           icon: Settings2,
-          permissionCodes: [100001],
+          permissionCodes: [100611],
         },
       ],
     },
     aml: {
       title: "AML & Compliance",
-      permissionCodes: [100001],
+      permissionCodes: [100601, 100602, 100606, 100608],
       items: [
         {
-          name: "AML Engine",
+          name: "AML Overview",
           url: "/aml",
           icon: Shield,
-          permissionCodes: [100001],
+          permissionCodes: [100601],
         },
         {
-          name: "AML Policies",
+          name: "AML Rules",
           url: "/aml?tab=policies",
           icon: BookUp2,
-          permissionCodes: [100001],
+          permissionCodes: [100602],
         },
         {
           name: "AML Alerts",
           url: "/aml?tab=alerts",
           icon: Asterisk,
-          permissionCodes: [100001],
+          permissionCodes: [100606],
         },
         {
           name: "AML Cases",
           url: "/aml?tab=cases",
           icon: FolderGit,
-          permissionCodes: [100001],
+          permissionCodes: [100608],
         },
       ],
     },
@@ -710,6 +717,18 @@ export function AppSidebar({ ...props }) {
           url: "business-performance-report",
           icon: BarChart3,
           permissionCodes: [100127, 100205],
+        },
+        {
+          name: "Accounting Custom Report",
+          url: "accounting-reports/custom-report",
+          icon: SlidersHorizontal,
+          permissionCodes: [100127],
+        },
+        {
+          name: "Loans Custom Report",
+          url: "loans-reports/custom-report",
+          icon: SlidersHorizontal,
+          permissionCodes: [100128],
         },
       ],
     },

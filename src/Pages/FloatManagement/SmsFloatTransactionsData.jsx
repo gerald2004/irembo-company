@@ -14,7 +14,7 @@ import SmsFloatTransactions from "./Components/SmsFloatTransactions";
 
 const SmsFloatTransactionsData = () => {
   const { smsAccountId } = useParams(); // route: /sms-float-management/:smsAccountId
-  const [account, setAccount] = useState(null); // { name, billing_type, charge_per_sms }
+  const [account, setAccount] = useState(null); // { id, sacco_id, name, billing_type, charge_per_sms }
 
   return (
     <>
@@ -65,6 +65,7 @@ const SmsFloatTransactionsData = () => {
           {/* Child passes account info up */}
           <SmsFloatTransactions
             smsAccountId={smsAccountId}
+            saccoId={account?.sacco_id}
             onAccountResolved={setAccount}
           />
         </div>

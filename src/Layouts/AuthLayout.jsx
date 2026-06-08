@@ -346,9 +346,10 @@ const markAllNotificationsRead = async () => {
                         >
                           {n.title}
                         </span>
-                        <span className="text-xs text-muted-foreground line-clamp-2">
-                          {n.message}
-                        </span>
+                        <span
+                          className="text-xs text-muted-foreground line-clamp-2"
+                          dangerouslySetInnerHTML={{ __html: n.message }}
+                        />
                         <span className="text-[10px] text-muted-foreground">
                           {n.created_at}
                         </span>

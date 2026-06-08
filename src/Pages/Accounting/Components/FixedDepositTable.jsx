@@ -58,6 +58,7 @@ export function FixedDepositTable() {
   const [selectedClientId, setSelectedClientId] = useState(null);
   const [showActionDialog, setShowActionDialog] = useState(false);
 
+  const [isDownloading, setIsDownloading] = useState(false);
   const [logModal, setLogModal] = useState({ open: false, fdId: null, fdCode: "" });
   const [movModal, setMovModal] = useState({ open: false, fdId: null, fdCode: "", type: "deposit", balance: 0, clientId: null, clientAccountId: null });
 
@@ -411,53 +412,35 @@ export function FixedDepositTable() {
       pageIndex: 0,
     }));
   };
-  const [isDownloading, setIsDownloading] = useState(false);
-  const onDownload = async (data) => {
-    const controller = new AbortController();
-    const dataDownload = {
+  const onDownload = async (row) => {
+    const isUnitTrust = row.product_type === "unit_trust";
+    const payload = {
       transaction: {
-        code: data?.fixed_deposit_transaction_code,
-        start: data?.fixed_deposit_transaction_start_date,
-        account_name: data?.account_name,
-        account_number: data?.account_number,
-        amount: data?.fixed_deposit_transaction_amount,
-        interest: data?.fixed_deposit_setting?.fixed_deposit_setting_interest,
-        end: data?.fixed_deposit_transaction_end_date,
-        amount_to_receive:
-          parseFloat(data?.fixed_deposit_transaction_amount) +
-          parseFloat(data?.fixed_deposit_transaction_return_amount),
+        code:              row.fixed_deposit_transaction_code,
+        start:             row.fixed_deposit_transaction_start_date,
+        end:               isUnitTrust ? null : row.fixed_deposit_transaction_end_date,
+        account_name:      row.account_name  ?? "",
+        account_number:    row.account_number ?? "",
+        amount:            row.fixed_deposit_transaction_amount,
+        interest:          row.fixed_deposit_setting?.fixed_deposit_setting_interest,
+        amount_to_receive: isUnitTrust
+          ? row.fixed_deposit_transaction_amount
+          : parseFloat(row.fixed_deposit_transaction_amount) + parseFloat(row.fixed_deposit_transaction_return_amount ?? 0),
       },
-    };    
+    };
     try {
       setIsDownloading(true);
-      let response;
-
-      response = await axiosPrivate.post(
-        `/export/certificate/fixed-deposit/pdf`, // <-- Your endpoint
-        { data: dataDownload },
-        {
-          responseType: "blob",
-          signal: controller.signal,
-        }
+      const response = await axiosPrivate.post(
+        "/export/certificate/fixed-deposit/pdf",
+        { data: payload },
+        { responseType: "blob" }
       );
-
-      const downloadTitle = `Fixed-Deposit-Certificate.pdf`;
-
-      fileDownload(response.data, downloadTitle);
-
-      toast({
-        title: `Download successful`,
-        variant: "success",
-        description: `Your file has been downloaded.`,
-      });
-      setIsDownloading(false);
-    } catch (error) {
-      console.log(error);
-      toast({
-        title: "Uh oh! Something went wrong.",
-        variant: "destructive",
-        description: "Failed to download file.",
-      });
+      const filename = isUnitTrust ? "unit-trust-certificate.pdf" : "fixed-deposit-certificate.pdf";
+      fileDownload(response.data, filename);
+      toast({ title: "Download successful", description: "Certificate saved." });
+    } catch {
+      toast({ title: "Download failed", variant: "destructive", description: "Could not generate certificate." });
+    } finally {
       setIsDownloading(false);
     }
   };

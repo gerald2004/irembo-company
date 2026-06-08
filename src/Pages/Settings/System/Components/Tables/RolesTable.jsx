@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,18 +19,32 @@ import AlertModal from "@/components/AlertModal";
 import { formatDateTimestamp } from "@/lib/utils";
 import { useRoles } from "@/Queries/Settings/roles";
 import { Link, useNavigate } from "react-router-dom";
+import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
+import { toast } from "@/hooks/use-toast";
+
 export function RolesTable() {
   const navigate = useNavigate();
-  const [showDialog, setShowDialog] = useState(false);
+  const axiosPrivate = useAxiosPrivate();
+  const queryClient = useQueryClient();
+  const [deleteId, setDeleteId] = useState(null);
 
   const { data = [], isLoading, refetch, isRefetching, isError } = useRoles();
-  const handleOpenDeleteDialog = () => {
-    setShowDialog(true);
-  };
 
-  const handleCloseDeleteDialog = () => {
-    setShowDialog(false);
-  };
+  const deleteMut = useMutation({
+    mutationFn: (id) => axiosPrivate.delete(`/settings/rights/roles/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["roles"] });
+      toast({ title: "Role deleted successfully." });
+      setDeleteId(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to delete role.", variant: "destructive" });
+      setDeleteId(null);
+    },
+  });
+
+  const handleOpenDeleteDialog = (id) => setDeleteId(id);
+  const handleCloseDeleteDialog = () => setDeleteId(null);
   const handleNavigate = () => navigate("/system-roles/add-role");
   const columns = [
     {
@@ -94,6 +109,7 @@ export function RolesTable() {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem
+              className="text-red-600"
               onClick={() => handleOpenDeleteDialog(row.original.id)}
             >
               Delete
@@ -118,12 +134,12 @@ export function RolesTable() {
       />
 
       <AlertModal
-        showDialog={showDialog}
+        showDialog={!!deleteId}
         setShowDialog={handleCloseDeleteDialog}
         title="Are you absolutely sure?"
-        message="Are you sure you want to delete this role?"
-        method={""}
-        buttonName="Okay"
+        message="Are you sure you want to delete this role? This action cannot be undone."
+        method={() => deleteMut.mutate(deleteId)}
+        buttonName="Delete"
       />
     </>
   );

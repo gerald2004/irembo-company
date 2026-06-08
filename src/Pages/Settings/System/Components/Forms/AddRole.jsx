@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -11,6 +11,7 @@ import { toast } from "@/hooks/use-toast";
 
 export function AddRoleForm() {
   const axiosPrivate = useAxiosPrivate();
+  const queryClient = useQueryClient();
   const { data: permissionData = [], isLoading } = usePermissions();
 
   const [role, setRole] = useState("");
@@ -54,6 +55,7 @@ export function AddRoleForm() {
     mutationFn: (payload) =>
       axiosPrivate.post("/settings/rights/roles", payload),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["roles"] });
       toast({ title: "Success", description: "Role created successfully." });
       setRole("");
       setSelected(new Set());

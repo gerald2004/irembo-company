@@ -42,10 +42,12 @@ const WithdrawsReport = () => {
       try {
         const response = await axiosPrivate.get(fetchURL, {
           params: {
-            startDate: filters.startDate,
-            endDate: filters.endDate,
-            branch_id: filters.branch_id,
-            user_id: filters.user_id,
+            startDate:   filters.startDate,
+            endDate:     filters.endDate,
+            branch_id:   filters.branch_id,
+            user_id:     filters.user_id,
+            method:      filters.method,
+            client_type: filters.client_type,
           },
           signal: controller.signal,
         });
@@ -187,7 +189,7 @@ const WithdrawsReport = () => {
       <div className="space-y-4 pt-2">
         <h5 className="text-2xl font-bold tracking-tight">Withdrawals Report</h5>
 
-        <LoanGeneralReportQuery show={{ method: true }}
+        <LoanGeneralReportQuery show={{ method: true, clientType: true }}
           onFilterChange={handleFilterChange}
           isRefetching={isRefetching}
           data={rows}

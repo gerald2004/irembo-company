@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import SmsCarryForwardDialog from "./SmsCarryForwardDialog";
 
 const currency = (n) => Number(n || 0).toLocaleString();
 
@@ -30,12 +31,13 @@ const ActionBadge = ({ action }) => {
   );
 };
 
-const SmsFloatTransactions = ({ smsAccountId, onAccountResolved }) => {
+const SmsFloatTransactions = ({ smsAccountId, saccoId, onAccountResolved }) => {
   const axiosPrivate = useAxiosPrivate();
-  const [page, setPage]   = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [page, setPage]         = useState(1);
+  const [limit, setLimit]       = useState(10);
+  const [cfOpen, setCfOpen]     = useState(false);
 
-  const { data, isLoading, isError, error, isFetching } = useQuery({
+  const { data, isLoading, isError, error, isFetching, refetch } = useQuery({
     queryKey: ["sms-float-transactions", smsAccountId, page, limit],
     queryFn: async () => {
       const res = await axiosPrivate.get("/float-management/sms-float/transactions", {
@@ -57,22 +59,29 @@ const SmsFloatTransactions = ({ smsAccountId, onAccountResolved }) => {
     }
   }, [data, onAccountResolved]);
 
-  const rows       = data?.transactions || [];
-  const total      = Number(data?.total || 0);
-  const totalPages = Math.max(Math.ceil(total / limit), 1);
-  const httpStatus = error?.response?.status;
+  const rows        = data?.transactions || [];
+  const total       = Number(data?.total || 0);
+  const totalPages  = Math.max(Math.ceil(total / limit), 1);
+  const httpStatus  = error?.response?.status;
+  const smsAccount  = data?.sms_account;
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-3">
         <CardTitle>
-          {data?.sms_account?.name
-            ? `${data.sms_account.name} Transactions`
-            : "SMS Transactions"}
+          {smsAccount?.name ? `${smsAccount.name} Transactions` : "SMS Transactions"}
           {isFetching && <span className="ml-2 text-xs text-muted-foreground">Refreshing…</span>}
         </CardTitle>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!saccoId || !smsAccountId}
+            onClick={() => setCfOpen(true)}
+          >
+            Carry Forward
+          </Button>
           <span className="text-xs text-muted-foreground">Rows:</span>
           <select
             className="h-9 rounded-md border bg-background px-2 text-sm"
@@ -147,6 +156,19 @@ const SmsFloatTransactions = ({ smsAccountId, onAccountResolved }) => {
           </>
         )}
       </CardContent>
+
+      {cfOpen && (
+        <SmsCarryForwardDialog
+          isOpen={cfOpen}
+          onClose={() => setCfOpen(false)}
+          refetch={refetch}
+          saccoId={saccoId}
+          smsAccountId={smsAccountId}
+          accountName={smsAccount?.name}
+          defaultChargePerSms={smsAccount?.charge_per_sms}
+          billingType={smsAccount?.billing_type}
+        />
+      )}
     </Card>
   );
 };

@@ -3,6 +3,7 @@ import {
   Scale, TrendingUp, LayoutList, ArrowRightLeft, BookOpen,
   Wallet, ClipboardList, CalendarDays, DollarSign, Receipt,
   FileSearch, FileBarChart2, BarChart3, FileText, Layers, Tag,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -169,6 +170,21 @@ const SECTIONS = [
         color: "text-pink-600",
         bg: "bg-pink-50 dark:bg-pink-900/20",
         permission: 100217,
+      },
+    ],
+  },
+  {
+    title: "Custom Reports",
+    description: "Build your own accounting report by selecting any combination of journal entry, account, and branch fields",
+    reports: [
+      {
+        title: "Custom Report Builder",
+        link: "accounting-reports/custom-report",
+        description: "Pick fields from journal entries, accounts, and line amounts — filter by date, type, module, or branch",
+        icon: <SlidersHorizontal className="w-5 h-5" />,
+        color: "text-indigo-600",
+        bg: "bg-indigo-50 dark:bg-indigo-900/20",
+        permission: 100127,
       },
     ],
   },

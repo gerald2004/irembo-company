@@ -39,6 +39,8 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   ArrowUp,
@@ -47,6 +49,7 @@ import {
   ChevronDown,
   RefreshCw,
   RotateCcw,
+  Eye,
 } from "lucide-react";
 import AddExpenseDialog from "../Forms/AddExpenseDialog";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
@@ -72,6 +75,7 @@ export function ExpensesTable() {
   const [pagination,   setPagination]   = useState({ pageIndex: 0, pageSize: 10 });
   const [selectedIds,  setSelectedIds]  = useState(new Set()); // journal_entry_id values
   const [isAddOpen,    setIsAddOpen]    = useState(false);
+  const [viewExpense,  setViewExpense]  = useState(null);
 
   // PIN dialog: null | { mode: 'single', jeId: number } | { mode: 'bulk', jeIds: number[] }
   const [pinDialog, setPinDialog] = useState(null);
@@ -111,8 +115,8 @@ export function ExpensesTable() {
   });
 
   const reverseSingle = useMutation({
-    mutationFn: ({ jeId, pincode }) =>
-      axiosPrivate.post(`/accounting/journals/${jeId}/reverse`, { user_pincode: pincode }),
+    mutationFn: ({ billId, pincode }) =>
+      axiosPrivate.post(`/accounting/expenses/${billId}/reverse`, { user_pincode: pincode }),
     onSuccess: () => {
       toast({ title: "Expense reversed", description: "A reversal journal entry has been created." });
       queryClient.invalidateQueries({ queryKey: ["expenses-ssr"] });
@@ -124,8 +128,8 @@ export function ExpensesTable() {
   });
 
   const reverseBulk = useMutation({
-    mutationFn: ({ jeIds, pincode }) =>
-      axiosPrivate.post("/accounting/journals/bulk-reverse", { ids: jeIds, user_pincode: pincode }),
+    mutationFn: ({ billIds, pincode }) =>
+      axiosPrivate.post("/accounting/expenses/bulk-reverse", { ids: billIds, user_pincode: pincode }),
     onSuccess: (res) => {
       const count = res.data.data?.reversed?.length ?? 0;
       toast({ title: `${count} expense entr${count === 1 ? "y" : "ies"} reversed`, description: "Reversal journal entries have been created." });
@@ -138,13 +142,13 @@ export function ExpensesTable() {
     },
   });
 
-  const openPinDialog = useCallback((mode, jeId) => {
+  const openPinDialog = useCallback((mode, billId) => {
     if (mode === "single") {
-      setPinDialog({ mode: "single", jeId });
+      setPinDialog({ mode: "single", billId });
     } else {
       const ids = [...selectedIds];
       if (!ids.length) return;
-      setPinDialog({ mode: "bulk", jeIds: ids });
+      setPinDialog({ mode: "bulk", billIds: ids });
     }
     setPin("");
     setPinError("");
@@ -159,18 +163,52 @@ export function ExpensesTable() {
   const submitReversal = useCallback(() => {
     if (!pin.trim()) { setPinError("PIN is required"); return; }
     if (pinDialog.mode === "single") {
-      reverseSingle.mutate({ jeId: pinDialog.jeId, pincode: pin });
+      reverseSingle.mutate({ billId: pinDialog.billId, pincode: pin });
     } else {
-      reverseBulk.mutate({ jeIds: pinDialog.jeIds, pincode: pin });
+      reverseBulk.mutate({ billIds: pinDialog.billIds, pincode: pin });
     }
   }, [pin, pinDialog, reverseSingle, reverseBulk]);
 
   const isPending = reverseSingle.isPending || reverseBulk.isPending;
 
+  const printInvoice = (expense) => {
+    const w = window.open("", "_blank", "width=600,height=700");
+    w.document.write(`
+      <html><head><title>Expense Invoice — ${expense.vendor_bill_code}</title><style>
+        body{font-family:sans-serif;padding:32px;font-size:14px;color:#111}
+        h2{margin:0 0 2px;font-size:20px}
+        .sub{color:#666;font-size:12px;margin-bottom:24px}
+        table{width:100%;border-collapse:collapse}
+        td{padding:7px 0;border-bottom:1px solid #eee;vertical-align:top}
+        td:first-child{color:#555;width:42%;font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+        .amount{font-size:22px;font-weight:700;color:#dc2626}
+        .footer{margin-top:32px;font-size:11px;color:#999;text-align:center;border-top:1px solid #eee;padding-top:12px}
+      </style></head><body>
+        <h2>Expense Invoice</h2>
+        <p class="sub">${expense.vendor_bill_code}</p>
+        <table>
+          <tr><td>Vendor</td><td>${expense.vendor || "—"}</td></tr>
+          <tr><td>Amount</td><td class="amount">UGX ${parseFloat(expense.vendor_bill_amount).toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>
+          <tr><td>Expense Account</td><td>${expense.expense_account || "—"}</td></tr>
+          <tr><td>Paid From</td><td>${expense.paid_from_account || "—"}</td></tr>
+          <tr><td>Date</td><td>${expense.vendor_bill_date || "—"}</td></tr>
+          <tr><td>Due Date</td><td>${expense.vendor_bill_due_date || "—"}</td></tr>
+          <tr><td>Posted By</td><td>${expense.user || "—"}</td></tr>
+          <tr><td>Branch</td><td>${expense.branch || "—"}</td></tr>
+          <tr><td>Notes</td><td>${expense.vendor_bill_notes || "—"}</td></tr>
+          <tr><td>Status</td><td>${expense.vendor_bill_status || "pending"}</td></tr>
+        </table>
+        <p class="footer">${import.meta.env.VITE_APP_NAME ?? "Banking System"} — Generated ${new Date().toLocaleString()}</p>
+        <script>window.onload=()=>{window.print();}</script>
+      </body></html>
+    `);
+    w.document.close();
+  };
+
   const rows          = data?.data ?? [];
   const totalRowCount = data?.meta?.totalRowCount ?? 0;
 
-  const allPageJeIds    = rows.filter((r) => r.journal_entry_id && r.vendor_bill_status !== "reversed").map((r) => r.journal_entry_id);
+  const allPageJeIds    = rows.filter((r) => r.vendor_bill_id && r.vendor_bill_status !== "reversed").map((r) => r.vendor_bill_id);
   const allPageSelected = allPageJeIds.length > 0 && allPageJeIds.every((id) => selectedIds.has(id));
   const somePageSelected = allPageJeIds.some((id) => selectedIds.has(id));
   const selectedCount   = selectedIds.size;
@@ -195,10 +233,11 @@ export function ExpensesTable() {
     });
   }, []);
 
-  const canReverse = hasPermission(roles, 100269);
+  const canReverseSingle = hasPermission(roles, 100172);
+  const canReverseBulk   = hasPermission(roles, 100269);
 
   const columns = [
-    ...(canReverse ? [{
+    ...(canReverseBulk ? [{
       id: "select",
       header: () => (
         <Checkbox
@@ -209,13 +248,13 @@ export function ExpensesTable() {
         />
       ),
       cell: ({ row }) => {
-        const jeId    = row.original.journal_entry_id;
+        const billId  = row.original.vendor_bill_id;
         const reversed = row.original.vendor_bill_status === "reversed";
-        if (!jeId || reversed) return null;
+        if (!billId || reversed) return null;
         return (
           <Checkbox
-            checked={selectedIds.has(jeId)}
-            onCheckedChange={() => toggleRow(jeId)}
+            checked={selectedIds.has(billId)}
+            onCheckedChange={() => toggleRow(billId)}
             aria-label="Select row"
           />
         );
@@ -311,27 +350,41 @@ export function ExpensesTable() {
       cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.vendor_bill_notes || "—"}</span>,
       exportValue: (r) => r.vendor_bill_notes || "",
     },
-    ...(canReverse ? [{
+    {
       id: "actions",
       header: "",
       enableSorting: false,
       enableHiding:  false,
       cell: ({ row }) => {
-        const jeId    = row.original.journal_entry_id;
+        const billId   = row.original.vendor_bill_id;
         const reversed = row.original.vendor_bill_status === "reversed";
-        if (!jeId || reversed) return null;
         return (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs text-destructive hover:text-destructive"
-            onClick={() => openPinDialog("single", jeId)}
-          >
-            <RotateCcw className="w-3 h-3 mr-1" /> Reverse
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-7 w-7 p-0 text-muted-foreground">
+                <span className="sr-only">Open menu</span>
+                <ChevronDown className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuLabel className="text-xs">Actions</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-xs" onClick={() => setViewExpense(row.original)}>
+                <Eye className="w-3 h-3 mr-1.5" /> View Details
+              </DropdownMenuItem>
+              {canReverseSingle && billId && !reversed && (
+                <DropdownMenuItem
+                  className="text-xs text-destructive focus:text-destructive"
+                  onClick={() => openPinDialog("single", billId)}
+                >
+                  <RotateCcw className="w-3 h-3 mr-1.5" /> Reverse
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         );
       },
-    }] : []),
+    },
   ];
 
   useEffect(() => {
@@ -399,7 +452,7 @@ export function ExpensesTable() {
           </Button>
         )}
 
-        {canReverse && selectedCount > 0 && (
+        {canReverseBulk && selectedCount > 0 && (
           <Button
             variant="destructive"
             size="sm"
@@ -561,13 +614,74 @@ export function ExpensesTable() {
         />
       )}
 
+      {/* ── Expense Details Dialog ── */}
+      <Dialog open={!!viewExpense} onOpenChange={(o) => !o && setViewExpense(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Expense Details</DialogTitle>
+            <DialogDescription className="font-mono text-xs">{viewExpense?.vendor_bill_code}</DialogDescription>
+          </DialogHeader>
+          {viewExpense && (
+            <div className="space-y-2 py-1 text-sm">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                <span className="text-muted-foreground text-xs">Vendor</span>
+                <span className="text-xs font-medium">{viewExpense.vendor || "—"}</span>
+
+                <span className="text-muted-foreground text-xs">Amount</span>
+                <span className="text-xs font-bold text-red-600">
+                  UGX {parseFloat(viewExpense.vendor_bill_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </span>
+
+                <span className="text-muted-foreground text-xs">Expense Account</span>
+                <span className="text-xs">{viewExpense.expense_account || "—"}</span>
+
+                <span className="text-muted-foreground text-xs">Paid From</span>
+                <span className="text-xs">{viewExpense.paid_from_account || "—"}</span>
+
+                <span className="text-muted-foreground text-xs">Date</span>
+                <span className="text-xs">{viewExpense.vendor_bill_date || "—"}</span>
+
+                <span className="text-muted-foreground text-xs">Due Date</span>
+                <span className="text-xs">{viewExpense.vendor_bill_due_date || "—"}</span>
+
+                <span className="text-muted-foreground text-xs">Posted By</span>
+                <span className="text-xs">{viewExpense.user || "—"}</span>
+
+                <span className="text-muted-foreground text-xs">Branch</span>
+                <span className="text-xs">{viewExpense.branch || "—"}</span>
+
+                <span className="text-muted-foreground text-xs">Status</span>
+                <span className="text-xs capitalize">
+                  <Badge className={`text-xs border ${STATUS_CLASS[viewExpense.vendor_bill_status ?? "pending"] ?? "bg-muted"}`}>
+                    {viewExpense.vendor_bill_status || "pending"}
+                  </Badge>
+                </span>
+
+                {viewExpense.vendor_bill_notes && (
+                  <>
+                    <span className="text-muted-foreground text-xs">Notes</span>
+                    <span className="text-xs">{viewExpense.vendor_bill_notes}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => setViewExpense(null)}>Close</Button>
+            <Button size="sm" onClick={() => printInvoice(viewExpense)}>
+              Print Invoice
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* ── PIN Reversal Dialog ── */}
       <Dialog open={!!pinDialog} onOpenChange={(o) => !o && closePinDialog()}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>
               {pinDialog?.mode === "bulk"
-                ? `Reverse ${pinDialog.jeIds?.length} expense entr${pinDialog.jeIds?.length === 1 ? "y" : "ies"}`
+                ? `Reverse ${pinDialog.billIds?.length} expense entr${pinDialog.billIds?.length === 1 ? "y" : "ies"}`
                 : "Reverse expense entry"}
             </DialogTitle>
             <DialogDescription>

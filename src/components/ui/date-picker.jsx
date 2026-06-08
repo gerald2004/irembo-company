@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import { useState, useEffect } from "react";
 import { format, getMonth, getYear, setMonth, setYear } from "date-fns";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ export function DatePicker(props) {
     endYear = getYear(new Date()) + 100,
     selectedDate,
     onChange,
+    placeholder = "Pick a date",
   } = props;
 
   // Whether the user has made an explicit selection (or a value was pre-provided)
@@ -79,7 +80,7 @@ export function DatePicker(props) {
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {selected ? format(date, "PPP") : <span>Pick a date</span>}
+          {selected ? format(date, "PPP") : <span>{placeholder}</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0">
@@ -126,5 +127,41 @@ export function DatePicker(props) {
         />
       </PopoverContent>
     </Popover>
+  );
+}
+
+/**
+ * DatePickerField — bridges ISO strings ("YYYY-MM-DD") to the shadcn DatePicker.
+ *
+ * Props:
+ *   value      — ISO date string or "" / undefined
+ *   onChange   — called with an ISO string ("YYYY-MM-DD") or "" when cleared
+ *   placeholder— text shown when nothing is selected
+ *   clearable  — shows an × button when a value is present
+ *   className  — optional wrapper class
+ */
+export function DatePickerField({ value, onChange, placeholder = "Pick a date", clearable = false, className }) {
+  const selectedDate = value ? new Date(value + "T00:00:00") : undefined;
+
+  return (
+    <div className={cn("flex items-center gap-1", className)}>
+      <div className="flex-1 min-w-0">
+        <DatePicker
+          selectedDate={selectedDate}
+          placeholder={placeholder}
+          onChange={(d) => onChange(d ? format(d, "yyyy-MM-dd") : "")}
+        />
+      </div>
+      {clearable && value && (
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          className="shrink-0 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+          aria-label="Clear date"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      )}
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -39,8 +39,18 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 
+const LOAN_REPORT_QUERY_KEYS = [
+  "loan-disbursements", "active-loans", "loan-applications", "overdue-loans",
+  "paid-off-loans", "settled-loans", "defaulted-loans", "rejected-loans",
+  "portfolio-loans", "portfolio-loans-summary", "loan-officer-performance",
+  "aging-loans", "loans-maturity", "loans-recovery", "loan-tracking",
+  "group-loans-report", "missed-installments", "guarantors-report",
+  "loans-expected-interest", "loan-repayment-periodic", "loan-arrears",
+];
+
 const EditLoanUser = ({ isOpen, onClose, refetch }) => {
   const axiosPrivate = useAxiosPrivate();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { loanid: loanid } = useParams(); // ✅ Get loanid from params
 
@@ -102,6 +112,9 @@ const EditLoanUser = ({ isOpen, onClose, refetch }) => {
 
       reset();
       refetch();
+      queryClient.invalidateQueries({
+        predicate: (query) => LOAN_REPORT_QUERY_KEYS.includes(String(query.queryKey[0])),
+      });
       onClose();
     } catch (error) {
       const errorMessage =
@@ -192,7 +205,7 @@ const EditLoanUser = ({ isOpen, onClose, refetch }) => {
                         ) : (
                           users.map((user) => (
                             <SelectItem
-                              key={user.id}
+                              key={user.user_id}
                               value={String(user.user_id)}
                             >
                               {user.user_firstname} {user.user_lastname} (

@@ -10,6 +10,9 @@ import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import Datatable from "@/Pages/Components/Datatable";
 import { Badge } from "@/components/ui/badge";
 import ShareTransactionDialog from "../Forms/ShareTransactionDialog";
+import ShareTransferDialog from "@/Pages/Clients/Components/Shared/Forms/ShareTransferDialog";
+import { Button } from "@/components/ui/button";
+import { ArrowRightLeft } from "lucide-react";
 import { formatDateTimestamp, hasPermission } from "@/lib/utils";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
 export function SharesTable() {
@@ -17,6 +20,7 @@ export function SharesTable() {
   const axiosPrivate = useAxiosPrivate();
   const params = useParams();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isTransferOpen, setIsTransferOpen] = useState(false);
 
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
@@ -88,13 +92,11 @@ export function SharesTable() {
     {
       accessorKey: "shares_transaction_type",
       header: "Status",
-      cell: ({ row }) => (
-        <Badge className="capitalize text-xs">
-          {row.original.shares_transaction_type === "in"
-            ? "Transfer In"
-            : "Transfer Out"}
-        </Badge>
-      ),
+      cell: ({ row }) => {
+        const t = row.original.shares_transaction_type;
+        const label = t === "in" ? "Purchase" : t === "transfer_in" ? "Transfer In" : t === "transfer_out" ? "Transfer Out" : "Redemption";
+        return <Badge className="capitalize text-xs">{label}</Badge>;
+      },
     },
     {
       accessorKey: "shares_transaction_count",
@@ -147,19 +149,33 @@ export function SharesTable() {
           </CardContent>
         </Card>
       </div>
+      <div className="flex justify-end gap-2 mt-2">
+        {hasPermission(roles, 100065) && (
+          <Button size="sm" onClick={handleOpenModal}>+ Buy Shares</Button>
+        )}
+        {hasPermission(roles, 100065) && (
+          <Button size="sm" variant="outline" onClick={() => setIsTransferOpen(true)}>
+            <ArrowRightLeft className="mr-1 h-4 w-4" /> Transfer Shares
+          </Button>
+        )}
+      </div>
       <Datatable
         columns={columns}
         data={data?.shares ?? []}
         fetchData={refetch}
         isLoading={isLoading}
         isRefetching={isRefetching}
-        buttonTitle={hasPermission(roles, 100065) ? "+ Buy Shares" : ""}
-        buttonMethod={hasPermission(roles, 100065) ? handleOpenModal : ""}
+        buttonTitle=""
         isError={isError}
       />
       <ShareTransactionDialog
         isOpen={isModalOpen}
         onClose={handleCloseModal}
+        refetch={refetch}
+      />
+      <ShareTransferDialog
+        isOpen={isTransferOpen}
+        onClose={() => setIsTransferOpen(false)}
         refetch={refetch}
       />
     </>

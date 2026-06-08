@@ -27,8 +27,6 @@ export default function InterBranchTransfers() {
   const topRef = useRef(null);
 
   const user = auth?.user ?? {};
-  const dataPrivilege = String(user?.data_privilege || "branch").toLowerCase();
-  const isSaccoUser = dataPrivilege === "sacco";
 
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [openDialog, setOpenDialog] = useState(false);
@@ -154,11 +152,9 @@ export default function InterBranchTransfers() {
               <Button variant="outline" onClick={() => refetch()} disabled={isFetching}>
                 Refresh
               </Button>
-              {isSaccoUser && (
-                <Button className="text-xs" onClick={() => setOpenDialog(true)}>
-                  New Transfer
-                </Button>
-              )}
+              <Button className="text-xs" onClick={() => setOpenDialog(true)}>
+                New Transfer
+              </Button>
             </div>
           </div>
 

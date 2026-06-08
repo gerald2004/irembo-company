@@ -56,7 +56,7 @@ const accountingRoutes = [
   {
     path: "/cash-transfers",
     element: <CashTransfers />,
-    roles: [100111],
+    roles: [100516],
   },
   {
     path: "/inter-branch-transfers",

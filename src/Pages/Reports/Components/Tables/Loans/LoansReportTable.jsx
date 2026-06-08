@@ -3,7 +3,7 @@ import {
   FileText, TrendingUp, AlertTriangle, BarChart2, BarChart3,
   Scale, PieChart, Layers, Clock, CheckCircle2, XCircle,
   ArrowDownToLine, Users, ShieldAlert, Wallet, Target,
-  TrendingDown, BookOpen, Receipt, CalendarRange, BellOff,
+  TrendingDown, BookOpen, Receipt, CalendarRange, BellOff, Flag, SlidersHorizontal,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -85,6 +85,15 @@ const SECTIONS = [
     description: "Monitor current portfolio health, overdue status, and risk exposure",
     reports: [
       {
+        title: "Loans Due Today",
+        link: "loans-reports/loans-due-today",
+        description: "All installments due today — principal, interest, penalties, and guarantor contacts per loan",
+        icon: <Clock className="w-5 h-5" />,
+        color: "text-rose-600",
+        bg: "bg-rose-50 dark:bg-rose-900/20",
+        permission: 100281,
+      },
+      {
         title: "Active Loans",
         link: "loans-reports/active-loans",
         description: "All currently disbursed loans with balance and next repayment",
@@ -137,6 +146,15 @@ const SECTIONS = [
         color: "text-pink-600",
         bg: "bg-pink-50 dark:bg-pink-900/20",
         permission: 100235,
+      },
+      {
+        title: "Flagged Off Loans",
+        link: "loans-reports/flagged-off-loans",
+        description: "Loans with penalty accumulation suspended — flag-off reason, date, and reverse action",
+        icon: <Flag className="w-5 h-5" />,
+        color: "text-orange-600",
+        bg: "bg-orange-50 dark:bg-orange-900/20",
+        permission: 100280,
       },
       {
         title: "Loan Maturity",
@@ -230,6 +248,21 @@ const SECTIONS = [
         color: "text-violet-600",
         bg: "bg-violet-50 dark:bg-violet-900/20",
         permission: 100258,
+      },
+    ],
+  },
+  {
+    title: "Custom Reports",
+    description: "Build your own report — pick any fields, apply filters, and save templates for reuse",
+    reports: [
+      {
+        title: "Custom Report Builder",
+        link: "loans-reports/custom-report",
+        description: "Select any combination of loan fields, apply filters, generate results, and save report templates",
+        icon: <SlidersHorizontal className="w-5 h-5" />,
+        color: "text-indigo-600",
+        bg: "bg-indigo-50 dark:bg-indigo-900/20",
+        permission: 100128,
       },
     ],
   },

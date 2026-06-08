@@ -9,7 +9,9 @@ import {
   TableFooter,
 } from "@/components/ui/table";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { formatDateTimestamp } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 const ITEMS_PER_PAGE = 10;
@@ -40,19 +42,21 @@ const CashbookTable = ({ data }) => {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead colSpan={4} className="text-start">
+            <TableHead colSpan={5} className="text-start">
               Cash Transactions
             </TableHead>
-            <TableHead colSpan={4} className="text-start">
+            <TableHead colSpan={5} className="text-start">
               Bank Transactions
             </TableHead>
           </TableRow>
           <TableRow>
+            <TableHead>Ref</TableHead>
             <TableHead>Date</TableHead>
             <TableHead>Description</TableHead>
             <TableHead className="text-right">Amount</TableHead>
             <TableHead className="text-right">Balance</TableHead>
 
+            <TableHead>Ref</TableHead>
             <TableHead>Date</TableHead>
             <TableHead>Description</TableHead>
             <TableHead className="text-right">Amount</TableHead>
@@ -65,6 +69,15 @@ const CashbookTable = ({ data }) => {
               {/* Cash side */}
               {paginatedCash[idx] ? (
                 <>
+                  <TableCell>
+                    {paginatedCash[idx].journal_entry_id ? (
+                      <Link to={`/journal-entries/${paginatedCash[idx].journal_entry_id}`}>
+                        <Badge variant="secondary" className="text-xs font-mono cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors">
+                          #{paginatedCash[idx].journal_entry_id}
+                        </Badge>
+                      </Link>
+                    ) : "—"}
+                  </TableCell>
                   <TableCell>
                     {formatDateTimestamp(paginatedCash[idx].date)}
                   </TableCell>
@@ -79,12 +92,21 @@ const CashbookTable = ({ data }) => {
                   </TableCell>
                 </>
               ) : (
-                <TableCell colSpan={4}></TableCell>
+                <TableCell colSpan={5}></TableCell>
               )}
 
               {/* Bank side */}
               {paginatedBank[idx] ? (
                 <>
+                  <TableCell>
+                    {paginatedBank[idx].journal_entry_id ? (
+                      <Link to={`/journal-entries/${paginatedBank[idx].journal_entry_id}`}>
+                        <Badge variant="secondary" className="text-xs font-mono cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors">
+                          #{paginatedBank[idx].journal_entry_id}
+                        </Badge>
+                      </Link>
+                    ) : "—"}
+                  </TableCell>
                   <TableCell>
                     {formatDateTimestamp(paginatedBank[idx].date)}
                   </TableCell>
@@ -99,20 +121,20 @@ const CashbookTable = ({ data }) => {
                   </TableCell>
                 </>
               ) : (
-                <TableCell colSpan={4}></TableCell>
+                <TableCell colSpan={5}></TableCell>
               )}
             </TableRow>
           ))}
         </TableBody>
         <TableFooter>
           <TableRow>
-            <TableCell colSpan={3} className="font-bold">
+            <TableCell colSpan={4} className="font-bold">
               Opening Cash Balance
             </TableCell>
             <TableCell className="text-right font-bold">
               {totals?.cash_opening?.toLocaleString()}
             </TableCell>
-            <TableCell colSpan={3} className="font-bold">
+            <TableCell colSpan={4} className="font-bold">
               Opening Bank Balance
             </TableCell>
             <TableCell className="text-right font-bold">
@@ -120,13 +142,13 @@ const CashbookTable = ({ data }) => {
             </TableCell>
           </TableRow>
           <TableRow>
-            <TableCell colSpan={3} className="font-bold text-green-700">
+            <TableCell colSpan={4} className="font-bold text-green-700">
               Total Cash In
             </TableCell>
             <TableCell className="text-right font-bold text-green-700">
               {totals.cash_in?.toLocaleString()}
             </TableCell>
-            <TableCell colSpan={3} className="font-bold text-green-700">
+            <TableCell colSpan={4} className="font-bold text-green-700">
               Total Bank In
             </TableCell>
             <TableCell className="text-right font-bold text-green-700">
@@ -134,13 +156,13 @@ const CashbookTable = ({ data }) => {
             </TableCell>
           </TableRow>
           <TableRow>
-            <TableCell colSpan={3} className="font-bold text-red-700">
+            <TableCell colSpan={4} className="font-bold text-red-700">
               Total Cash Out
             </TableCell>
             <TableCell className="text-right font-bold text-red-700">
               {totals.cash_out?.toLocaleString()}
             </TableCell>
-            <TableCell colSpan={3} className="font-bold text-red-700">
+            <TableCell colSpan={4} className="font-bold text-red-700">
               Total Bank Out
             </TableCell>
             <TableCell className="text-right font-bold text-red-700">
@@ -148,13 +170,13 @@ const CashbookTable = ({ data }) => {
             </TableCell>
           </TableRow>
           <TableRow>
-            <TableCell colSpan={3} className="font-bold">
+            <TableCell colSpan={4} className="font-bold">
               Closing Cash Balance
             </TableCell>
             <TableCell className="text-right font-bold">
               {totals.cash_closing?.toLocaleString()}
             </TableCell>
-            <TableCell colSpan={3} className="font-bold">
+            <TableCell colSpan={4} className="font-bold">
               Closing Bank Balance
             </TableCell>
             <TableCell className="text-right font-bold">

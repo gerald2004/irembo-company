@@ -92,7 +92,7 @@ const WithdrawTransactionDialog = ({ isOpen, onClose, refetch, accountId, handle
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Withdraw Transaction</DialogTitle>
           <DialogDescription>Follow the steps to complete transaction.</DialogDescription>
@@ -105,7 +105,7 @@ const WithdrawTransactionDialog = ({ isOpen, onClose, refetch, accountId, handle
 
         <div className="flex items-center space-x-3 my-1">
           {stepIcons.map((s, i) => (
-            <div key={i} className={`flex items-center ${step > i + 1 ? "opacity-100" : "opacity-50"} transition-opacity`}>
+            <div key={i} className={`flex items-center ${step >= i + 1 ? "opacity-100" : "opacity-50"} transition-opacity`}>
               {s.icon}
               <span className="ml-2 text-sm font-medium">{s.label}</span>
               {i < stepIcons.length - 1 && <div className="h-[2px] w-6 bg-gray-300 mx-2" />}
@@ -114,7 +114,8 @@ const WithdrawTransactionDialog = ({ isOpen, onClose, refetch, accountId, handle
         </div>
         <Progress value={(step / TOTAL_STEPS) * 100} className="my-1" />
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden min-h-0">
+          <div className="overflow-y-auto flex-1 min-h-0 space-y-4 pr-1">
           {step === 1 && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -179,7 +180,8 @@ const WithdrawTransactionDialog = ({ isOpen, onClose, refetch, accountId, handle
             </div>
           )}
 
-          <DialogFooter>
+          </div>
+          <DialogFooter className="pt-3">
             <div className="flex justify-end w-full gap-2">
               {step > 1 && (
                 <Button type="button" variant="secondary" onClick={() => setStep((p) => p - 1)}>
