@@ -11,7 +11,7 @@ import InterBranchTransfers from "@/Pages/Accounting/InterBranchTransfers";
 import Budgets from "@/Pages/Accounting/Budgets";
 import BudgetDetail from "@/Pages/Accounting/BudgetDetail";
 import BudgetVariance from "@/Pages/Accounting/BudgetVariance";
-
+//just testing the new env file 
 const accountingRoutes = [
   {
     path: "/external-incomes",
