@@ -36,6 +36,7 @@ import CustomReportBuilder from "@/Pages/Reports/Components/Blocks/Loans/CustomR
 import SavingsReports from "@/Pages/Reports/SavingsReports";
 import SavingsReport from "@/Pages/Reports/Components/Blocks/Savings/SavingsReport";
 import WithdrawsReport from "@/Pages/Reports/Components/Blocks/Savings/WithdrawsReport";
+import DepositsDemographicsReport from "@/Pages/Reports/Components/Blocks/Savings/DepositsDemographicsReport";
 
 import ClientsReports from "@/Pages/Reports/ClientsReports";
 import MembershipReport from "@/Pages/Reports/Components/Blocks/Clients/MembershipReport";
@@ -150,6 +151,7 @@ const reportsRoutes = [
   { path: "/savings-reports",                           element: <SavingsReports />,            roles: [100244, 100129] },
   { path: "/savings-reports/savings",                   element: <SavingsReport />,             roles: [100245, 100129] },
   { path: "/savings-reports/withdraws",                 element: <WithdrawsReport />,           roles: [100246, 100129] },
+  { path: "/savings-reports/deposits-demographics",     element: <DepositsDemographicsReport />, roles: [100629, 100129] },
 
   // Client Reports
   { path: "/client-reports",                            element: <ClientsReports />,            roles: [100247, 100130] },

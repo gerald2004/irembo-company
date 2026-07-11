@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { PiggyBank, ArrowUpFromLine } from "lucide-react";
+import { PiggyBank, ArrowUpFromLine, PieChart } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
@@ -27,6 +27,15 @@ const SECTIONS = [
         color: "text-amber-600",
         bg: "bg-amber-50 dark:bg-amber-900/20",
         permission: 100246,
+      },
+      {
+        title: "Deposits Demographics Report",
+        link: "savings-reports/deposits-demographics",
+        description: "Deposits grouped by day/week/month with a male/female breakdown and transaction drill-down",
+        icon: <PieChart className="w-5 h-5" />,
+        color: "text-purple-600",
+        bg: "bg-purple-50 dark:bg-purple-900/20",
+        permission: 100629,
       },
     ],
   },
