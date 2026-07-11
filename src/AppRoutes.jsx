@@ -23,6 +23,7 @@ import AdminAccount from "@/Pages/Admin/AdminAccount";
 import publicRoutes from "./routes/publicRoutes";
 import clientRoutes from "./routes/clientRoutes";
 import loansRoutes from "./routes/loansRoutes";
+import salaryAdvanceRoutes from "./routes/salaryAdvanceRoutes";
 import transactionRoutes from "./routes/transactionRoutes";
 import accountingRoutes from "./routes/accountingRoutes";
 import reportsRoutes from "./routes/reportsRoutes";
@@ -39,6 +40,7 @@ import qmsRoutes from "./routes/qmsRoutes";
 const protectedRoutes = [
   ...clientRoutes,
   ...loansRoutes,
+  ...salaryAdvanceRoutes,
   ...transactionRoutes,
   ...accountingRoutes,
   ...hrRoutes,

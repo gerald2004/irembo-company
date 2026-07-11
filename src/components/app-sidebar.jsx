@@ -134,6 +134,11 @@ export function AppSidebar({ ...props }) {
               permissionCodes: [100140],
             },
             {
+              title: "Salary Advance Settings",
+              url: "salary-advance-settings",
+              permissionCodes: [100619],
+            },
+            {
               title: "Fixed Deposit Settings",
               url: "fixed-deposit-settings",
               permissionCodes: [100141],
@@ -336,6 +341,18 @@ export function AppSidebar({ ...props }) {
               permissionCodes: [100521],
             },
           ],
+        },
+      ],
+    },
+    salary_advance: {
+      title: "Salary Advance",
+      permissionCodes: [100619, 100621, 100622],
+      items: [
+        {
+          name: "Applications",
+          url: "salary-advance-applications",
+          icon: Banknote,
+          permissionCodes: [100621],
         },
       ],
     },
@@ -808,6 +825,9 @@ export function AppSidebar({ ...props }) {
           <NavSingle data={filteredSidebar.clients} />
         )}
         {filteredSidebar.loans && <NavMain data={filteredSidebar.loans} />}
+        {filteredSidebar.salary_advance && (
+          <NavSingle data={filteredSidebar.salary_advance} />
+        )}
         {filteredSidebar.transactions && (
           <NavSingle data={filteredSidebar.transactions} />
         )}

@@ -3,6 +3,7 @@ import BusinessDefaults from "@/Pages/Settings/Business/BusinessDefaults";
 import ChartOfAccounts from "@/Pages/Settings/Business/ChartOfAccounts";
 import LoanSettings from "@/Pages/Settings/Business/LoanSettings";
 import LoanSettingsSummary from "@/Pages/Settings/Business/LoanSettingsSummary";
+import SalaryAdvanceSettings from "@/Pages/Settings/Business/SalaryAdvanceSettings";
 import AccountSavingSettings from "@/Pages/Settings/Business/AccountSavingSettings";
 import AccountSettingsSummary from "@/Pages/Settings/Business/AccountSettingsSummary";
 import FiscalYears from "@/Pages/Settings/Business/FiscalYears";
@@ -40,6 +41,11 @@ const settingsRoutes = [
     path: "/loan-settings/products/:id",
     element: <LoanSettingsSummary />,
     roles: [100140],
+  },
+  {
+    path: "/salary-advance-settings",
+    element: <SalaryAdvanceSettings />,
+    roles: [100619],
   },
   {
     path: "/account-savings-settings",

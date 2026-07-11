@@ -17,7 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X, Shield, ShieldCheck, ShieldOff, Smartphone, MessageSquare, Mail, AlertTriangle, Trash2, Plus, GitBranch, CreditCard, Building2, Info } from "lucide-react";
+import { X, Shield, ShieldCheck, ShieldOff, Smartphone, MessageSquare, Mail, AlertTriangle, Trash2, Plus, GitBranch, CreditCard, Building2, Info, Link2, Unlink } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
@@ -39,6 +39,7 @@ import {
 import { getInitials } from "@/lib/general-functions";
 import useAuth from "@/MiddleWares/Hooks/useAuth";
 import { hasPermission } from "@/lib/utils";
+import { ClientCombobox } from "@/Pages/Components/ClientCombobox";
 
 const StaffDetails = () => {
   const axiosPrivate = useAxiosPrivate();
@@ -501,6 +502,41 @@ const StaffDetails = () => {
     },
     onError: () =>
       toast({ title: "Error", description: "Failed to update access level", variant: "destructive" }),
+  });
+
+  // ── SACCO Member Link (staff ↔ own client/savings record, for Salary Advance) ──
+  const [pendingClientId, setPendingClientId] = useState(null);
+
+  const linkClient = useMutation({
+    mutationFn: (clientId) =>
+      axiosPrivate.patch(`/business/employees/${params.id}`, {
+        client_id: clientId,
+      }),
+    onSuccess: () => {
+      toast({ title: "Staff linked to SACCO member" });
+      setPendingClientId(null);
+      queryClient.invalidateQueries({ queryKey: ["staff", params.id] });
+    },
+    onError: (err) =>
+      toast({
+        title: "Error",
+        description:
+          err?.response?.data?.messages?.[0] ?? "Failed to link staff to client",
+        variant: "destructive",
+      }),
+  });
+
+  const unlinkClient = useMutation({
+    mutationFn: () =>
+      axiosPrivate.patch(`/business/employees/${params.id}`, {
+        client_id: null,
+      }),
+    onSuccess: () => {
+      toast({ title: "Staff unlinked from SACCO member" });
+      queryClient.invalidateQueries({ queryKey: ["staff", params.id] });
+    },
+    onError: () =>
+      toast({ title: "Error", description: "Failed to unlink", variant: "destructive" }),
   });
 
   return (
@@ -1160,6 +1196,70 @@ const StaffDetails = () => {
                     </CardContent>
                   </Card>
                 </div>
+
+                {/* SACCO Member Link (for Salary Advance eligibility) */}
+                {hasPermission(roles, 100628) && (
+                  <div className="mt-3 grid grid-cols-1 gap-4">
+                    <Card className="shadow-lg rounded-xl overflow-hidden">
+                      <div className={`h-1 ${userData?.client ? "bg-emerald-500" : "bg-slate-300"}`} />
+                      <CardHeader className="p-4 pb-2">
+                        <div className="flex items-center gap-2">
+                          <Link2 className="w-5 h-5 text-emerald-600" />
+                          <CardTitle className="text-base font-semibold">
+                            SACCO Member Link
+                          </CardTitle>
+                        </div>
+                        <CardDescription className="text-xs mt-1">
+                          Link this staff member to their own SACCO member/savings
+                          account to make them eligible for salary advances.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="p-4 pt-2 space-y-3">
+                        {userData?.client ? (
+                          <div className="flex items-center justify-between gap-3">
+                            <Badge
+                              variant="secondary"
+                              className="flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border-emerald-200 px-2.5 py-1"
+                            >
+                              <CreditCard className="h-3.5 w-3.5" />
+                              {userData.client.client_firstname}{" "}
+                              {userData.client.client_lastname} (
+                              {userData.client.client_account_number})
+                            </Badge>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 text-xs text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/5"
+                              onClick={() => unlinkClient.mutate()}
+                              disabled={unlinkClient.isPending}
+                            >
+                              <Unlink className="w-3.5 h-3.5 mr-1.5" />
+                              {unlinkClient.isPending ? "Unlinking…" : "Unlink"}
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <ClientCombobox
+                              label="Search & link a SACCO member"
+                              selectedClient={pendingClientId}
+                              onClientSelect={setPendingClientId}
+                              searchUrl="/clients/individual"
+                            />
+                            <Button
+                              size="sm"
+                              className="h-8 gap-1.5"
+                              disabled={!pendingClientId || linkClient.isPending}
+                              onClick={() => linkClient.mutate(pendingClientId)}
+                            >
+                              <Link2 className="h-3.5 w-3.5" />
+                              {linkClient.isPending ? "Linking…" : "Link Member"}
+                            </Button>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
 
                 {/* Bottom: resets */}
                 <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
