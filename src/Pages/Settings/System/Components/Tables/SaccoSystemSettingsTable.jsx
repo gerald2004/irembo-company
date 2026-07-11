@@ -58,6 +58,11 @@ export function SaccoSystemSettingsTable() {
       description:
         "Enable monthly automatic deductions for fees or savings products assigned to clients.",
     },
+    sacco_salary_advances: {
+      label: "Salary Advances",
+      description:
+        "Enable or disable the salary advance module for this Business.",
+    },
   };
   // ✅ Fetch current settings
   const {

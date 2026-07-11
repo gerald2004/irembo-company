@@ -87,6 +87,8 @@ const BusinessDefaults = () => {
     default_capital_account: null,
     // NEW:
     monitoring_fees_account: null,
+    salary_advance_receivable_account: null,
+    salary_advance_fee_income_account: null,
   });
 
   // Hydrate form + selected accounts from defaults
@@ -122,6 +124,10 @@ const BusinessDefaults = () => {
       // NEW:
       monitoring_fees_account:
         defaultsData?.monitoring_fees_account?.id ?? null,
+      salary_advance_receivable_account:
+        defaultsData?.salary_advance_receivable_account?.id ?? null,
+      salary_advance_fee_income_account:
+        defaultsData?.salary_advance_fee_income_account?.id ?? null,
     });
   }, [defaultsData, reset]);
 
@@ -389,6 +395,35 @@ const BusinessDefaults = () => {
                               setSelectedAccounts((prev) => ({
                                 ...prev,
                                 monitoring_fees_account: value,
+                              }))
+                            }
+                            accountsData={accountsData}
+                          />
+
+                          {/* NEW — Salary Advance GL Accounts */}
+                          <AccountCombobox
+                            label="Salary Advance Receivable Account"
+                            selectedAccount={
+                              selectedAccounts.salary_advance_receivable_account
+                            }
+                            onAccountSelect={(value) =>
+                              setSelectedAccounts((prev) => ({
+                                ...prev,
+                                salary_advance_receivable_account: value,
+                              }))
+                            }
+                            accountsData={accountsData}
+                          />
+
+                          <AccountCombobox
+                            label="Salary Advance Fee Income Account"
+                            selectedAccount={
+                              selectedAccounts.salary_advance_fee_income_account
+                            }
+                            onAccountSelect={(value) =>
+                              setSelectedAccounts((prev) => ({
+                                ...prev,
+                                salary_advance_fee_income_account: value,
                               }))
                             }
                             accountsData={accountsData}
