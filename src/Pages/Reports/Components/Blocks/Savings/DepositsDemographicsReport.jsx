@@ -193,6 +193,8 @@ const DepositsDemographicsReport = () => {
           exportHeaders={exportHeaders}
           exportRows={exportRows}
           exportDisabled={!periods.length}
+          exportTotals={{ Amount: summary.total_amount }}
+          exportColspan={4}
         />
 
         {isError ? (

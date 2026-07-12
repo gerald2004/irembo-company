@@ -27,6 +27,8 @@ import fileDownload from "js-file-download";
  *  exportHeaders      — string[] column headers
  *  exportRows         — (string|number)[][] rows  OR  object[] rows
  *  exportDisabled     — hide/disable export buttons (no data yet)
+ *  exportTotals       — object of { header: value } rendered as a footer row (optional)
+ *  exportColspan      — number of leading columns to skip before the totals values (optional)
  */
 const ReportFilterBar = ({
   onApply,
@@ -38,6 +40,8 @@ const ReportFilterBar = ({
   exportHeaders  = [],
   exportRows     = [],
   exportDisabled = false,
+  exportTotals   = {},
+  exportColspan  = 0,
 }) => {
   const { auth }       = useAuth();
   const axiosPrivate   = useAxiosPrivate();
@@ -101,8 +105,8 @@ const ReportFilterBar = ({
         {
           data: {
             data:    { headers: exportHeaders, rows },
-            totals:  {},
-            colspan: 0,
+            totals:  exportTotals,
+            colspan: exportColspan,
             mode:    { format: "A4", orientation: exportHeaders.length > 6 ? "landscape" : "portrait" },
             dates:   dateStr,
             title:   exportTitle,
@@ -129,8 +133,8 @@ const ReportFilterBar = ({
         {
           data: {
             data:    { headers: exportHeaders, rows },
-            totals:  {},
-            colspan: 0,
+            totals:  exportTotals,
+            colspan: exportColspan,
           },
         },
         { responseType: "blob" }
