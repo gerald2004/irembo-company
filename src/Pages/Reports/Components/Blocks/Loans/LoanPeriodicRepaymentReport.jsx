@@ -6,16 +6,22 @@ import {
 import useAxiosPrivate from "@/MiddleWares/Hooks/useAxiosPrivate";
 import useBranchFilter from "@/MiddleWares/Hooks/useBranchFilter";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import LoanGeneralReportQuery from "../Queries/LoanGeneralReportQuery";
+import { Label } from "@/components/ui/label";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+  Accordion, AccordionItem, AccordionTrigger, AccordionContent,
+} from "@/components/ui/accordion";
+import ReportFilterBar from "../Queries/ReportFilterBar";
 import { useState, useCallback } from "react";
 import { TrendingUp, BarChart3, DollarSign, AlertTriangle } from "lucide-react";
 
-const fmt = (v) =>
-  new Intl.NumberFormat("en-UG", { maximumFractionDigits: 0 }).format(v ?? 0);
+const fmt = (v) => new Intl.NumberFormat("en-UG", { maximumFractionDigits: 0 }).format(v ?? 0);
 
 const KpiCard = ({ title, value, sub, icon: Icon, color = "text-foreground", bg = "bg-muted/30" }) => (
   <Card>
@@ -45,22 +51,27 @@ const LoanPeriodicRepaymentReport = () => {
   const navigate = useNavigate();
 
   const [periodType, setPeriodType] = useState("monthly");
+  const [productId, setProductId] = useState("all");
   const { branchKey } = useBranchFilter();
 
-  const today = new Date();
-  const defaultStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
-  const defaultEnd   = today.toISOString().slice(0, 10);
+  const [filters, setFilters] = useState({ startDate: "", endDate: "", branch_id: String(branchKey ?? "") });
+  const [openPeriods, setOpenPeriods] = useState([]);
 
-  const [filters, setFilters] = useState({ startDate: defaultStart, endDate: defaultEnd, branch_id: String(branchKey ?? "") });
+  const handleApply = useCallback((incoming) => setFilters((prev) => ({ ...prev, ...incoming })), []);
 
-  // Merge incoming filter changes without wiping periodType
-  const handleFilterChange = useCallback(
-    (incoming) => setFilters((prev) => ({ ...prev, ...incoming })),
-    []
-  );
+  const { data: loanProducts = [] } = useQuery({
+    queryKey: ["loan-products-periodic-repayment"],
+    queryFn: async () => {
+      try {
+        const res = await axiosPrivate.get("/settings/loans/products");
+        return res?.data?.data?.loan_products ?? [];
+      } catch { return []; }
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
-  const { data: raw = {}, isLoading, isRefetching, isError, refetch } = useQuery({
-    queryKey: ["loan-repayment-periodic", filters, periodType],
+  const { data: raw = {}, isLoading, isRefetching, isError } = useQuery({
+    queryKey: ["loan-repayment-periodic", filters, periodType, productId],
     queryFn: async () => {
       try {
         const res = await axiosPrivate.get("reports/loans/repayment-periodic", {
@@ -69,6 +80,7 @@ const LoanPeriodicRepaymentReport = () => {
             endDate:     filters.endDate     || undefined,
             period_type: periodType,
             branch_id:   filters.branch_id   || undefined,
+            product_id:  productId === "all" ? undefined : productId,
           },
         });
         return res?.data?.data ?? {};
@@ -84,6 +96,69 @@ const LoanPeriodicRepaymentReport = () => {
   const periods = Array.isArray(raw?.periods) ? raw.periods : [];
   const totals  = raw?.totals ?? {};
   const loading = isLoading || isRefetching;
+
+  // Flatten every period's loans into export-ready rows
+  const exportHeaders = ["Period", "Loan Code", "Client", "Account Number", "Principal", "Interest", "Penalty", "Monitoring", "Total", "Transactions"];
+  const exportRows = periods.flatMap((p) =>
+    (p.loans ?? []).map((l) => ({
+      Period: p.period_label,
+      "Loan Code": l.loan_application_code,
+      Client: l.client,
+      "Account Number": l.account_number,
+      Principal: l.principal_collected,
+      Interest: l.interest_collected,
+      Penalty: l.penalty_collected,
+      Monitoring: l.monitoring_collected,
+      Total: l.total_collected,
+      Transactions: l.transactions_count,
+    }))
+  );
+
+  const openLoanDetail = (periodKey) => {
+    setOpenPeriods((prev) => (prev.includes(periodKey) ? prev : [...prev, periodKey]));
+    requestAnimationFrame(() => {
+      const el = document.getElementById(`period-detail-${periodKey}`);
+      el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
+  const filterControl = (
+    <div className="flex items-end gap-3">
+      <div className="space-y-1">
+        <Label className="text-xs font-medium text-muted-foreground">Loan Product</Label>
+        <Select value={productId} onValueChange={setProductId}>
+          <SelectTrigger className="h-8 w-40 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Products</SelectItem>
+            {loanProducts.map((p) => (
+              <SelectItem key={p.loan_product_id ?? p.id} value={String(p.loan_product_id ?? p.id)}>
+                {p.loan_product_title ?? p.title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs font-medium text-muted-foreground">Group By</Label>
+        <div className="flex gap-1">
+          {PERIOD_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setPeriodType(opt.value)}
+              className={`text-xs px-3 py-1.5 h-8 rounded-md border transition-colors ${
+                periodType === opt.value
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background text-foreground border-border hover:bg-muted"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -102,42 +177,21 @@ const LoanPeriodicRepaymentReport = () => {
         <div className="flex-1 space-y-5 p-0 pt-2">
           <h5 className="text-2xl font-bold tracking-tight">Periodic Loan Repayment Report</h5>
 
-          <LoanGeneralReportQuery
-            show={{ officer: false, product: true }}
-            onFilterChange={handleFilterChange}
-            isRefetching={isRefetching}
-            refetch={refetch}
-            data={[]}
-            tableRef={null}
-            filters={filters}
-            colSpan={0}
-            title="Periodic Loan Repayment Report"
-            totals={{}}
-            mode={{ format: "A4-L", orientation: "L" }}
+          <ReportFilterBar
+            onApply={handleApply}
+            isLoading={loading}
+            showStatus={false}
+            extra={filterControl}
+            exportTitle="Periodic Loan Repayment Report"
+            exportFilename="loan_repayment_periodic"
+            exportHeaders={exportHeaders}
+            exportRows={exportRows}
+            exportDisabled={!exportRows.length}
+            exportTotals={{ Total: totals.total_collected }}
+            exportColspan={4}
           />
 
-          {/* Period type toggle */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-muted-foreground">Group by:</span>
-            <div className="flex gap-1">
-              {PERIOD_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setPeriodType(opt.value)}
-                  className={`text-xs px-3 py-1.5 rounded-md border transition-colors ${
-                    periodType === opt.value
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background text-foreground border-border hover:bg-muted"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {loading ? (
+          {loading && !periods.length ? (
             <div className="space-y-3">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
@@ -221,7 +275,16 @@ const LoanPeriodicRepaymentReport = () => {
                           <td className="px-3 py-2 text-right font-semibold text-green-700">
                             {fmt(p.total_collected)}
                           </td>
-                          <td className="px-3 py-2 text-right text-muted-foreground">{p.transactions_count}</td>
+                          <td className="px-3 py-2 text-right">
+                            <button
+                              type="button"
+                              onClick={() => openLoanDetail(p.period_key)}
+                              className="text-primary underline decoration-dotted hover:decoration-solid"
+                              title="View per-loan repayment detail for this period"
+                            >
+                              {p.transactions_count}
+                            </button>
+                          </td>
                           <td className="px-3 py-2 text-right text-muted-foreground">{p.loans_count}</td>
                         </tr>
                       ))}
@@ -265,6 +328,72 @@ const LoanPeriodicRepaymentReport = () => {
                   </div>
                 );
               })()}
+
+              {/* Per-loan drill-down by period */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h6 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Loan Repayment Detail by Period
+                  </h6>
+                  <Badge variant="outline" className="text-xs">{exportRows.length} loan-period rows</Badge>
+                </div>
+                <div className="rounded-lg border">
+                  <Accordion type="multiple" value={openPeriods} onValueChange={setOpenPeriods} className="w-full">
+                    {periods.map((p) => (
+                      <AccordionItem key={p.period_key} value={p.period_key} id={`period-detail-${p.period_key}`} className="px-3">
+                        <AccordionTrigger>
+                          <div className="flex items-center gap-3 text-xs">
+                            <span className="font-medium">{p.period_label}</span>
+                            <Badge variant="outline" className="text-[10px]">{p.loans_count} loans</Badge>
+                            <Badge variant="outline" className="text-[10px]">{p.transactions_count} txns</Badge>
+                            <span className="text-muted-foreground">UGX {fmt(p.total_collected)}</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-xs">
+                              <thead className="bg-muted/50">
+                                <tr>
+                                  <th className="px-2 py-1.5 text-left font-medium">Loan Code</th>
+                                  <th className="px-2 py-1.5 text-left font-medium">Client</th>
+                                  <th className="px-2 py-1.5 text-left font-medium">Account No.</th>
+                                  <th className="px-2 py-1.5 text-right font-medium">Principal</th>
+                                  <th className="px-2 py-1.5 text-right font-medium">Interest</th>
+                                  <th className="px-2 py-1.5 text-right font-medium">Penalty</th>
+                                  <th className="px-2 py-1.5 text-right font-medium">Monitoring</th>
+                                  <th className="px-2 py-1.5 text-right font-medium">Total</th>
+                                  <th className="px-2 py-1.5 text-right font-medium">Txns</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {(p.loans ?? []).map((l) => (
+                                  <tr key={l.loan_application_id} className="border-t hover:bg-muted/20">
+                                    <td className="px-2 py-1.5">
+                                      <Link to={`/loans/${l.loan_application_id}`} className="font-medium text-primary hover:underline">
+                                        {l.loan_application_code}
+                                      </Link>
+                                    </td>
+                                    <td className="px-2 py-1.5 capitalize">{l.client ?? "—"}</td>
+                                    <td className="px-2 py-1.5">{l.account_number ?? "—"}</td>
+                                    <td className="px-2 py-1.5 text-right">{fmt(l.principal_collected)}</td>
+                                    <td className="px-2 py-1.5 text-right">{fmt(l.interest_collected)}</td>
+                                    <td className={`px-2 py-1.5 text-right ${Number(l.penalty_collected) > 0 ? "text-amber-600" : ""}`}>
+                                      {fmt(l.penalty_collected)}
+                                    </td>
+                                    <td className="px-2 py-1.5 text-right">{fmt(l.monitoring_collected)}</td>
+                                    <td className="px-2 py-1.5 text-right font-medium text-green-700">{fmt(l.total_collected)}</td>
+                                    <td className="px-2 py-1.5 text-right text-muted-foreground">{l.transactions_count}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                </div>
+              </div>
             </>
           )}
         </div>
